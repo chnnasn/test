@@ -9,11 +9,18 @@ public class EnemyChaseState : EnemyState
     // 目标更新间隔
     private float _updateTimer;
 
+    // 平滑方向插值：避免分离力突变导致的坐标/旋转抖动
+    private Vector3 _smoothedDirection;
+    private Vector3 _velocityRef; // SmoothDamp 内部速度缓存
+    private const float STEER_SMOOTH_TIME = 0.15f; // 方向平滑时间（越小越灵敏）
+
     public EnemyChaseState(EnemyStateMachine machine) : base(machine) { }
 
     public override void Enter()
     {
         _updateTimer = 0f;
+        // 初始化平滑方向为当前朝向，避免进入时突变
+        _smoothedDirection = enemy.transform.forward;
         enemy.SetTarget(GameManager.Instance.GetPlayer()?.transform);
     }
 
@@ -40,9 +47,21 @@ public class EnemyChaseState : EnemyState
             enemy.SetTarget(target);
         }
 
-        // 计算合成移动方向 = FlowField + 分离 + 避障
+        // 计算目标转向方向 = FlowField + 分离 + 避障
         Vector3 steer = ComputeSteering(target.position);
-        enemy.MoveByTransform(steer);
+
+        // 平滑插值：将瞬时方向渐变到目标方向，消除分离力突变引起的抖动
+        if (steer != Vector3.zero)
+        {
+            _smoothedDirection = Vector3.SmoothDamp(
+                _smoothedDirection,
+                steer,
+                ref _velocityRef,
+                STEER_SMOOTH_TIME);
+            _smoothedDirection.y = 0;
+        }
+
+        enemy.MoveByTransform(_smoothedDirection);
     }
 
     public override void Exit()
@@ -59,27 +78,52 @@ public class EnemyChaseState : EnemyState
         Vector3 pos = enemy.transform.position;
         Vector3 totalForce = Vector3.zero;
 
+        // 计算到目标的距离（用于到达减速）
+        float distToTarget = Vector3.Distance(pos, targetPos);
+
         // ── 1. FlowField 全局方向（替代 Seek）──
         Vector3 flowDir = FlowField.GetFlowDirection(pos);
         // FlowField 未初始化或不可达时 fallback 为直接朝向目标
         if (flowDir == Vector3.zero)
         {
-            flowDir = targetPos - pos;
-            flowDir.y = 0;
-            flowDir = flowDir.normalized;
+            Vector3 toTarget = targetPos - pos;
+            toTarget.y = 0;
+            float sqrMag = toTarget.sqrMagnitude;
+            // 防止归一化零向量导致抖动
+            if (sqrMag > 0.0001f)
+            {
+                flowDir = toTarget.normalized;
+            }
+            else
+            {
+                // 距离极小，停止移动防止抖动
+                return Vector3.zero;
+            }
         }
 
         // ── 2. Boids 分离力（空间分桶查询邻居）──
         Vector3 separation = ComputeSeparation(pos);
 
-        // ── 3. 简单射线避障（局部微调）──
-        Vector3 avoidance = ComputeObstacleAvoidance(pos);
+        // ── 3. 射线避障：使用实际移动方向替代 transform.forward，确保检测与移动一致 ──
+        Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
 
         // ── 组合：FlowField 主导，分离 + 局部避障叠加 ──
         totalForce = flowDir * 1.0f + separation * 1.2f + avoidance * 1.5f;
         totalForce.y = 0;
 
-        return totalForce.normalized;
+        if (totalForce.sqrMagnitude < 0.0001f) return Vector3.zero;
+
+        Vector3 result = totalForce.normalized;
+
+        // ── 到达减速：接近目标时降低速度，避免冲过头导致来回振荡 ──
+        float slowDownDist = enemy.AttackRange * 2f; // 2倍攻击范围开始减速
+        if (distToTarget < slowDownDist)
+        {
+            float t = Mathf.Max(distToTarget / slowDownDist, 0.15f); // 最低保留15%速度
+            result *= t;
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -117,16 +161,19 @@ public class EnemyChaseState : EnemyState
     }
 
     /// <summary>
-    /// 简单避障：前方/左/右三条射线，遇障碍往远离方向偏转
+    /// 简单避障：沿实际移动方向检测前方/左/右三条射线，遇障碍往远离方向偏转
     /// </summary>
-    private Vector3 ComputeObstacleAvoidance(Vector3 pos)
+    private Vector3 ComputeObstacleAvoidance(Vector3 pos, Vector3 moveDirection)
     {
         float checkDist = enemy.ObstacleCheckDistance;
         LayerMask mask = enemy.ObstacleLayerMask;
         if (checkDist <= 0 || mask == 0) return Vector3.zero;
 
-        Vector3 forward = enemy.transform.forward;
-        Vector3 right = enemy.transform.right;
+        // 使用实际移动方向替代 transform.forward，确保避障检测与移动方向一致
+        Vector3 forward = moveDirection.normalized;
+        // 计算垂直方向（世界 Y 轴叉乘得到右侧）
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        if (right.sqrMagnitude < 0.001f) return Vector3.zero; // forward 接近垂直时无法计算
 
         Vector3 avoidForce = Vector3.zero;
 

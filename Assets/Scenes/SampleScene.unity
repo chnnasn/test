@@ -609,14 +609,14 @@ MonoBehaviour:
   _attackDamage: 10
   _attackInterval: 1.2
   _separationRadius: 2
-  _separationForce: 0
-  _hardPushDistance: 1.5
-  _hardPushForce: 0
+  _separationForce: 3
+  _hardPushDistance: 1
+  _hardPushForce: 3
   _obstacleCheckDistance: 2
   _obstacleAvoidForce: 5
   _obstacleLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 2048
 --- !u!136 &989758625
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1363,15 +1363,15 @@ MonoBehaviour:
   _attackRange: 2.5
   _attackDamage: 10
   _attackInterval: 1.2
-  _separationRadius: 2
-  _separationForce: 0
-  _hardPushDistance: 1.5
-  _hardPushForce: 0
+  _separationRadius: 1
+  _separationForce: 2
+  _hardPushDistance: 1
+  _hardPushForce: 2
   _obstacleCheckDistance: 2
   _obstacleAvoidForce: 5
   _obstacleLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 2048
 --- !u!136 &1670728288
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1637,14 +1637,14 @@ MonoBehaviour:
   _attackDamage: 10
   _attackInterval: 1.2
   _separationRadius: 2
-  _separationForce: 0
-  _hardPushDistance: 1.5
-  _hardPushForce: 0
+  _separationForce: 3
+  _hardPushDistance: 1
+  _hardPushForce: 3
   _obstacleCheckDistance: 2
   _obstacleAvoidForce: 5
   _obstacleLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 2048
 --- !u!1 &2040533866
 GameObject:
   m_ObjectHideFlags: 0
