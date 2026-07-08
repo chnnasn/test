@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
@@ -10,34 +8,44 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float _maxHP = 100f;
     [SerializeField] private float _birthDuration = 1.5f;
 
+    [Header("移动属性")]
+    [SerializeField] private float _moveSpeed = 3.5f;
+    [SerializeField] private float _rotationSpeed = 10f;
+
     [Header("攻击属性")]
     [SerializeField] private float _attackRange = 2.5f;
     [SerializeField] private float _attackDamage = 10f;
     [SerializeField] private float _attackInterval = 1.2f;
 
     [Header("分离力（Boids）")]
-    [SerializeField] private float _separationRadius = 2.0f;
-    [SerializeField] private float _separationForce = 3.0f;
-    [SerializeField] private LayerMask _enemyLayerMask;
+    [SerializeField] private float _separationRadius = 2.5f;
+    [SerializeField] private float _separationForce = 4f;
+    [SerializeField] private float _hardPushDistance = 1.0f;
+    [SerializeField] private float _hardPushForce = 6f;
+
+    [Header("简单避障")]
+    [SerializeField] private float _obstacleCheckDistance = 2f;
+    [SerializeField] private float _obstacleAvoidForce = 5f;
+    [SerializeField] private LayerMask _obstacleLayerMask;
 
     private float _currentHP;
-    private NavMeshAgent _navMeshAgent;
     private Transform _target;
-    private Collider[] _neighborBuffer = new Collider[20]; // 预分配，避免 GC
+    private CharacterController _characterController;
 
     public EnemyStateMachine stateMachine { get; private set; }
-    
-    /// <summary>
-    /// 出生持续时间（供状态读取）
-    /// </summary>
-    public float BirthDuration => _birthDuration;
-    
-    /// <summary>
-    /// 是否还活着
-    /// </summary>
-    public bool IsAlive => _currentHP > 0;
 
-    // 攻击配置只读属性
+    // 公开属性
+    public Vector3 Velocity { get; set; }
+    public float MoveSpeed => _moveSpeed;
+    public float SeparationRadius => _separationRadius;
+    public float SeparationForce => _separationForce;
+    public float HardPushDistance => _hardPushDistance;
+    public float HardPushForce => _hardPushForce;
+    public float ObstacleCheckDistance => _obstacleCheckDistance;
+    public float ObstacleAvoidForce => _obstacleAvoidForce;
+    public LayerMask ObstacleLayerMask => _obstacleLayerMask;
+    public float BirthDuration => _birthDuration;
+    public bool IsAlive => _currentHP > 0;
     public float AttackRange => _attackRange;
     public float AttackDamage => _attackDamage;
     public float AttackInterval => _attackInterval;
@@ -54,20 +62,28 @@ public class Enemy : MonoBehaviour
 
     private void Awake()
     {
-        _navMeshAgent = GetComponent<NavMeshAgent>();
+        _characterController = GetComponent<CharacterController>();
         _currentHP = _maxHP;
         stateMachine = new EnemyStateMachine(this);
     }
 
+    private void OnEnable()
+    {
+        SpatialGrid.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        SpatialGrid.Unregister(this);
+    }
+
     private void Start()
     {
-        // 初始进入出生状态
         stateMachine.ChangeState(stateMachine.BirthState);
     }
 
     private void Update()
     {
-        // 每帧驱动状态机更新
         stateMachine.Update();
     }
 
@@ -84,19 +100,52 @@ public class Enemy : MonoBehaviour
     /// </summary>
     public Transform GetTarget()
     {
-        return GameManager.Instance.GetPlayer().transform;
+        return GameManager.Instance.GetPlayer()?.transform;
     }
 
     /// <summary>
-    /// 让 NavMeshAgent 追击目标
+    /// Transform 移动：直接用 CharacterController 或 transform.position
     /// </summary>
-    public void ChaseTarget()
+    public void MoveByTransform(Vector3 direction, float speedMultiplier = 1f)
     {
-        if (_target != null && _navMeshAgent != null && _navMeshAgent.isActiveAndEnabled)
+        if (!IsAlive || direction == Vector3.zero) return;
+
+        Vector3 velocity = direction.normalized * _moveSpeed * speedMultiplier;
+        velocity.y = 0; // 锁定 Y 轴
+
+        if (_characterController != null && _characterController.enabled)
         {
-            _navMeshAgent.isStopped = false;
-            _navMeshAgent.SetDestination(_target.position);
+            _characterController.Move(velocity * Time.deltaTime);
         }
+        else
+        {
+            transform.position += velocity * Time.deltaTime;
+        }
+
+        Velocity = velocity;
+        FaceDirection(direction);
+    }
+
+    /// <summary>
+    /// 面向移动方向
+    /// </summary>
+    public void FaceDirection(Vector3 direction)
+    {
+        direction.y = 0;
+        if (direction == Vector3.zero) return;
+
+        Quaternion targetRot = Quaternion.LookRotation(direction);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, _rotationSpeed * Time.deltaTime);
+    }
+
+    /// <summary>
+    /// 面向目标
+    /// </summary>
+    public void FaceTarget()
+    {
+        if (_target == null) return;
+        Vector3 dir = _target.position - transform.position;
+        FaceDirection(dir);
     }
 
     /// <summary>
@@ -104,11 +153,7 @@ public class Enemy : MonoBehaviour
     /// </summary>
     public void StopMoving()
     {
-        if (_navMeshAgent != null && _navMeshAgent.isActiveAndEnabled)
-        {
-            _navMeshAgent.isStopped = true;
-            _navMeshAgent.velocity = Vector3.zero;
-        }
+        Velocity = Vector3.zero;
     }
 
     /// <summary>
@@ -119,7 +164,6 @@ public class Enemy : MonoBehaviour
         if (!IsAlive) return;
 
         _currentHP -= damage;
-        Debug.Log($"{gameObject.name} 受到 {damage} 点伤害，剩余 HP: {_currentHP}");
 
         if (_currentHP <= 0)
         {
@@ -129,65 +173,10 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 死亡，触发状态切换
+    /// 死亡
     /// </summary>
     private void Die()
     {
-        Debug.Log($"{gameObject.name} 死亡");
         stateMachine.ChangeState(stateMachine.deadState);
-    }
-
-    /// <summary>
-    /// 让 NavMeshAgent 看向目标方向
-    /// </summary>
-    public void FaceTarget()
-    {
-        if (_target != null)
-        {
-            Vector3 direction = (_target.position - transform.position).normalized;
-            direction.y = 0;
-            if (direction != Vector3.zero)
-            {
-                transform.rotation = Quaternion.LookRotation(direction);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Boids 分离力：检测周围敌人并施加排斥力，叠加到 NavMeshAgent 速度上
-    /// 在 EnemChaseState.Update() 每帧调用
-    /// </summary>
-    public void ApplySeparation()
-    {
-        if (_navMeshAgent == null || !_navMeshAgent.isActiveAndEnabled) return;
-        if (_navMeshAgent.pathPending) return; // 等路径算完，避免冲突
-
-        Vector3 separation = Vector3.zero;
-
-        // OverlapSphereNonAlloc 用预分配 buffer，不产生 GC
-        int neighborCount = Physics.OverlapSphereNonAlloc(
-            transform.position, _separationRadius, _neighborBuffer, _enemyLayerMask);
-
-        for (int i = 0; i < neighborCount; i++)
-        {
-            Collider neighbor = _neighborBuffer[i];
-            if (neighbor == null || neighbor.gameObject == gameObject) continue;
-
-            Vector3 awayDir = transform.position - neighbor.transform.position;
-            float dist = awayDir.magnitude;
-            if (dist < 0.001f) continue;
-
-            // 越近排斥力越强（反比于距离平方）
-            float strength = _separationForce / (dist * dist);
-            separation += awayDir.normalized * strength;
-        }
-
-        if (separation == Vector3.zero) return;
-
-        // 限制单帧分离力的大小，防止突变
-        separation = Vector3.ClampMagnitude(separation, _navMeshAgent.speed * 2f);
-
-        // 叠加到 Agent 速度上，NavMeshAgent 本身仍负责寻路
-        _navMeshAgent.velocity += separation * Time.deltaTime;
     }
 }
