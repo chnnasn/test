@@ -19,15 +19,15 @@ public class EnemyChaseState : EnemyState
     {
         _updateTimer = 0f;
         Debug.Log($"{enemy.gameObject.name} 进入追击状态");
+        enemy.SetTarget(GameManager.Instance.GetPlayer().transform);
     }
 
     public override void Update()
     {
         // 如果敌人已死亡，不需要继续追击
         if (!enemy.IsAlive) return;
-
-        Transform target = enemy.GetTarget();
-        if (target == null)
+        
+        if (GameManager.Instance.GetPlayer().transform == null)
         {
             Debug.LogWarning($"{enemy.gameObject.name} 追击状态但没有目标");
             return;

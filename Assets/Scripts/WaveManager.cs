@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PortalManager : MonoBehaviour
+public class WaveManager : MonoBehaviour
 {
     [SerializeField] private PortalWave[] _portalWaves;
     [SerializeField] private SpawnPoint[] _spawnPoints;
@@ -13,6 +13,8 @@ public class PortalManager : MonoBehaviour
     {
         _spawnPoints = GetComponentsInChildren<SpawnPoint>();
         currentWave = 0;
+        
+        StartCoroutine(FirstWaveTimer(5));
     }
 
     public void SpawnNextWave()
@@ -21,9 +23,8 @@ public class PortalManager : MonoBehaviour
             return;
 
         StartCoroutine(canSpawnWavesCoroutine());
-        
-        //todo：判断玩家是否存活
-        if (true)
+
+        if (GameManager.Instance.GetPlayer()!=null)
         {
             if (currentWave < _portalWaves.Length)
             {
@@ -57,5 +58,12 @@ public class PortalManager : MonoBehaviour
         {
             spawnPoint.busy = false;
         }
+    }
+    
+    private IEnumerator FirstWaveTimer(float time)
+    {
+        yield return new WaitForSeconds(time);
+        SpawnNextWave();
+        yield break;
     }
 }

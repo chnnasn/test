@@ -58,7 +58,7 @@ public class Enemy : MonoBehaviour
     /// </summary>
     public Transform GetTarget()
     {
-        return _target;
+        return GameManager.Instance.GetPlayer().transform;
     }
 
     /// <summary>
@@ -66,10 +66,12 @@ public class Enemy : MonoBehaviour
     /// </summary>
     public void ChaseTarget()
     {
+        Debug.Log("追击中");
         if (_target != null && _navMeshAgent != null && _navMeshAgent.isActiveAndEnabled)
         {
             _navMeshAgent.isStopped = false;
             _navMeshAgent.SetDestination(_target.position);
+            Debug.Log("正在追击中");
         }
     }
 
