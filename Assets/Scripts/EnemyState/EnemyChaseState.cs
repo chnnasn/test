@@ -26,10 +26,18 @@ public class EnemyChaseState : EnemyState
     {
         // 如果敌人已死亡，不需要继续追击
         if (!enemy.IsAlive) return;
-        
-        if (GameManager.Instance.GetPlayer().transform == null)
+
+        Transform target = GameManager.Instance.GetPlayer().transform;
+        if (target == null)
         {
             Debug.LogWarning($"{enemy.gameObject.name} 追击状态但没有目标");
+            return;
+        }
+
+        // 进入攻击范围 → 切换到攻击状态
+        if (enemy.IsTargetInAttackRange())
+        {
+            stateMachine.ChangeState(stateMachine.attackState);
             return;
         }
 

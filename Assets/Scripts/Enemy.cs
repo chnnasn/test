@@ -9,7 +9,12 @@ public class Enemy : MonoBehaviour
     [Header("基础属性")]
     [SerializeField] private float _maxHP = 100f;
     [SerializeField] private float _birthDuration = 1.5f;
-    
+
+    [Header("攻击属性")]
+    [SerializeField] private float _attackRange = 2.5f;
+    [SerializeField] private float _attackDamage = 10f;
+    [SerializeField] private float _attackInterval = 1.2f;
+
     private float _currentHP;
     private NavMeshAgent _navMeshAgent;
     private Transform _target;
@@ -25,6 +30,21 @@ public class Enemy : MonoBehaviour
     /// 是否还活着
     /// </summary>
     public bool IsAlive => _currentHP > 0;
+
+    // 攻击配置只读属性
+    public float AttackRange => _attackRange;
+    public float AttackDamage => _attackDamage;
+    public float AttackInterval => _attackInterval;
+
+    /// <summary>
+    /// 目标是否在攻击范围内
+    /// </summary>
+    public bool IsTargetInAttackRange()
+    {
+        if (_target == null) return false;
+        float dist = Vector3.Distance(transform.position, _target.position);
+        return dist <= _attackRange;
+    }
 
     private void Awake()
     {
