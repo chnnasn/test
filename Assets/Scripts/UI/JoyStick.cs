@@ -16,6 +16,8 @@ public class JoyStick : ScrollRect
 
     public Vector2 Direction { get; private set; }
 
+    [SerializeField, Range(0.5f, 1f)] private float _runThreshold = 0.9f;
+
     protected override void Start()
     {
         base.Start();
@@ -38,6 +40,10 @@ public class JoyStick : ScrollRect
             : Vector2.zero;
 
         Direction = input.normalized;
+
+        // 摇杆推到阈值以上 + 向前 → 自动奔跑；松开则停止
+        _character.SetExternalRunning(input.magnitude >= _runThreshold && input.y > 0f);
+
         _character.SetExternalMoveInput(input);
     }
 
