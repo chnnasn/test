@@ -5,8 +5,6 @@ public interface IState
 
         public void Exit();
 
-        public void HandInput();
-
         public void Update();
 
         public void OnAnimationTranslateEvent(IState state);

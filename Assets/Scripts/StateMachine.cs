@@ -22,15 +22,7 @@ public abstract class StateMachine
 
         currentState.Value?.Enter();
     }
-
-    /// <summary>
-    /// 处理输入的接口API
-    /// </summary>
-    public void HandInput()
-    {
-        //只允许一个状态在这里更新
-        currentState.Value?.HandInput();
-    }
+    
     /// <summary>
     /// 更新非物理逻辑的接口API
     /// </summary>

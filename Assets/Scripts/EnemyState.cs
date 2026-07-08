@@ -19,10 +19,6 @@ public abstract class EnemyState : IState
     {
     }
 
-    public virtual void HandInput()
-    {
-    }
-
     public virtual void Update()
     {
     }
