@@ -6,7 +6,7 @@ using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 /// <summary>
 /// 移动端触摸拖动控制摄像机视角旋转（基于 Input System EnhancedTouch）。
-/// 按住屏幕任意位置拖动 → 计算拖动增量 → 调用 Character.OnLook(Vector2)，
+/// 按住屏幕任意位置拖动 → 使用 EnhancedTouch 的帧增量 → 调用 Character.OnLook(Vector2)，
 /// 与鼠标输入走完全相同的 axisLook → CameraLook 管线。
 /// 仅当触摸在 UI 上时不处理，交由 UI 事件系统。
 /// </summary>

@@ -1438,6 +1438,10 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		public void OnLook(InputAction.CallbackContext context)
 		{
+			//移动端触摸视角由 ScreenTouch 统一处理，避免 <Pointer>/delta 与 EnhancedTouch 同时写入导致 APK 中视角抽搐。
+			if (context.control?.device is Touchscreen)
+				return;
+
 			//光标锁定时读取输入值，否则设为默认值
 			axisLook = cursorLocked ? context.ReadValue<Vector2>() : default;
 
