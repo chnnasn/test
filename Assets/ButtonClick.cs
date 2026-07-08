@@ -36,6 +36,11 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     
     private bool isPressed = false;
     private float nextFireTime = 0f;
+
+    /// <summary>
+    /// anim 类型的瞄准切换状态。
+    /// </summary>
+    private bool _animAiming = false;
     
     private void Start()
     {
@@ -46,8 +51,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     
     private void Update()
     {
-
-        if (triggerType == ButtonTriggerType.LongpPress && isPressed)
+        if (triggerType == ButtonTriggerType.LongpPress && isPressed && type == ButtonType.shoot)
         {
             if (Time.time >= nextFireTime)
             {
@@ -83,7 +87,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         // 按住模式：立即触发第一次
         if (triggerType == ButtonTriggerType.LongpPress)
         {
-            nextFireTime = Time.time; // 立即触发第一次
+            nextFireTime = Time.time;
         }
     }
     
@@ -101,8 +105,8 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         }
         else if (type == ButtonType.anim)
         {
-            Debug.Log(type);
-            
+            _animAiming = !_animAiming;
+            character.SetAimingExternal(_animAiming);
         }
     }
 }
