@@ -785,6 +785,15 @@ namespace InfimaGames.LowPolyShooterPack
 		}
 
 		/// <summary>
+		/// 外部设置光标锁定状态（移动端调用，无 Escape 键）。
+		/// </summary>
+		public void SetCursorLocked(bool locked)
+		{
+			cursorLocked = locked;
+			UpdateCursorState();
+		}
+
+		/// <summary>
 		/// 播放手雷投掷动画。同时播放左手（主）和右手（叠加）动画层。
 		/// </summary>
 		private void PlayGrenadeThrow()
@@ -1442,6 +1451,24 @@ namespace InfimaGames.LowPolyShooterPack
 
 			//如果正在瞄准，乘以瞄准镜的灵敏度倍率（降低灵敏度实现更精细的瞄准）
 			axisLook *= aiming ? equippedWeaponScope.GetMultiplierMouseSensitivity() : 1.0f;
+		}
+
+		public void OnLook(Vector2 Increment)
+		{
+			axisLook = Increment;
+			
+			
+			//确保已装备武器
+			if (equippedWeapon == null)
+				return;
+
+			//确保已装备瞄准镜
+			if (equippedWeaponScope == null)
+				return;
+
+			//如果正在瞄准，乘以瞄准镜的灵敏度倍率（降低灵敏度实现更精细的瞄准）
+			axisLook *= aiming ? equippedWeaponScope.GetMultiplierMouseSensitivity() : 1.0f;
+			
 		}
 
 		/// <summary>
