@@ -35,7 +35,7 @@ public class JoyStick : ScrollRect
             ? Vector2.ClampMagnitude(diraction / Radius, 1f)
             : Vector2.zero;
 
-        Direction = input;
+        Direction = input.normalized;
         character.SetExternalMoveInput(input);
     }
 
