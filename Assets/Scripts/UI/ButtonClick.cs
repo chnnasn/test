@@ -12,7 +12,8 @@ public enum ButtonTriggerType
 
 public enum ButtonType
 {   shoot,
-    anim
+    anim,
+    run
 }
 
 public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
@@ -105,6 +106,10 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         {
             _animAiming = !_animAiming;
             GameManager.Instance.GetCharacter().SetAimingExternal(_animAiming);
+        }
+        else if (type == ButtonType.run)
+        {
+            
         }
     }
 }
