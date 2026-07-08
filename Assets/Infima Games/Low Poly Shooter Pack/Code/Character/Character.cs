@@ -387,16 +387,15 @@ namespace InfimaGames.LowPolyShooterPack
 			//按住开火键的处理逻辑
 			if (holdingButtonFire)
 			{
-				//非外部开火模式下，自动武器连发逻辑
-				if (!ExternalFireActive && CanPlayAnimationFire() && equippedWeapon.HasAmmunition() && equippedWeapon.IsAutomatic())
+				//自动武器连发：按武器射速持续射击
+				if (CanPlayAnimationFire() && equippedWeapon.HasAmmunition() && equippedWeapon.IsAutomatic())
 				{
-					//检查射速间隔是否已过
 					if (Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
 						Fire();
 				}
-				else if (!ExternalFireActive)
+				//弹药耗尽时重置连射计数，避免后坐力/扩散保持最大值
+				else if (!equippedWeapon.HasAmmunition())
 				{
-					//弹药耗尽时重置连射计数，避免后坐力/扩散保持最大值
 					shotsFired = 0;
 				}
 			}
@@ -658,14 +657,29 @@ namespace InfimaGames.LowPolyShooterPack
 		public void FireWeapon() => Fire();
 
 		/// <summary>
-		/// 外部开火状态切换。由 AutoCombatController 控制武器的开火/停止。
+		/// 外部开火状态切换。由UI按钮控制武器的开火/停止。
+		/// 按下时标记 holdingButtonFire 并重置连射计数；
+		/// 非自动武器检查射速后单发射击，或空仓射击；
+		/// 取消时清除 holdingButtonFire 和连射计数。
 		/// </summary>
 		public void SetExternalFire(bool active)
 		{
-			ExternalFireActive = active;
 			holdingButtonFire = active;
-			if (!active)
-				shotsFired = 0;
+			shotsFired = 0;
+
+			// 非自动武器：按下时单发射击
+			if (active && equippedWeapon != null && !equippedWeapon.IsAutomatic()
+			    && CanPlayAnimationFire() && equippedWeapon.HasAmmunition()
+			    && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+			{
+				Fire();
+			}
+			// 无弹药时：空仓射击
+			else if (active && equippedWeapon != null && !equippedWeapon.IsAutomatic()
+			         && CanPlayAnimationFire() && !equippedWeapon.HasAmmunition())
+			{
+				FireEmpty();
+			}
 		}
 
 

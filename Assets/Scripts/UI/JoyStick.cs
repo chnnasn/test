@@ -14,12 +14,12 @@ public class JoyStick : ScrollRect
     private int? activePointerId = null;
     private Character _character;
     private Vector2 _dragOrigin;
-    private Vector2 _pendingDelta;
 
     public Vector2 Direction { get; private set; }
 
     [SerializeField, Range(0.5f, 1f)] private float _runThreshold = 0.9f;
     [SerializeField, Range(1f, 4f)] private float _sensitivity = 2f;
+    [SerializeField, Range(5f, 30f)] private float _returnSpeed = 15f;
 
     protected override void Start()
     {
@@ -46,10 +46,11 @@ public class JoyStick : ScrollRect
     {
         if (_character == null) return;
 
-        Vector2 input = activePointerId.HasValue
-            ? Vector2.ClampMagnitude(diraction / Radius, 1f)
-            : Vector2.zero;
+        // 松开后平滑回中
+        if (!activePointerId.HasValue)
+            diraction = Vector2.Lerp(diraction, Vector2.zero, _returnSpeed * Time.deltaTime);
 
+        Vector2 input = Vector2.ClampMagnitude(diraction / Radius, 1f);
         Direction = input.normalized;
 
         // 摇杆推到阈值以上 + 向前 → 自动奔跑；松开则停止
@@ -71,27 +72,21 @@ public class JoyStick : ScrollRect
     {
         if (activePointerId != eventData.pointerId) return;
 
-        Vector2 delta = (eventData.position - _dragOrigin) * _sensitivity / canvas.scaleFactor;
-        delta = Vector2.ClampMagnitude(delta, Radius);
-        _pendingDelta = delta;
-        diraction = delta;
+        diraction = Vector2.ClampMagnitude(
+            (eventData.position - _dragOrigin) * _sensitivity / canvas.scaleFactor,
+            Radius);
     }
 
     public override void OnEndDrag(PointerEventData eventData)
     {
         if (activePointerId != eventData.pointerId) return;
-
+        // 只解绑手指，diraction 由 Update 平滑回弹到零
         activePointerId = null;
-        _pendingDelta = Vector2.zero;
-        diraction = Vector2.zero;
     }
 
-    /// <summary>
-    /// LateUpdate 中应用位置，确保覆盖 ScrollRect 内部的位置修正
-    /// </summary>
     void LateUpdate()
     {
-        // 每帧强制应用，覆盖 ScrollRect 内部位置修正
-        content.anchoredPosition = _pendingDelta;
+        // diraction 就是手柄位置，LateUpdate 覆盖 ScrollRect 内部修正
+        content.anchoredPosition = diraction;
     }
 }

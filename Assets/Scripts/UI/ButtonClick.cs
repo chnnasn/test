@@ -27,14 +27,10 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     [SerializeField] private float pressDuration = 0.1f;
     [SerializeField] private Color pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
     
-    [Header("Hold Settings")]
-    [SerializeField] private float fireRate = 0.1f; // 按住时开火间隔（秒）
-    
     private Color originalColor;
     private Image buttonImage;
     
     private bool isPressed = false;
-    private float nextFireTime = 0f;
 
     /// <summary>
     /// anim 类型的瞄准切换状态。
@@ -45,18 +41,6 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     {
         buttonImage = GetComponent<Image>();
         originalColor = buttonImage.color;
-    }
-    
-    private void Update()
-    {
-        if (triggerType == ButtonTriggerType.LongpPress && isPressed && type == ButtonType.shoot)
-        {
-            if (Time.time >= nextFireTime)
-            {
-                nextFireTime = Time.time + fireRate;
-                TriggerAction();
-            }
-        }
     }
     
     public void OnPointerClick(PointerEventData eventData)
@@ -74,7 +58,6 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
                 TriggerAction();
             });
         }
-        // 按住持续触发模式：不需要在PointerClick中处理，已在Update中处理
     }
     
     public void OnPointerDown(PointerEventData eventData)
@@ -82,10 +65,10 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         isPressed = true;
         buttonImage.DOColor(pressedColor, pressDuration);
         
-        // 按住模式：立即触发第一次
-        if (triggerType == ButtonTriggerType.LongpPress)
+        // 长按开火：标记 holdingButtonFire，后续由 Character.Update 按武器射速自动连发
+        if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
         {
-            nextFireTime = Time.time;
+            GameManager.Instance.GetCharacter().SetExternalFire(true);
         }
     }
     
@@ -93,6 +76,12 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     {
         isPressed = false;
         buttonImage.DOColor(originalColor, pressDuration);
+
+        // 长按开火松开：清除 holdingButtonFire
+        if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
+        {
+            GameManager.Instance.GetCharacter().SetExternalFire(false);
+        }
     }
     
     private void TriggerAction()
