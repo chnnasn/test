@@ -23,8 +23,10 @@ public class JoyStick : ScrollRect
         canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
         Radius = (transform as RectTransform).sizeDelta.x * 0.5f;
         content = transform.GetChild(0).gameObject.GetComponent<RectTransform>();
-        
-        _character = FindFirstObjectByType<Character>();
+
+        // 通过 GameManager 间接获取 Character，不直接 FindFirstObjectByType
+        if (GameManager.Instance != null)
+            _character = GameManager.Instance.GetCharacter();
     }
 
     void Update()

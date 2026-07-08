@@ -63,7 +63,7 @@ public class ScreenTouch : MonoBehaviour
 
 	private void Start()
 	{
-		if ( GameManager.Instance.GetCharacter() == null)
+		if (GameManager.Instance == null || GameManager.Instance.GetCharacter() == null)
 		{
 			Debug.LogWarning("[ScreenTouch] 未找到 Character 组件。");
 			return;
@@ -74,7 +74,7 @@ public class ScreenTouch : MonoBehaviour
 
 	private void Update()
 	{
-		if ( GameManager.Instance.GetCharacter() == null) return;
+		if (GameManager.Instance == null || GameManager.Instance.GetCharacter() == null) return;
 		HandleTouchLook();
 	}
 
@@ -129,15 +129,20 @@ public class ScreenTouch : MonoBehaviour
 
 	private void ApplyLookDelta(Vector2 delta)
 	{
+		if (GameManager.Instance == null) return;
+
 		float x = delta.x * sensitivityX;
 		float y = delta.y * sensitivityY * (invertY ? -1.0f : 1.0f);
-		GameManager.Instance.GetCharacter().OnLook(new Vector2(x, y));
+		GameManager.Instance.GetCharacter()?.OnLook(new Vector2(x, y));
 	}
 
 	private void ResetLookFinger()
 	{
 		lookFinger = null;
 		hasLastLookPosition = false;
+
+		// OnDisable 时 GameManager 可能已被销毁，判空保护
+		if (GameManager.Instance == null) return;
 		GameManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
 	}
 
