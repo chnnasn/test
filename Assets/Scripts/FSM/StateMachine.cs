@@ -4,7 +4,6 @@ using UnityEngine;
 
 public abstract class StateMachine
 {
-
     //这是一个继承了BindableProperty类型的IState字段，获取Istate要通过.Value
     public GenericProperty<IState> currentState = new GenericProperty<IState>();
 

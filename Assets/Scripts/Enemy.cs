@@ -15,9 +15,15 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float _attackDamage = 10f;
     [SerializeField] private float _attackInterval = 1.2f;
 
+    [Header("分离力（Boids）")]
+    [SerializeField] private float _separationRadius = 2.0f;
+    [SerializeField] private float _separationForce = 3.0f;
+    [SerializeField] private LayerMask _enemyLayerMask;
+
     private float _currentHP;
     private NavMeshAgent _navMeshAgent;
     private Transform _target;
+    private Collider[] _neighborBuffer = new Collider[20]; // 预分配，避免 GC
 
     public EnemyStateMachine stateMachine { get; private set; }
     
@@ -86,12 +92,10 @@ public class Enemy : MonoBehaviour
     /// </summary>
     public void ChaseTarget()
     {
-        Debug.Log("追击中");
         if (_target != null && _navMeshAgent != null && _navMeshAgent.isActiveAndEnabled)
         {
             _navMeshAgent.isStopped = false;
             _navMeshAgent.SetDestination(_target.position);
-            Debug.Log("正在追击中");
         }
     }
 
@@ -147,5 +151,43 @@ public class Enemy : MonoBehaviour
                 transform.rotation = Quaternion.LookRotation(direction);
             }
         }
+    }
+
+    /// <summary>
+    /// Boids 分离力：检测周围敌人并施加排斥力，叠加到 NavMeshAgent 速度上
+    /// 在 EnemChaseState.Update() 每帧调用
+    /// </summary>
+    public void ApplySeparation()
+    {
+        if (_navMeshAgent == null || !_navMeshAgent.isActiveAndEnabled) return;
+        if (_navMeshAgent.pathPending) return; // 等路径算完，避免冲突
+
+        Vector3 separation = Vector3.zero;
+
+        // OverlapSphereNonAlloc 用预分配 buffer，不产生 GC
+        int neighborCount = Physics.OverlapSphereNonAlloc(
+            transform.position, _separationRadius, _neighborBuffer, _enemyLayerMask);
+
+        for (int i = 0; i < neighborCount; i++)
+        {
+            Collider neighbor = _neighborBuffer[i];
+            if (neighbor == null || neighbor.gameObject == gameObject) continue;
+
+            Vector3 awayDir = transform.position - neighbor.transform.position;
+            float dist = awayDir.magnitude;
+            if (dist < 0.001f) continue;
+
+            // 越近排斥力越强（反比于距离平方）
+            float strength = _separationForce / (dist * dist);
+            separation += awayDir.normalized * strength;
+        }
+
+        if (separation == Vector3.zero) return;
+
+        // 限制单帧分离力的大小，防止突变
+        separation = Vector3.ClampMagnitude(separation, _navMeshAgent.speed * 2f);
+
+        // 叠加到 Agent 速度上，NavMeshAgent 本身仍负责寻路
+        _navMeshAgent.velocity += separation * Time.deltaTime;
     }
 }

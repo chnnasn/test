@@ -32,7 +32,6 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     
     private Color originalColor;
     private Image buttonImage;
-    private Character character;
     
     private bool isPressed = false;
     private float nextFireTime = 0f;
@@ -46,7 +45,6 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     {
         buttonImage = GetComponent<Image>();
         originalColor = buttonImage.color;
-        character = FindFirstObjectByType<Character>();
     }
     
     private void Update()
@@ -101,12 +99,12 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     {
         if (type == ButtonType.shoot)
         {
-            character.FireWeapon();
+            GameManager.Instance.GetCharacter().FireWeapon();
         }
         else if (type == ButtonType.anim)
         {
             _animAiming = !_animAiming;
-            character.SetAimingExternal(_animAiming);
+            GameManager.Instance.GetCharacter().SetAimingExternal(_animAiming);
         }
     }
 }

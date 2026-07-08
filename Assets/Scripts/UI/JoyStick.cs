@@ -12,7 +12,7 @@ public class JoyStick : ScrollRect
     RectTransform rectTransform;
 
     private int? activePointerId = null;
-    private Character character;
+    private Character _character;
 
     public Vector2 Direction { get; private set; }
 
@@ -23,20 +23,20 @@ public class JoyStick : ScrollRect
         canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
         Radius = (transform as RectTransform).sizeDelta.x * 0.5f;
         content = transform.GetChild(0).gameObject.GetComponent<RectTransform>();
-
-        character = FindFirstObjectByType<Character>();
+        
+        _character = FindFirstObjectByType<Character>();
     }
 
     void Update()
     {
-        if (character == null) return;
+        if (_character == null) return;
 
         Vector2 input = activePointerId.HasValue
             ? Vector2.ClampMagnitude(diraction / Radius, 1f)
             : Vector2.zero;
 
         Direction = input.normalized;
-        character.SetExternalMoveInput(input);
+        _character.SetExternalMoveInput(input);
     }
 
     public override void OnBeginDrag(PointerEventData eventData)

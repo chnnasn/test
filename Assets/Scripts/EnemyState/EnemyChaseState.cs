@@ -49,6 +49,9 @@ public class EnemyChaseState : EnemyState
             enemy.ChaseTarget();
         }
 
+        // Boids 分离力：推开周围敌人，防止聚堆
+        enemy.ApplySeparation();
+
         // 面向目标
         enemy.FaceTarget();
     }

@@ -46,11 +46,6 @@ public class ScreenTouch : MonoBehaviour
 	/// </summary>
 	private bool hasLastLookPosition;
 
-	/// <summary>
-	/// 角色组件引用。通过 Character.OnLook(Vector2) 将触摸增量传入同一管线。
-	/// </summary>
-	private Character character;
-
 	#endregion
 
 	#region UNITY
@@ -68,19 +63,18 @@ public class ScreenTouch : MonoBehaviour
 
 	private void Start()
 	{
-		character = FindFirstObjectByType<Character>();
-		if (character == null)
+		if ( GameManager.Instance.GetCharacter() == null)
 		{
 			Debug.LogWarning("[ScreenTouch] 未找到 Character 组件。");
 			return;
 		}
 
-		character.SetCursorLocked(true);
+		GameManager.Instance.GetCharacter().SetCursorLocked(true);
 	}
 
 	private void Update()
 	{
-		if (character == null) return;
+		if ( GameManager.Instance.GetCharacter() == null) return;
 		HandleTouchLook();
 	}
 
@@ -137,14 +131,14 @@ public class ScreenTouch : MonoBehaviour
 	{
 		float x = delta.x * sensitivityX;
 		float y = delta.y * sensitivityY * (invertY ? -1.0f : 1.0f);
-		character.OnLook(new Vector2(x, y));
+		GameManager.Instance.GetCharacter().OnLook(new Vector2(x, y));
 	}
 
 	private void ResetLookFinger()
 	{
 		lookFinger = null;
 		hasLastLookPosition = false;
-		character?.OnLook(Vector2.zero);
+		GameManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
 	}
 
 	/// <summary>
