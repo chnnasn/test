@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class EnemyBirthState : EnemyState
 {
@@ -9,5 +10,14 @@ public class EnemyBirthState : EnemyState
     {
         
     }
-    
+
+    public override void Enter()
+    {
+        Debug.Log($"进Bir状态");
+    }
+
+    public override void Exit()
+    {
+        stateMachine.ChangeState(stateMachine.chaseState);
+    }
 }

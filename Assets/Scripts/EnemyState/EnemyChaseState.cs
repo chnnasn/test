@@ -7,4 +7,9 @@ public class EnemyChaseState:EnemyState
     public EnemyChaseState(EnemyStateMachine machine) : base(machine)
     {
     }
+
+    public override void Update()
+    {
+        
+    }
 }

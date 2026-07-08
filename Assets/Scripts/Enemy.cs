@@ -15,6 +15,8 @@ public class Enemy:MonoBehaviour
     private void Start()
     {
         _navMeshAgent = GetComponent<NavMeshAgent>();
+        
+        stateMachine.ChangeState(stateMachine.BirthState);
     }
     
     

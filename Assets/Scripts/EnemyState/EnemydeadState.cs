@@ -8,5 +8,10 @@ public class EnemydeadState : EnemyState
     public EnemydeadState(EnemyStateMachine machine) : base(machine)
     {
     }
-    
+
+    public override void Enter()
+    {
+        
+        Debug.Log("敌人死亡");
+    }
 }
