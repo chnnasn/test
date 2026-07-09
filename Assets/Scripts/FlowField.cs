@@ -10,9 +10,8 @@ using UnityEditor;
 /// </summary>
 public static class FlowField
 {
-    private const float CELL_SIZE = 2f;
-    private const float REBUILD_THRESHOLD = 2f;
-    private const int MAX_ITERATIONS = 5000;
+    private const float CELL_SIZE = 1f;
+    private const float REBUILD_THRESHOLD = 1f;
 
     private static int _width, _height;
     private static Vector2 _origin;
@@ -121,10 +120,8 @@ public static class FlowField
         _flowDirections[targetIdx] = Vector2.zero;
         _bfsQueue.Enqueue(targetCell);
 
-        int iterations = 0;
-        while (_bfsQueue.Count > 0 && iterations < MAX_ITERATIONS)
+        while (_bfsQueue.Count > 0)
         {
-            iterations++;
             Vector2Int current = _bfsQueue.Dequeue();
             int curIdx = CellToIndex(current);
             int curCost = _costs[curIdx];
