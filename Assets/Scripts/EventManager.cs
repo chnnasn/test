@@ -17,6 +17,8 @@ public class EventManager : LazySingleton<EventManager>
     public Action<bool> ExternalFire;
     public Action<bool> ExternalRun;
     public Action<Vector2> MoveInput;
+
+    public Action<float> AddExper;
     
     public void SetBuffIndex(int index)
     {
@@ -49,5 +51,10 @@ public class EventManager : LazySingleton<EventManager>
     public void SetExternalMoveInput(Vector2 input)
     {
         MoveInput?.Invoke(input);
+    }
+
+    public void SetAddExperience(float value)
+    {
+        AddExper?.Invoke(value);
     }
 }

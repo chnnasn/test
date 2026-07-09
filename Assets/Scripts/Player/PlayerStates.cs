@@ -1,45 +1,39 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using InfimaGames.LowPolyShooterPack;
 
 public class PlayerStates : MonoBehaviour, IDamage
 {
+    
     [SerializeField] private float _maxHP = 100f;
-
-    private Character _character;
+    private float _experience;
+    
     private float _currentHP;
 
     public bool IsAlive => _currentHP > 0f;
-    public Character getCharacter => _character;
-
-    private void Awake()
-    {
+    
+    void Start()
+    { 
         _currentHP = _maxHP;
     }
-
+    
     private void OnEnable()
     {
         EventManager.Instance.OnAttackedAction += TakeDamage;
+        EventManager.Instance.AddExper += addExperience;
     }
 
     private void OnDisable()
     {
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
             eventManager.OnAttackedAction -= TakeDamage;
+        EventManager.Instance.AddExper -= addExperience;
     }
 
-    // Start is called before the first frame update
-    void Start()
+    private void addExperience(float experience)
     {
-        _character = GetComponent<Character>();
+        _experience += experience;
+        
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
 
     public void TakeDamage(float damage)
     {
