@@ -11,6 +11,7 @@ public class UIManager : MonoBehaviour
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
         EventManager.Instance.BindPlayerExp(OnExperienceChanged);
+        EventManager.Instance.LevelUpBuffs += OnLevelUpBuffs;
     }
 
     private void OnDisable()
@@ -19,6 +20,7 @@ public class UIManager : MonoBehaviour
         {
             eventManager.UnbindPlayerHp(OnHpChanged);
             eventManager.UnbindPlayerExp(OnExperienceChanged);
+            eventManager.LevelUpBuffs -= OnLevelUpBuffs;
         }
     }
 
@@ -38,5 +40,20 @@ public class UIManager : MonoBehaviour
     {
         Debug.Log($"经验值变化: {exp}");
         // TODO: 更新经验条 UI
+    }
+
+    private void OnLevelUpBuffs(PlayerBuffAsset[] buffs)
+    {
+        if (BuffTexts == null || buffs == null) return;
+
+        int count = Mathf.Min(BuffTexts.Length, buffs.Length);
+        for (int i = 0; i < count; i++)
+        {
+            if (BuffTexts[i] == null) continue;
+
+            string buffName = buffs[i] != null ? buffs[i].BuffName : string.Empty;
+            string description = buffs[i] != null ? buffs[i].Description : string.Empty;
+            BuffTexts[i].text = string.IsNullOrEmpty(description) ? buffName : $"{buffName}\n{description}";
+        }
     }
 }

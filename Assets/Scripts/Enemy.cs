@@ -106,8 +106,6 @@ public class Enemy : MonoBehaviour,IDamage
         stateMachine.ChangeState(stateMachine.BirthState);
     }
 
-    #region 相关动画进入或退出触发的方法
-
     public void OnAnimationEnterEvent(AnimationState playerState, float animationLength = 0f)
     {
         switch (playerState)
@@ -131,7 +129,6 @@ public class Enemy : MonoBehaviour,IDamage
 
         }
     }
-    #endregion
     
     private void Update()
     {
@@ -145,14 +142,7 @@ public class Enemy : MonoBehaviour,IDamage
     {
         _target = target;
     }
-
-    /// <summary>
-    /// 获取追击目标
-    /// </summary>
-    public Transform GetTarget()
-    {
-        return GameManager.Instance.GetPlayer()?.transform;
-    }
+    
 
     /// <summary>
     /// CharacterController 移动。direction 的长度会作为速度比例，避免接近目标时减速被归一化吞掉。

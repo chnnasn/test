@@ -9,6 +9,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action<float> OnAttackedAction;
 
     public Action<int> TriggerBuff;
+    public Action<PlayerBuffAsset[]> LevelUpBuffs;
 
     public Action Fire;
     public Action Reload;
@@ -85,6 +86,11 @@ public class EventManager : LazySingleton<EventManager>
     public void SetBuffIndex(int index)
     {
         TriggerBuff?.Invoke(index);
+    }
+
+    public void SetLevelUpBuffs(PlayerBuffAsset[] buffs)
+    {
+        LevelUpBuffs?.Invoke(buffs);
     }
 
     public void FireWeapon()

@@ -4,10 +4,15 @@ public class PlayerStates : MonoBehaviour, IDamage
 {
     [SerializeField] private float _maxHP = 100f;
     [SerializeField] private int _level = 1;
+    [SerializeField] private int _levelUpBuffChooseCount = 3;
     [SerializeField] private PlayerLevelExperienceAsset _levelExperienceAsset;
+    [SerializeField] private PlayerBuffPoolAsset _buffPoolAsset;
+
+    private PlayerBuffAsset[] _currentLevelUpBuffs;
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _maxHP;
+    public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
 
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<float> Experience { get; private set; } = new GenericProperty<float>();
@@ -38,16 +43,32 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     public void CheckExper()
     {
-        if (_levelExperienceAsset.LevelExperienceRequirements[_level-1] > Experience.Value)
-        {
+        if (_levelExperienceAsset == null || _levelExperienceAsset.LevelExperienceRequirements == null)
             return;
-        }
-        else
+
+        while (_level - 1 < _levelExperienceAsset.LevelExperienceRequirements.Length &&
+               Experience.Value >= _levelExperienceAsset.LevelExperienceRequirements[_level - 1])
         {
             Experience.Value -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
             _level++;
-            //UImanager显示与抽取BUff池
+            DrawLevelUpBuffs();
         }
+    }
+
+    private void DrawLevelUpBuffs()
+    {
+        if (_buffPoolAsset == null) return;
+
+        _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount);
+        EventManager.Instance.SetLevelUpBuffs(_currentLevelUpBuffs);
+    }
+
+    public PlayerBuffAsset GetCurrentLevelUpBuff(int index)
+    {
+        if (_currentLevelUpBuffs == null || index < 0 || index >= _currentLevelUpBuffs.Length)
+            return null;
+
+        return _currentLevelUpBuffs[index];
     }
 
     public void TakeDamage(float damage)
