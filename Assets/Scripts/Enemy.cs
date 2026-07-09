@@ -21,6 +21,9 @@ public class Enemy : MonoBehaviour,IDamage
     [SerializeField] private float _attackRange = 2.5f;
     [SerializeField] private float _attackDamage = 10f;
     [SerializeField] private float _attackInterval = 1.2f;
+    [SerializeField] private float _attackSphereRadius = 0.75f;
+    [SerializeField] private Vector3 _attackCastOffset = new Vector3(0f, 1f, 0f);
+    [SerializeField] private LayerMask _playerLayerMask = ~0;
 
     [Header("分离力（Boids）")]
     [SerializeField] private float _separationRadius = 2.5f;
@@ -58,6 +61,9 @@ public class Enemy : MonoBehaviour,IDamage
     public float AttackRange => _attackRange;
     public float AttackDamage => _attackDamage;
     public float AttackInterval => _attackInterval;
+    public float AttackSphereRadius => _attackSphereRadius;
+    public Vector3 AttackCastOffset => _attackCastOffset;
+    public LayerMask PlayerLayerMask => _playerLayerMask;
     public float DeadDestroyDelay => Mathf.Max(_deadAnimationDuration, 0f) + _deadDestroyExtraDelay;
 
     /// <summary>

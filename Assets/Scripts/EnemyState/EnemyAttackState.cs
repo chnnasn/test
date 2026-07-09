@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class EnemyAttackState : EnemyState
 {
+    private static readonly RaycastHit[] _attackHits = new RaycastHit[8];
+
     private float _attackTimer;
 
     public EnemyAttackState(EnemyStateMachine machine) : base(machine)
@@ -74,11 +76,22 @@ public class EnemyAttackState : EnemyState
         Debug.Log($"{enemy.gameObject.name} 发起攻击！");
 #endif
 
-        var player = GameManager.Instance.GetPlayer();
-        if (player != null)
+        GameObject player = GameManager.Instance.GetPlayer();
+        if (player == null) return;
+
+        Vector3 origin = enemy.transform.position + enemy.AttackCastOffset;
+        Vector3 direction = enemy.transform.forward;
+        float distance = Mathf.Max(enemy.AttackRange - enemy.AttackSphereRadius, 0f);
+        int hitCount = Physics.SphereCastNonAlloc(origin, enemy.AttackSphereRadius, direction, _attackHits, distance, enemy.PlayerLayerMask, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
         {
+            Collider hitCollider = _attackHits[i].collider;
+            if (hitCollider == null || !hitCollider.transform.IsChildOf(player.transform)) continue;
+
             //事件发送扣除玩家血量
-            
+            EventManager.Instance.OnAttackedAction?.Invoke(enemy.AttackDamage);
+            break;
         }
     }
 }
