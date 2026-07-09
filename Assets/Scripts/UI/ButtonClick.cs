@@ -13,7 +13,8 @@ public enum ButtonTriggerType
 public enum ButtonType
 {   shoot,
     anim,
-    reload
+    reload,
+    buff
 }
 
 public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
@@ -69,7 +70,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         // 长按开火：标记 holdingButtonFire，后续由 Character.Update 按武器射速自动连发
         if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
         {
-            GameManager.Instance.GetCharacter().SetExternalFire(true);
+            EventManager.Instance.SetExternalFire(true);
         }
     }
     
@@ -81,7 +82,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         // 长按开火松开：清除 holdingButtonFire
         if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
         {
-            GameManager.Instance.GetCharacter().SetExternalFire(false);
+            EventManager.Instance.SetExternalFire(false);
         }
     }
     
@@ -89,16 +90,16 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     {
         if (type == ButtonType.shoot)
         {
-            GameManager.Instance.GetCharacter().FireWeapon();
+           EventManager.Instance.FireWeapon();
         }
         else if (type == ButtonType.anim)
         {
             _animAiming = !_animAiming;
-            GameManager.Instance.GetCharacter().SetAimingExternal(_animAiming);
+            EventManager.Instance.SetAimingExternal(_animAiming);
         }
         else if (type == ButtonType.reload)
         {
-            GameManager.Instance.GetCharacter().TryReload();
+            EventManager.Instance.TryReload();
         }
     }
 }

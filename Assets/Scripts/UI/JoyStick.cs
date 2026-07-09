@@ -12,7 +12,6 @@ public class JoyStick : ScrollRect
     RectTransform rectTransform;
 
     private int? activePointerId = null;
-    private Character _character;
     private Vector2 _dragOrigin;
 
     public Vector2 Direction { get; private set; }
@@ -36,16 +35,10 @@ public class JoyStick : ScrollRect
         Radius = (transform as RectTransform).sizeDelta.x * 0.5f;
         content = transform.GetChild(0).gameObject.GetComponent<RectTransform>();
         content.anchoredPosition = Vector2.zero;
-
-        // 通过 GameManager 间接获取 Character，不直接 FindFirstObjectByType
-        if (GameManager.Instance != null)
-            _character = GameManager.Instance.GetCharacter();
     }
 
     void Update()
     {
-        if (_character == null) return;
-
         // 松开后平滑回中
         if (!activePointerId.HasValue)
             diraction = Vector2.Lerp(diraction, Vector2.zero, _returnSpeed * Time.deltaTime);
@@ -54,9 +47,9 @@ public class JoyStick : ScrollRect
         Direction = input.normalized;
 
         // 摇杆推到阈值以上 + 向前 → 自动奔跑；松开则停止
-        _character.SetExternalRunning(input.magnitude >= _runThreshold && input.y > 0f);
+        EventManager.Instance.SetExternalRunning(input.magnitude >= _runThreshold && input.y > 0f);
 
-        _character.SetExternalMoveInput(input);
+        EventManager.Instance.SetExternalMoveInput(input);
     }
 
     public override void OnBeginDrag(PointerEventData eventData)
