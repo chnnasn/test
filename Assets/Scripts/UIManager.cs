@@ -7,11 +7,19 @@ public class UIManager : MonoBehaviour
     public Text[] BuffTexts;
     public Text HpText;
 
+    [Header("准星")]
+    public Cross crossComponent;
+
     private void OnEnable()
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
         EventManager.Instance.BindPlayerExp(OnExperienceChanged);
         EventManager.Instance.LevelUpBuffs += OnLevelUpBuffs;
+
+        // ---- 订阅准星相关事件 ----
+        EventManager.Instance.Aim          += OnAimChanged;
+        EventManager.Instance.ExternalRun  += OnRunChanged;
+        EventManager.Instance.ExternalFire += OnFireChanged;
     }
 
     private void OnDisable()
@@ -21,7 +29,31 @@ public class UIManager : MonoBehaviour
             eventManager.UnbindPlayerHp(OnHpChanged);
             eventManager.UnbindPlayerExp(OnExperienceChanged);
             eventManager.LevelUpBuffs -= OnLevelUpBuffs;
+
+            // ---- 解订阅 ----
+            eventManager.Aim          -= OnAimChanged;
+            eventManager.ExternalRun  -= OnRunChanged;
+            eventManager.ExternalFire -= OnFireChanged;
         }
+    }
+    
+
+    private void OnAimChanged(bool isAiming)
+    {
+        if (crossComponent != null)
+            crossComponent.SetAiming(isAiming);
+    }
+
+    private void OnRunChanged(bool isRunning)
+    {
+        if (crossComponent != null)
+            crossComponent.SetRunning(isRunning);
+    }
+
+    private void OnFireChanged(bool isFiring)
+    {
+        if (crossComponent != null)
+            crossComponent.SetFiring(isFiring);
     }
 
     private void OnHpChanged(float currentHp, float maxHp)
