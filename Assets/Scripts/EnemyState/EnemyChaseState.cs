@@ -12,7 +12,12 @@ public class EnemyChaseState : EnemyState
     // 平滑方向插值：避免分离力突变导致的坐标/旋转抖动
     private Vector3 _smoothedDirection;
     private Vector3 _velocityRef; // SmoothDamp 内部速度缓存
+    private Vector3 _lastStableDirection;
+    private float _lastDistanceToTarget;
+    private float _orbitNoProgressTimer;
     private const float STEER_SMOOTH_TIME = 0.15f; // 方向平滑时间（越小越灵敏）
+    private const float MOVE_DEAD_ZONE = 0.04f;
+    private const float ORBIT_NO_PROGRESS_LIMIT = 0.8f;
 
     // 振荡检测：防止被夹住时反复前进/后退
     private Vector3 _prevSteer;
@@ -43,6 +48,9 @@ public class EnemyChaseState : EnemyState
         _lateralAssistTimer = 0f;
         // 初始化平滑方向为当前朝向，避免进入时突变
         _smoothedDirection = enemy.transform.forward;
+        _lastStableDirection = enemy.transform.forward;
+        _lastDistanceToTarget = float.MaxValue;
+        _orbitNoProgressTimer = 0f;
         enemy.SetTarget(GameManager.Instance.GetPlayer()?.transform);
     }
 
@@ -118,7 +126,7 @@ public class EnemyChaseState : EnemyState
         }
 
         // 平滑插值：将瞬时方向渐变到目标方向，消除分离力突变引起的抖动
-        if (steer != Vector3.zero)
+        if (steer.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
         {
             _smoothedDirection = Vector3.SmoothDamp(
                 _smoothedDirection,
@@ -127,8 +135,24 @@ public class EnemyChaseState : EnemyState
                 STEER_SMOOTH_TIME);
             _smoothedDirection.y = 0;
         }
+        else
+        {
+            _smoothedDirection = Vector3.MoveTowards(_smoothedDirection, Vector3.zero, Time.deltaTime * 2f);
+        }
 
-        enemy.MoveByTransform(_smoothedDirection);
+        if (_smoothedDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
+        {
+            _lastStableDirection = _smoothedDirection.normalized;
+            Vector3 moveDirection = ConstrainByObstacle(_smoothedDirection);
+            if (moveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
+                enemy.MoveByTransform(moveDirection);
+            else
+                enemy.StopMoving();
+        }
+        else
+        {
+            enemy.StopMoving();
+        }
     }
 
     public override void Exit()
@@ -149,27 +173,28 @@ public class EnemyChaseState : EnemyState
         float distToTarget = Vector3.Distance(pos, targetPos);
 
         // ── 1. FlowField 全局方向（替代 Seek）──
-        Vector3 flowDir = FlowField.GetFlowDirection(pos);
-        // FlowField 未初始化或不可达时 fallback 为直接朝向目标
-        if (flowDir == Vector3.zero)
+        bool hasFlowDirection = FlowField.TryGetFlowDirection(pos, out Vector3 flowDir);
+        // 只有 FlowField 未初始化时才 fallback 直追；已初始化但不可达时避免直线穿墙
+        if (!hasFlowDirection)
         {
-            Vector3 toTarget = targetPos - pos;
-            toTarget.y = 0;
-            float sqrMag = toTarget.sqrMagnitude;
-            // 防止归一化零向量导致抖动
-            if (sqrMag > 0.0001f)
+            if (!FlowField.IsInitialized)
             {
-                flowDir = toTarget.normalized;
+                Vector3 toTarget = targetPos - pos;
+                toTarget.y = 0;
+                float sqrMag = toTarget.sqrMagnitude;
+                if (sqrMag > 0.0001f)
+                    flowDir = toTarget.normalized;
+                else
+                    return Vector3.zero;
             }
             else
             {
-                // 距离极小，停止移动防止抖动
-                return Vector3.zero;
+                flowDir = _lastStableDirection.sqrMagnitude > 0.0001f ? _lastStableDirection : enemy.transform.forward;
             }
         }
 
         // ── 2. Boids 分离力（空间分桶查询邻居）──
-        Vector3 separation = ComputeSeparation(pos);
+        Vector3 separation = LimitBackwardSeparation(ComputeSeparation(pos), flowDir);
 
         // ── 3. 射线避障：使用实际移动方向替代 transform.forward，确保检测与移动一致 ──
         Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
@@ -203,6 +228,19 @@ public class EnemyChaseState : EnemyState
         if (lateralAssistActive)
             lateralWeight = Mathf.Max(lateralWeight, LATERAL_WEIGHT_STUCK);
 
+        if (lateralWeight > 0f)
+        {
+            bool makingProgress = distToTarget < _lastDistanceToTarget - 0.02f;
+            _orbitNoProgressTimer = makingProgress ? 0f : _orbitNoProgressTimer + Time.deltaTime;
+            if (_orbitNoProgressTimer > ORBIT_NO_PROGRESS_LIMIT)
+                lateralWeight *= 0.35f;
+        }
+        else
+        {
+            _orbitNoProgressTimer = 0f;
+        }
+        _lastDistanceToTarget = distToTarget;
+
         totalForce = flowDir * flowWeight
                    + separation * separationWeight
                    + avoidance * avoidanceWeight
@@ -235,6 +273,53 @@ public class EnemyChaseState : EnemyState
         }
 
         return result;
+    }
+
+    private Vector3 LimitBackwardSeparation(Vector3 separation, Vector3 flowDir)
+    {
+        if (separation.sqrMagnitude < 0.0001f || flowDir.sqrMagnitude < 0.0001f)
+            return separation;
+
+        Vector3 flow = flowDir.normalized;
+        float forwardAmount = Vector3.Dot(separation, flow);
+        if (forwardAmount >= 0f) return separation;
+
+        Vector3 lateral = separation - flow * forwardAmount;
+        Vector3 backward = flow * Mathf.Max(forwardAmount, -0.35f);
+        return lateral + backward;
+    }
+
+    private Vector3 GetCastOrigin(Vector3 pos)
+    {
+        Vector3 center = enemy.ColliderCenter;
+        return pos + new Vector3(0f, Mathf.Max(center.y, 0.5f), 0f);
+    }
+
+    private bool SphereCheck(Vector3 origin, Vector3 direction, float distance, out RaycastHit hit)
+    {
+        hit = default(RaycastHit);
+        if (direction.sqrMagnitude < 0.0001f) return false;
+
+        float radius = Mathf.Max(0.1f, enemy.ColliderRadius * 0.9f);
+        return Physics.SphereCast(origin, radius, direction.normalized, out hit, distance,
+            enemy.ObstacleLayerMask, QueryTriggerInteraction.Ignore);
+    }
+
+    private Vector3 ConstrainByObstacle(Vector3 moveDirection)
+    {
+        float magnitude = moveDirection.magnitude;
+        if (magnitude < 0.0001f || enemy.ObstacleLayerMask == 0)
+            return moveDirection;
+
+        Vector3 dir = moveDirection / magnitude;
+        Vector3 origin = GetCastOrigin(enemy.transform.position);
+        float checkDistance = Mathf.Max(enemy.ColliderRadius + 0.05f, enemy.MoveSpeed * Time.deltaTime + enemy.ColliderRadius);
+        if (!SphereCheck(origin, dir, checkDistance, out RaycastHit hit))
+            return moveDirection;
+
+        Vector3 slide = Vector3.ProjectOnPlane(moveDirection, hit.normal);
+        slide.y = 0f;
+        return slide.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE ? slide.normalized * magnitude : Vector3.zero;
     }
 
     /// <summary>
@@ -277,8 +362,8 @@ public class EnemyChaseState : EnemyState
 
         if (checkDist > 0f && mask != 0)
         {
-            bool rightBlocked = Physics.Raycast(pos, rightTangent, checkDist, mask);
-            bool leftBlocked = Physics.Raycast(pos, -rightTangent, checkDist, mask);
+            bool rightBlocked = SphereCheck(GetCastOrigin(pos), rightTangent, checkDist, out _);
+            bool leftBlocked = SphereCheck(GetCastOrigin(pos), -rightTangent, checkDist, out _);
 
             if (rightBlocked && !leftBlocked) return -1;
             if (leftBlocked && !rightBlocked) return 1;
@@ -352,19 +437,20 @@ public class EnemyChaseState : EnemyState
         if (right.sqrMagnitude < 0.001f) return Vector3.zero; // forward 接近垂直时无法计算
 
         Vector3 avoidForce = Vector3.zero;
+        Vector3 origin = GetCastOrigin(pos);
 
         // 正前方检测
-        if (Physics.Raycast(pos, forward, checkDist, mask))
+        if (SphereCheck(origin, forward, checkDist, out _))
             avoidForce += right;
 
         // 左前方检测
         Vector3 leftDir = (forward - right * 0.5f).normalized;
-        if (Physics.Raycast(pos, leftDir, checkDist * 0.8f, mask))
+        if (SphereCheck(origin, leftDir, checkDist * 0.8f, out _))
             avoidForce += right * 1.5f;
 
         // 右前方检测
         Vector3 rightDir = (forward + right * 0.5f).normalized;
-        if (Physics.Raycast(pos, rightDir, checkDist * 0.8f, mask))
+        if (SphereCheck(origin, rightDir, checkDist * 0.8f, out _))
             avoidForce -= right * 1.5f;
 
         if (avoidForce == Vector3.zero) return Vector3.zero;

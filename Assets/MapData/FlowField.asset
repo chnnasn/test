@@ -15,6 +15,7 @@ MonoBehaviour:
   _worldMin: {x: -17, y: 0, z: -25}
   _worldMax: {x: 17, y: 0, z: 25}
   _cellSize: 1
+  _agentRadius: 0.3
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 2048

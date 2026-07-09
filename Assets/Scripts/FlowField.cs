@@ -175,6 +175,7 @@ public static class FlowField
                 Vector2Int neighbor = current + _neighbors[n];
                 int nIdx = CellToIndex(neighbor);
                 if (nIdx < 0 || _costs[nIdx] == -2) continue;
+                if (!CanMoveBetween(current, neighbor)) continue;
 
                 int stepCost = (_neighbors[n].x != 0 && _neighbors[n].y != 0) ? 14 : 10;
                 int newCost = curCost + stepCost;
@@ -202,6 +203,7 @@ public static class FlowField
                     Vector2Int nb = new Vector2Int(x, y) + _neighbors[n];
                     int nIdx = CellToIndex(nb);
                     if (nIdx < 0 || _costs[nIdx] < 0) continue;
+                    if (!CanMoveBetween(new Vector2Int(x, y), nb)) continue;
                     if (_costs[nIdx] < bestCost)
                     {
                         bestCost = _costs[nIdx];
@@ -216,16 +218,69 @@ public static class FlowField
 
     public static Vector3 GetFlowDirection(Vector3 position)
     {
-        if (!_initialized) return Vector3.zero;
+        return TryGetFlowDirection(position, out Vector3 direction) ? direction : Vector3.zero;
+    }
+
+    public static bool TryGetFlowDirection(Vector3 position, out Vector3 direction)
+    {
+        direction = Vector3.zero;
+        if (!_initialized) return false;
 
         Vector2Int cell = WorldToCell(position);
         int idx = CellToIndex(cell);
 
-        if (idx < 0 || _costs[idx] < 0) return Vector3.zero;
-        if (_costs[idx] == 0) return Vector3.zero;
+        if (idx >= 0 && _costs[idx] > 0)
+        {
+            Vector2 dir2D = _flowDirections[idx];
+            direction = new Vector3(dir2D.x, 0, dir2D.y);
+            return direction.sqrMagnitude > 0.0001f;
+        }
 
-        Vector2 dir2D = _flowDirections[idx];
-        return new Vector3(dir2D.x, 0, dir2D.y);
+        if (idx < 0 || _costs[idx] < 0)
+        {
+            Vector2Int nearest = FindNearestReachable(cell);
+            int nearestIdx = CellToIndex(nearest);
+            if (nearestIdx >= 0 && _costs[nearestIdx] >= 0)
+            {
+                Vector3 escape = CellToWorld(nearest.x, nearest.y) - position;
+                escape.y = 0f;
+                if (escape.sqrMagnitude > 0.0001f)
+                {
+                    direction = escape.normalized;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool CanMoveBetween(Vector2Int from, Vector2Int to)
+    {
+        int dx = to.x - from.x;
+        int dy = to.y - from.y;
+        if (Mathf.Abs(dx) != 1 || Mathf.Abs(dy) != 1) return true;
+
+        int a = CellToIndex(from.x + dx, from.y);
+        int b = CellToIndex(from.x, from.y + dy);
+        return a >= 0 && b >= 0 && !_blockedCells[a] && !_blockedCells[b];
+    }
+
+    private static Vector2Int FindNearestReachable(Vector2Int cell)
+    {
+        int maxRadius = Mathf.Max(_width, _height);
+        for (int r = 1; r < maxRadius; r++)
+        {
+            for (int y = -r; y <= r; y++)
+                for (int x = -r; x <= r; x++)
+                {
+                    if (Mathf.Abs(x) != r && Mathf.Abs(y) != r) continue;
+                    Vector2Int c = new Vector2Int(cell.x + x, cell.y + y);
+                    int idx = CellToIndex(c);
+                    if (idx >= 0 && _costs[idx] >= 0) return c;
+                }
+        }
+        return cell;
     }
 
     private static Vector2Int FindNearestWalkable(Vector2Int blockedCell)

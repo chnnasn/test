@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 public class Enemy : MonoBehaviour,IDamage
 {
     private static readonly int ChaseStateHash = Animator.StringToHash("ChaseState");
@@ -39,6 +40,7 @@ public class Enemy : MonoBehaviour,IDamage
     private float _currentHP;
     private Transform _target;
     private CharacterController _characterController;
+    private bool _missingCharacterControllerLogged;
 
     public EnemyStateMachine stateMachine { get; private set; }
     
@@ -55,6 +57,9 @@ public class Enemy : MonoBehaviour,IDamage
     public float HardPushForce => _hardPushForce;
     public float ObstacleCheckDistance => _obstacleCheckDistance;
     public float ObstacleAvoidForce => _obstacleAvoidForce;
+    public float ColliderRadius => _characterController != null ? _characterController.radius : 0.3f;
+    public Vector3 ColliderCenter => _characterController != null ? _characterController.center : Vector3.up * 0.4f;
+    public float ColliderHeight => _characterController != null ? _characterController.height : 1.7f;
     public LayerMask ObstacleLayerMask => _obstacleLayerMask;
     public float BirthDuration => _birthDuration;
     public bool IsAlive => _currentHP > 0;
@@ -80,6 +85,8 @@ public class Enemy : MonoBehaviour,IDamage
     {
         _characterController = GetComponent<CharacterController>();
         _animator = GetComponent<Animator>();
+        if (_animator != null)
+            _animator.applyRootMotion = false;
         _currentHP = _maxHP;
         stateMachine = new EnemyStateMachine(this);
     }
@@ -148,26 +155,43 @@ public class Enemy : MonoBehaviour,IDamage
     }
 
     /// <summary>
-    /// Transform 移动：直接用 CharacterController 或 transform.position
+    /// CharacterController 移动。direction 的长度会作为速度比例，避免接近目标时减速被归一化吞掉。
     /// </summary>
     public void MoveByTransform(Vector3 direction, float speedMultiplier = 1f)
     {
-        if (!IsAlive || direction == Vector3.zero) return;
+        if (!IsAlive) return;
 
-        Vector3 velocity = direction.normalized * _moveSpeed * speedMultiplier;
-        velocity.y = 0; // 锁定 Y 轴
+        direction.y = 0f;
+        float inputMagnitude = direction.magnitude;
+        if (inputMagnitude < 0.01f)
+        {
+            StopMoving();
+            return;
+        }
+
+        float magnitude = Mathf.Clamp01(inputMagnitude) * Mathf.Max(0f, speedMultiplier);
+        Vector3 velocity = direction / inputMagnitude * _moveSpeed * magnitude;
 
         if (_characterController != null && _characterController.enabled)
         {
-            _characterController.Move(velocity * Time.deltaTime);
+            Vector3 motion = velocity;
+            motion.y = _characterController.isGrounded ? -1f : -4f;
+            _characterController.Move(motion * Time.deltaTime);
         }
         else
         {
-            transform.position += velocity * Time.deltaTime;
+            if (!_missingCharacterControllerLogged)
+            {
+                Debug.LogError($"[Enemy] {name} 缺少 CharacterController，已停止 Transform 直移以避免穿墙", this);
+                _missingCharacterControllerLogged = true;
+            }
+
+            StopMoving();
+            return;
         }
 
         Velocity = velocity;
-        FaceDirection(direction);
+        FaceDirection(velocity);
     }
 
     /// <summary>
@@ -175,11 +199,12 @@ public class Enemy : MonoBehaviour,IDamage
     /// </summary>
     public void FaceDirection(Vector3 direction)
     {
-        direction.y = 0;
-        if (direction == Vector3.zero) return;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f) return;
 
-        Quaternion targetRot = Quaternion.LookRotation(direction);
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, _rotationSpeed * Time.deltaTime);
+        Quaternion targetRot = Quaternion.LookRotation(direction.normalized);
+        float maxDegreesDelta = _rotationSpeed * 60f * Time.deltaTime;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, maxDegreesDelta);
     }
 
     /// <summary>

@@ -48,7 +48,10 @@ public class FlowFieldBakerEditor : Editor
 
         bool[] blockedCells = new bool[width * height];
         int blockedCount = 0;
-        Vector3 halfExtents = new Vector3(cellSize * 0.45f, 1f, cellSize * 0.45f);
+        Vector3 halfExtents = new Vector3(
+            cellSize * 0.45f + asset.AgentRadius,
+            1f,
+            cellSize * 0.45f + asset.AgentRadius);
 
         for (int y = 0; y < height; y++)
         {

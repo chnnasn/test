@@ -7,6 +7,7 @@ public class FlowFieldAsset : ScriptableObject
     [SerializeField] private Vector3 _worldMin = new Vector3(-50, 0, -50);
     [SerializeField] private Vector3 _worldMax = new Vector3(50, 0, 50);
     [SerializeField] private float _cellSize = 1f;
+    [SerializeField] private float _agentRadius = 0.3f;
     [SerializeField] private LayerMask _obstacleMask;
 
     [Header("Bake 结果")]
@@ -20,6 +21,7 @@ public class FlowFieldAsset : ScriptableObject
     public Vector3 WorldMin => _worldMin;
     public Vector3 WorldMax => _worldMax;
     public float CellSize => _cellSize;
+    public float AgentRadius => _agentRadius;
     public LayerMask ObstacleMask => _obstacleMask;
     public int Width => _width;
     public int Height => _height;
