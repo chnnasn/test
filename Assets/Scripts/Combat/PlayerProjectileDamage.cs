@@ -9,20 +9,31 @@ public class PlayerProjectileDamage : MonoBehaviour
     [SerializeField] private bool destroyOnImpact = true;
 
     private float _damage;
+    private float _lifeTimer;
     private GameObject _owner;
     private bool _hasHit;
 
     private void Awake()
     {
         _damage = defaultDamage;
-        if (lifeTime > 0f)
-            Destroy(gameObject, lifeTime);
+        _lifeTimer = lifeTime;
+    }
+
+    private void Update()
+    {
+        if (_hasHit || lifeTime <= 0f) return;
+
+        _lifeTimer -= Time.deltaTime;
+        if (_lifeTimer <= 0f)
+            ReleaseToPool();
     }
 
     public void Initialize(GameObject owner, float damage)
     {
         _owner = owner;
         _damage = damage;
+        _lifeTimer = lifeTime;
+        _hasHit = false;
         IgnoreOwnerColliders();
     }
 
@@ -65,8 +76,6 @@ public class PlayerProjectileDamage : MonoBehaviour
         if (_owner != null && hitCollider.transform.IsChildOf(_owner.transform))
             return;
 
-        _hasHit = true;
-
         Enemy enemy = hitCollider.GetComponentInParent<Enemy>();
         if (enemy != null)
         {
@@ -74,8 +83,14 @@ public class PlayerProjectileDamage : MonoBehaviour
         }
 
         if (destroyOnImpact)
-        {
-            Destroy(gameObject);
-        }
+            ReleaseToPool();
+    }
+
+    private void ReleaseToPool()
+    {
+        if (_hasHit) return;
+
+        _hasHit = true;
+        ProjectilePool.Release(gameObject);
     }
 }

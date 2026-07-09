@@ -49,6 +49,10 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float projectileDamage = 25.0f;
 
+        [Tooltip("此武器启动时预热的弹丸对象池数量。0 表示不预热。")]
+        [SerializeField]
+        private int projectilePoolPrewarm;
+
         [Tooltip("此武器每分钟可发射的子弹数。决定武器的射速。")]
         [SerializeField]
         private int roundsPerMinutes = 200;
@@ -86,6 +90,10 @@ namespace InfimaGames.LowPolyShooterPack
         [Tooltip("弹壳预制体。每次抛壳时在此武器上生成的弹壳模型。")]
         [SerializeField]
         private GameObject prefabCasing;
+
+        [Tooltip("此武器启动时预热的弹壳对象池数量。0 表示不预热。")]
+        [SerializeField]
+        private int casingPoolPrewarm;
 
         [Tooltip("弹丸预制体。武器射击时生成的弹丸对象。")]
         [SerializeField]
@@ -247,6 +255,11 @@ namespace InfimaGames.LowPolyShooterPack
 
             //将弹药补满至弹匣容量上限。
             ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
+
+            if (prefabProjectile != null && projectilePoolPrewarm > 0)
+                global::ProjectilePool.Prewarm(prefabProjectile, projectilePoolPrewarm);
+            if (prefabCasing != null && casingPoolPrewarm > 0)
+                global::ProjectilePool.Prewarm(prefabCasing, casingPoolPrewarm);
         }
 
         #endregion
@@ -468,7 +481,8 @@ namespace InfimaGames.LowPolyShooterPack
                 spreadValue = playerCamera.TransformDirection(spreadValue);
 
                 //在摄像机位置生成弹丸，方向为摄像机朝向加上散布偏移。
-                GameObject projectile = Instantiate(prefabProjectile, playerCamera.position, Quaternion.Euler(playerCamera.eulerAngles + spreadValue));
+                GameObject projectile = global::ProjectilePool.Spawn(prefabProjectile, playerCamera.position, Quaternion.Euler(playerCamera.eulerAngles + spreadValue));
+                if (projectile == null) continue;
 
                 global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
                 if (damageComponent == null)
@@ -476,7 +490,9 @@ namespace InfimaGames.LowPolyShooterPack
                 damageComponent.Initialize(characterBehaviour.gameObject, projectileDamage);
 
                 //为弹丸添加速度。velocity = 弹丸自身前方 * 弹丸冲量。
-                projectile.GetComponent<Rigidbody>().velocity = projectile.transform.forward * projectileImpulse;
+                Rigidbody projectileRigidbody = projectile.GetComponent<Rigidbody>();
+                if (projectileRigidbody != null)
+                    projectileRigidbody.velocity = projectile.transform.forward * projectileImpulse;
             }
         }
 
@@ -508,9 +524,15 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public override void EjectCasing()
         {
-            //在抛壳口位置生成弹壳预制体。
-            if(prefabCasing != null && socketEjection != null)
-                Instantiate(prefabCasing, socketEjection.position, socketEjection.rotation);
+            if (prefabCasing == null || socketEjection == null) return;
+
+            GameObject casing = global::ProjectilePool.Spawn(prefabCasing, socketEjection.position, socketEjection.rotation);
+            if (casing == null) return;
+
+            global::PooledCasing pooledCasing = casing.GetComponent<global::PooledCasing>();
+            if (pooledCasing == null)
+                pooledCasing = casing.AddComponent<global::PooledCasing>();
+            pooledCasing.Initialize();
         }
 
         #endregion

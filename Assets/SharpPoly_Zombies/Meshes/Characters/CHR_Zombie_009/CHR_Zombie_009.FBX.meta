@@ -1,104 +1,280 @@
 fileFormatVersion: 2
 guid: fd6f5d091ff1bd4439030cb00c85d444
 ModelImporter:
-  serializedVersion: 23
-  fileIDToRecycleName:
-    100000: Bone_Head
-    100002: Bone_Hips
-    100004: Bone_LeftArm
-    100006: Bone_LeftFoot
-    100008: Bone_LeftForeArm
-    100010: Bone_LeftHand
-    100012: Bone_LeftHandIndex1
-    100014: Bone_LeftHandIndex2
-    100016: Bone_LeftHandIndex3
-    100018: Bone_LeftHandMiddle1
-    100020: Bone_LeftHandMiddle2
-    100022: Bone_LeftHandMiddle3
-    100024: Bone_LeftHandThumb1
-    100026: Bone_LeftHandThumb2
-    100028: Bone_LeftHandThumb3
-    100030: Bone_LeftLeg
-    100032: Bone_LeftShoulder
-    100034: Bone_LeftToeBase
-    100036: Bone_LeftUpLeg
-    100038: Bone_Neck
-    100040: Bone_RightArm
-    100042: Bone_RightFoot
-    100044: Bone_RightForeArm
-    100046: Bone_RightHand
-    100048: Bone_RightHandIndex1
-    100050: Bone_RightHandIndex2
-    100052: Bone_RightHandIndex3
-    100054: Bone_RightHandMiddle1
-    100056: Bone_RightHandMiddle2
-    100058: Bone_RightHandMiddle3
-    100060: Bone_RightHandThumb1
-    100062: Bone_RightHandThumb2
-    100064: Bone_RightHandThumb3
-    100066: Bone_RightLeg
-    100068: Bone_RightShoulder
-    100070: Bone_RightToeBase
-    100072: Bone_RightUpLeg
-    100074: Bone_Spine
-    100076: Bone_Spine1
-    100078: Bone_Spine2
-    100080: //RootNode
-    100082: CHR_Zombie_009
-    400000: Bone_Head
-    400002: Bone_Hips
-    400004: Bone_LeftArm
-    400006: Bone_LeftFoot
-    400008: Bone_LeftForeArm
-    400010: Bone_LeftHand
-    400012: Bone_LeftHandIndex1
-    400014: Bone_LeftHandIndex2
-    400016: Bone_LeftHandIndex3
-    400018: Bone_LeftHandMiddle1
-    400020: Bone_LeftHandMiddle2
-    400022: Bone_LeftHandMiddle3
-    400024: Bone_LeftHandThumb1
-    400026: Bone_LeftHandThumb2
-    400028: Bone_LeftHandThumb3
-    400030: Bone_LeftLeg
-    400032: Bone_LeftShoulder
-    400034: Bone_LeftToeBase
-    400036: Bone_LeftUpLeg
-    400038: Bone_Neck
-    400040: Bone_RightArm
-    400042: Bone_RightFoot
-    400044: Bone_RightForeArm
-    400046: Bone_RightHand
-    400048: Bone_RightHandIndex1
-    400050: Bone_RightHandIndex2
-    400052: Bone_RightHandIndex3
-    400054: Bone_RightHandMiddle1
-    400056: Bone_RightHandMiddle2
-    400058: Bone_RightHandMiddle3
-    400060: Bone_RightHandThumb1
-    400062: Bone_RightHandThumb2
-    400064: Bone_RightHandThumb3
-    400066: Bone_RightLeg
-    400068: Bone_RightShoulder
-    400070: Bone_RightToeBase
-    400072: Bone_RightUpLeg
-    400074: Bone_Spine
-    400076: Bone_Spine1
-    400078: Bone_Spine2
-    400080: //RootNode
-    400082: CHR_Zombie_009
-    2100000: 'Material #37'
-    4300000: CHR_Zombie_009
-    9500000: //RootNode
-    13700000: CHR_Zombie_009
+  serializedVersion: 22200
+  internalIDToNameTable:
+  - first:
+      1: 100000
+    second: Bone_Head
+  - first:
+      1: 100002
+    second: Bone_Hips
+  - first:
+      1: 100004
+    second: Bone_LeftArm
+  - first:
+      1: 100006
+    second: Bone_LeftFoot
+  - first:
+      1: 100008
+    second: Bone_LeftForeArm
+  - first:
+      1: 100010
+    second: Bone_LeftHand
+  - first:
+      1: 100012
+    second: Bone_LeftHandIndex1
+  - first:
+      1: 100014
+    second: Bone_LeftHandIndex2
+  - first:
+      1: 100016
+    second: Bone_LeftHandIndex3
+  - first:
+      1: 100018
+    second: Bone_LeftHandMiddle1
+  - first:
+      1: 100020
+    second: Bone_LeftHandMiddle2
+  - first:
+      1: 100022
+    second: Bone_LeftHandMiddle3
+  - first:
+      1: 100024
+    second: Bone_LeftHandThumb1
+  - first:
+      1: 100026
+    second: Bone_LeftHandThumb2
+  - first:
+      1: 100028
+    second: Bone_LeftHandThumb3
+  - first:
+      1: 100030
+    second: Bone_LeftLeg
+  - first:
+      1: 100032
+    second: Bone_LeftShoulder
+  - first:
+      1: 100034
+    second: Bone_LeftToeBase
+  - first:
+      1: 100036
+    second: Bone_LeftUpLeg
+  - first:
+      1: 100038
+    second: Bone_Neck
+  - first:
+      1: 100040
+    second: Bone_RightArm
+  - first:
+      1: 100042
+    second: Bone_RightFoot
+  - first:
+      1: 100044
+    second: Bone_RightForeArm
+  - first:
+      1: 100046
+    second: Bone_RightHand
+  - first:
+      1: 100048
+    second: Bone_RightHandIndex1
+  - first:
+      1: 100050
+    second: Bone_RightHandIndex2
+  - first:
+      1: 100052
+    second: Bone_RightHandIndex3
+  - first:
+      1: 100054
+    second: Bone_RightHandMiddle1
+  - first:
+      1: 100056
+    second: Bone_RightHandMiddle2
+  - first:
+      1: 100058
+    second: Bone_RightHandMiddle3
+  - first:
+      1: 100060
+    second: Bone_RightHandThumb1
+  - first:
+      1: 100062
+    second: Bone_RightHandThumb2
+  - first:
+      1: 100064
+    second: Bone_RightHandThumb3
+  - first:
+      1: 100066
+    second: Bone_RightLeg
+  - first:
+      1: 100068
+    second: Bone_RightShoulder
+  - first:
+      1: 100070
+    second: Bone_RightToeBase
+  - first:
+      1: 100072
+    second: Bone_RightUpLeg
+  - first:
+      1: 100074
+    second: Bone_Spine
+  - first:
+      1: 100076
+    second: Bone_Spine1
+  - first:
+      1: 100078
+    second: Bone_Spine2
+  - first:
+      1: 100080
+    second: //RootNode
+  - first:
+      1: 100082
+    second: CHR_Zombie_009
+  - first:
+      4: 400000
+    second: Bone_Head
+  - first:
+      4: 400002
+    second: Bone_Hips
+  - first:
+      4: 400004
+    second: Bone_LeftArm
+  - first:
+      4: 400006
+    second: Bone_LeftFoot
+  - first:
+      4: 400008
+    second: Bone_LeftForeArm
+  - first:
+      4: 400010
+    second: Bone_LeftHand
+  - first:
+      4: 400012
+    second: Bone_LeftHandIndex1
+  - first:
+      4: 400014
+    second: Bone_LeftHandIndex2
+  - first:
+      4: 400016
+    second: Bone_LeftHandIndex3
+  - first:
+      4: 400018
+    second: Bone_LeftHandMiddle1
+  - first:
+      4: 400020
+    second: Bone_LeftHandMiddle2
+  - first:
+      4: 400022
+    second: Bone_LeftHandMiddle3
+  - first:
+      4: 400024
+    second: Bone_LeftHandThumb1
+  - first:
+      4: 400026
+    second: Bone_LeftHandThumb2
+  - first:
+      4: 400028
+    second: Bone_LeftHandThumb3
+  - first:
+      4: 400030
+    second: Bone_LeftLeg
+  - first:
+      4: 400032
+    second: Bone_LeftShoulder
+  - first:
+      4: 400034
+    second: Bone_LeftToeBase
+  - first:
+      4: 400036
+    second: Bone_LeftUpLeg
+  - first:
+      4: 400038
+    second: Bone_Neck
+  - first:
+      4: 400040
+    second: Bone_RightArm
+  - first:
+      4: 400042
+    second: Bone_RightFoot
+  - first:
+      4: 400044
+    second: Bone_RightForeArm
+  - first:
+      4: 400046
+    second: Bone_RightHand
+  - first:
+      4: 400048
+    second: Bone_RightHandIndex1
+  - first:
+      4: 400050
+    second: Bone_RightHandIndex2
+  - first:
+      4: 400052
+    second: Bone_RightHandIndex3
+  - first:
+      4: 400054
+    second: Bone_RightHandMiddle1
+  - first:
+      4: 400056
+    second: Bone_RightHandMiddle2
+  - first:
+      4: 400058
+    second: Bone_RightHandMiddle3
+  - first:
+      4: 400060
+    second: Bone_RightHandThumb1
+  - first:
+      4: 400062
+    second: Bone_RightHandThumb2
+  - first:
+      4: 400064
+    second: Bone_RightHandThumb3
+  - first:
+      4: 400066
+    second: Bone_RightLeg
+  - first:
+      4: 400068
+    second: Bone_RightShoulder
+  - first:
+      4: 400070
+    second: Bone_RightToeBase
+  - first:
+      4: 400072
+    second: Bone_RightUpLeg
+  - first:
+      4: 400074
+    second: Bone_Spine
+  - first:
+      4: 400076
+    second: Bone_Spine1
+  - first:
+      4: 400078
+    second: Bone_Spine2
+  - first:
+      4: 400080
+    second: //RootNode
+  - first:
+      4: 400082
+    second: CHR_Zombie_009
+  - first:
+      21: 2100000
+    second: Material #37
+  - first:
+      43: 4300000
+    second: CHR_Zombie_009
+  - first:
+      95: 9500000
+    second: //RootNode
+  - first:
+      137: 13700000
+    second: CHR_Zombie_009
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: 'Material #37'
+      name: Material #37
     second: {fileID: 2100000, guid: cf97da99ca360214994439980fc0854a, type: 2}
   materials:
-    importMaterials: 1
+    materialImportMode: 1
     materialName: 0
     materialSearch: 1
     materialLocation: 1
@@ -107,9 +283,16 @@ ModelImporter:
     bakeSimulation: 0
     resampleCurves: 1
     optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
     motionNodeName: 
     rigImportErrors: 
-    rigImportWarnings: 
+    rigImportWarnings: "Avatar Rig Configuration mis-match. Bone length in configuration
+      does not match position in animation file:\n\t'Bone_LeftUpLeg' : position error
+      = 10747.148438 mm\n\t'Bone_LeftLeg' : position error = 41648.953125 mm\n\t'Bone_LeftFoot'
+      : position error = 38686.617188 mm\n\t'Bone_LeftToeBase' : position error =
+      16639.871094 mm\n\t'Bone_RightUpLeg' : position error = 10759.258789 mm\n\t'Bone_RightLeg'
+      : position error = 41651.203125 mm\n\t'Bone_RightFoot' : position error = 38683.546875
+      mm\n\t'Bone_RightToeBase' : position error = 17511.578125 mm\n"
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -131,25 +314,36 @@ ModelImporter:
     meshCompression: 0
     addColliders: 0
     useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
     importLights: 1
+    nodeNameCollisionStrategy: 0
+    fileIdsGeneration: 1
     swapUVChannels: 0
     generateSecondaryUV: 0
     useFileUnits: 1
-    optimizeMeshForGPU: 1
     keepQuads: 0
     weldVertices: 1
+    bakeAxisConversion: 0
     preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
     secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 0
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
-    previousCalculatedGlobalScale: 0.01
-    hasPreviousCalculatedGlobalScale: 1
+    strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
@@ -158,10 +352,10 @@ ModelImporter:
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
+  referencedClips: []
   importAnimation: 1
-  copyAvatar: 0
   humanDescription:
-    serializedVersion: 2
+    serializedVersion: 3
     human:
     - boneName: Bone_Hips
       humanName: Hips
@@ -496,7 +690,7 @@ ModelImporter:
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_Hips
       parentName: CHR_Zombie_009(Clone)
-      position: {x: 0.000001285129, y: 0.4875172, z: -0.011791925}
+      position: {x: 0.000001285129, y: 0.48751715, z: -0.011791925}
       rotation: {x: -0.7071067, y: 0.000016521564, z: -0.00001551004, w: 0.7071068}
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_Spine
@@ -506,7 +700,7 @@ ModelImporter:
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_Spine1
       parentName: Bone_Spine
-      position: {x: -0, y: 0.060341034, z: -0.0000000023841857}
+      position: {x: -0, y: 0.06034103, z: -0.0000000023841857}
       rotation: {x: 0.0000050477684, y: -7.060721e-14, z: 5.8975085e-13, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_Spine2
@@ -521,7 +715,7 @@ ModelImporter:
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_Head
       parentName: Bone_Neck
-      position: {x: -8.731149e-13, y: -0.01728943, z: 0.04261116}
+      position: {x: -8.731149e-13, y: -0.017289428, z: 0.04261116}
       rotation: {x: 2.8807354e-26, y: -5.8975047e-13, z: 4.8846682e-14, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_LeftShoulder
@@ -546,17 +740,17 @@ ModelImporter:
       scale: {x: 1.0000002, y: 1.0000001, z: 1.0000001}
     - name: Bone_LeftHandThumb1
       parentName: Bone_LeftHand
-      position: {x: 0.017890368, y: 0.018292999, z: 0.0018630218}
+      position: {x: 0.017890368, y: 0.018292999, z: 0.0018630216}
       rotation: {x: 0.053547908, y: -0.0473143, z: -0.21165471, w: 0.9747289}
       scale: {x: 0.99999994, y: 1, z: 1.0000001}
     - name: Bone_LeftHandThumb2
       parentName: Bone_LeftHandThumb1
-      position: {x: 0.0020026397, y: 0.020425778, z: -0.00000015258789}
+      position: {x: 0.0020026397, y: 0.020425776, z: -0.00000015258789}
       rotation: {x: 0.0000133848835, y: 0.000989925, z: -0.0845521, w: 0.9964186}
       scale: {x: 0.9999998, y: 1.0000001, z: 0.99999994}
     - name: Bone_LeftHandThumb3
       parentName: Bone_LeftHandThumb2
-      position: {x: -0.001504116, y: 0.020982437, z: 0.000000076293944}
+      position: {x: -0.001504116, y: 0.020982435, z: 0.000000076293944}
       rotation: {x: -0.000009660786, y: 0.00019246995, z: 0.02045369, w: 0.9997908}
       scale: {x: 1.0000002, y: 1.0000001, z: 1.0000001}
     - name: Bone_LeftHandMiddle1
@@ -566,7 +760,7 @@ ModelImporter:
       scale: {x: 1, y: 0.9999999, z: 0.99999994}
     - name: Bone_LeftHandMiddle2
       parentName: Bone_LeftHandMiddle1
-      position: {x: -0.000016188622, y: 0.01491394, z: 0.00000015258789}
+      position: {x: -0.000016188622, y: 0.014913939, z: 0.00000015258789}
       rotation: {x: 0.00000018180219, y: -0.000013304632, z: 0.0014207355, w: 0.999999}
       scale: {x: 0.99999976, y: 0.9999998, z: 0.9999999}
     - name: Bone_LeftHandMiddle3
@@ -581,7 +775,7 @@ ModelImporter:
       scale: {x: 1, y: 0.99999976, z: 1.0000001}
     - name: Bone_LeftHandIndex2
       parentName: Bone_LeftHandIndex1
-      position: {x: -0.000026835203, y: 0.017862778, z: 0}
+      position: {x: -0.000026835203, y: 0.017862776, z: 0}
       rotation: {x: -0.000000478685, y: -0.0000028211286, z: -0.00065431115, w: 0.9999998}
       scale: {x: 1.0000002, y: 1, z: 1}
     - name: Bone_LeftHandIndex3
@@ -606,7 +800,7 @@ ModelImporter:
       scale: {x: 1, y: 1, z: 1}
     - name: Bone_RightHand
       parentName: Bone_RightForeArm
-      position: {x: -0.0000000023841857, y: 0.13581672, z: -0.000000076293944}
+      position: {x: -0.0000000023841857, y: 0.13581671, z: -0.000000076293944}
       rotation: {x: 0.0028791325, y: 0.029210484, z: 0.098046556, w: 0.9947489}
       scale: {x: 1.0000001, y: 1, z: 1.0000002}
     - name: Bone_RightHandThumb1
@@ -626,12 +820,12 @@ ModelImporter:
       scale: {x: 1.0000002, y: 1.0000002, z: 1.0000004}
     - name: Bone_RightHandMiddle1
       parentName: Bone_RightHand
-      position: {x: 0.012974395, y: 0.06517582, z: 0}
+      position: {x: 0.0129743945, y: 0.06517582, z: 0}
       rotation: {x: 0.001695221, y: 0.01732165, z: -0.09877677, w: 0.9949574}
       scale: {x: 0.99999994, y: 0.99999994, z: 0.9999998}
     - name: Bone_RightHandMiddle2
       parentName: Bone_RightHandMiddle1
-      position: {x: -0.000024442672, y: 0.01696987, z: 0}
+      position: {x: -0.00002444267, y: 0.01696987, z: 0}
       rotation: {x: 0.00000029134782, y: -0.00003501353, z: 0.0018141263, w: 0.9999984}
       scale: {x: 1.0000001, y: 1.0000002, z: 1}
     - name: Bone_RightHandMiddle3
@@ -646,7 +840,7 @@ ModelImporter:
       scale: {x: 0.99999994, y: 1, z: 0.99999976}
     - name: Bone_RightHandIndex2
       parentName: Bone_RightHandIndex1
-      position: {x: -0.0000075805187, y: 0.019837951, z: -0.000000076293944}
+      position: {x: -0.0000075805183, y: 0.019837951, z: -0.000000076293944}
       rotation: {x: -0.00000047579488, y: -0.0000059922113, z: 0.00017380713, w: 1}
       scale: {x: 1.0000001, y: 0.99999976, z: 1.0000001}
     - name: Bone_RightHandIndex3
@@ -656,17 +850,17 @@ ModelImporter:
       scale: {x: 1.0000001, y: 0.99999994, z: 1.0000001}
     - name: Bone_LeftUpLeg
       parentName: Bone_Hips
-      position: {x: -0.046169575, y: -0.011096494, z: -0.028650016}
+      position: {x: -0.046169575, y: -0.011096494, z: -0.028650014}
       rotation: {x: 0.009960216, y: -0.7055517, z: 0.7085153, w: 0.010184391}
       scale: {x: 1.0000001, y: 0.99999994, z: 1}
     - name: Bone_LeftLeg
       parentName: Bone_LeftUpLeg
-      position: {x: -0, y: 0.21491893, z: 7.4505804e-11}
+      position: {x: -0, y: 0.21491891, z: 7.4505804e-11}
       rotation: {x: -0.035663277, y: -0.0012095986, z: 0.029641127, w: 0.9989235}
       scale: {x: 0.99999976, y: 0.9999998, z: 0.9999997}
     - name: Bone_LeftFoot
       parentName: Bone_LeftLeg
-      position: {x: 0.0000000047683715, y: 0.19963257, z: 0}
+      position: {x: 0.0000000047683715, y: 0.19963256, z: 0}
       rotation: {x: 0.51802945, y: 0.06126733, z: -0.046708897, w: 0.8518862}
       scale: {x: 1.0000001, y: 1.0000001, z: 1.0000001}
     - name: Bone_LeftToeBase
@@ -676,12 +870,12 @@ ModelImporter:
       scale: {x: 1, y: 1.0000002, z: 1}
     - name: Bone_RightUpLeg
       parentName: Bone_Hips
-      position: {x: 0.046169575, y: -0.011404723, z: -0.028650016}
+      position: {x: 0.046169575, y: -0.011404722, z: -0.028650014}
       rotation: {x: -0.009975925, y: -0.70590216, z: 0.70816517, w: -0.010232394}
       scale: {x: 1.0000001, y: 1, z: 1.0000001}
     - name: Bone_RightLeg
       parentName: Bone_RightUpLeg
-      position: {x: -0.0000000047683715, y: 0.21493056, z: 0}
+      position: {x: -0.0000000047683715, y: 0.21493055, z: 0}
       rotation: {x: -0.03541068, y: 0.0012703338, z: -0.029641677, w: 0.99893236}
       scale: {x: 0.9999999, y: 0.9999998, z: 1.0000002}
     - name: Bone_RightFoot
@@ -691,7 +885,7 @@ ModelImporter:
       scale: {x: 1.0000001, y: 1.0000001, z: 0.9999998}
     - name: Bone_RightToeBase
       parentName: Bone_RightFoot
-      position: {x: 0.000000019073486, y: 0.09036409, z: 0}
+      position: {x: 0.000000019073486, y: 0.09036408, z: 0}
       rotation: {x: 0.2545493, y: -0.061251428, z: 0.016157262, w: 0.96498287}
       scale: {x: 1, y: 0.9999999, z: 1}
     armTwist: 0.5
@@ -701,13 +895,19 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
+    globalScale: 1
     rootMotionBoneName: 
     hasTranslationDoF: 0
     hasExtraRoot: 1
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 3
   humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 0
+  importBlendShapeDeformPercent: 0
+  remapMaterialsIfMaterialImportModeIsNone: 1
   additionalBone: 0
   userData: 
   assetBundleName: 
