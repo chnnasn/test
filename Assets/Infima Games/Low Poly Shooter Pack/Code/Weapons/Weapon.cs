@@ -45,6 +45,10 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float projectileImpulse = 400.0f;
 
+        [Tooltip("每个弹丸造成的伤害。")]
+        [SerializeField]
+        private float projectileDamage = 25.0f;
+
         [Tooltip("此武器每分钟可发射的子弹数。决定武器的射速。")]
         [SerializeField]
         private int roundsPerMinutes = 200;
@@ -465,6 +469,12 @@ namespace InfimaGames.LowPolyShooterPack
 
                 //在摄像机位置生成弹丸，方向为摄像机朝向加上散布偏移。
                 GameObject projectile = Instantiate(prefabProjectile, playerCamera.position, Quaternion.Euler(playerCamera.eulerAngles + spreadValue));
+
+                global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
+                if (damageComponent == null)
+                    damageComponent = projectile.AddComponent<global::PlayerProjectileDamage>();
+                damageComponent.Initialize(characterBehaviour.gameObject, projectileDamage);
+
                 //为弹丸添加速度。velocity = 弹丸自身前方 * 弹丸冲量。
                 projectile.GetComponent<Rigidbody>().velocity = projectile.transform.forward * projectileImpulse;
             }
