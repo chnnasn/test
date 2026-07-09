@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 using InfimaGames.LowPolyShooterPack;
 
 [DefaultExecutionOrder(-100)]
@@ -10,12 +11,17 @@ public class GameManager : LazySingleton<GameManager>
 
     private Character _character;
     private bool _flowFieldInitialized;
+    private Text _frameText;
+    private float _fpsTimer;
+    private int _fpsFrameCount;
 
     public Action<float> AttackAction;
 
     private void Start()
     {
+        Application.targetFrameRate = 120;
         InitCharacter();
+        InitFrameText();
 
         if (_flowFieldInitialized && _character != null)
         {
@@ -26,6 +32,12 @@ public class GameManager : LazySingleton<GameManager>
     private void Update()
     {
         SpatialGrid.RebuildAll();
+        UpdateFrameRate();
+
+        if (_character == null)
+        {
+            InitCharacter();
+        }
 
         if (_flowFieldInitialized && _character != null)
         {
@@ -57,6 +69,42 @@ public class GameManager : LazySingleton<GameManager>
 
         if (_character != null)
             InitFlowField();
+    }
+
+    private void InitFrameText()
+    {
+        if (_frameText != null) return;
+
+        GameObject frameObj = GameObject.Find("Frame");
+        if (frameObj != null)
+            _frameText = frameObj.GetComponent<Text>();
+    }
+
+    private void UpdateFrameRate()
+    {
+        if (_frameText == null)
+        {
+            InitFrameText();
+            if (_frameText == null) return;
+        }
+
+        _fpsTimer += Time.unscaledDeltaTime;
+        _fpsFrameCount++;
+
+        if (_fpsTimer < 0.25f) return;
+
+        float fps = _fpsFrameCount / _fpsTimer;
+        _frameText.text = $"FPS: {fps:0}";
+        _fpsTimer = 0f;
+        _fpsFrameCount = 0;
+    }
+
+    public bool IsFlowFieldReady => _flowFieldInitialized;
+
+    public bool WarmupFlowField()
+    {
+        InitFlowField();
+        return _flowFieldInitialized;
     }
 
     public GameObject GetPlayer()
