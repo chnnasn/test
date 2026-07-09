@@ -22,11 +22,24 @@ public class EnemyChaseState : EnemyState
     private const int MAX_FLIPS = 3;           // 窗口内允许的最大方向翻转次数
     private const float STUCK_BIAS = 0.35f;    // 检测到振荡时偏向流场的比例
 
+    // 切向绕行：打破近玩家时 flow 与分离力径向对冲造成的前后振荡
+    private int _orbitSide;
+    private float _orbitLockTimer;
+    private float _lateralAssistTimer;
+    private const float ORBIT_LOCK_DURATION = 0.8f;
+    private const float LATERAL_ASSIST_DURATION = 0.7f;
+    private const float LATERAL_WEIGHT_NEAR = 0.75f;
+    private const float LATERAL_WEIGHT_STUCK = 1.1f;
+    private const float RADIAL_CONFLICT_DOT = -0.55f;
+
     public EnemyChaseState(EnemyStateMachine machine) : base(machine) { }
 
     public override void Enter()
     {
         _updateTimer = 0f;
+        _orbitSide = 0;
+        _orbitLockTimer = 0f;
+        _lateralAssistTimer = 0f;
         // 初始化平滑方向为当前朝向，避免进入时突变
         _smoothedDirection = enemy.transform.forward;
         enemy.SetTarget(GameManager.Instance.GetPlayer()?.transform);
@@ -55,6 +68,11 @@ public class EnemyChaseState : EnemyState
             enemy.SetTarget(target);
         }
 
+        if (_orbitLockTimer > 0f)
+            _orbitLockTimer -= Time.deltaTime;
+        if (_lateralAssistTimer > 0f)
+            _lateralAssistTimer -= Time.deltaTime;
+
         // 计算目标转向方向 = FlowField + 分离 + 避障
         Vector3 steer = ComputeSteering(target.position);
 
@@ -70,7 +88,8 @@ public class EnemyChaseState : EnemyState
 
                 if (_flipCount >= MAX_FLIPS)
                 {
-                    // 检测到被夹住振荡，强制偏向流场方向
+                    // 检测到被夹住振荡，短时间强化切向侧滑，同时保留少量流场前进倾向
+                    _lateralAssistTimer = LATERAL_ASSIST_DURATION;
                     Vector3 flowDir = FlowField.GetFlowDirection(enemy.transform.position);
                     if (flowDir == Vector3.zero)
                     {
@@ -154,20 +173,39 @@ public class EnemyChaseState : EnemyState
         // ── 3. 射线避障：使用实际移动方向替代 transform.forward，确保检测与移动一致 ──
         Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
 
-        // ── 组合：FlowField 负责导航，分离/避障作为安全力优先保留 ──
+        // ── 4. 切向绕行：近玩家拥挤或振荡时，沿玩家周围切线侧滑，打破前后对冲 ──
+        Vector3 lateral = ComputeLateralSlide(pos, targetPos, flowDir, separation, distToTarget);
+
+        // ── 组合：FlowField 负责导航，分离/避障/切向绕行作为安全力优先保留 ──
         float flowWeight = 1.0f;
         float separationWeight = 1.2f;
         float avoidanceWeight = 1.6f;
+        float lateralWeight = 0f;
 
         float crowdDistance = enemy.AttackRange + enemy.SeparationRadius;
+        bool hasSeparation = separation.sqrMagnitude > 0.01f;
+        bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
+        bool lateralAssistActive = _lateralAssistTimer > 0f;
+
         if (distToTarget < crowdDistance)
         {
             float t = Mathf.InverseLerp(enemy.AttackRange, crowdDistance, distToTarget);
             flowWeight = Mathf.Lerp(0.25f, flowWeight, t);
             separationWeight = Mathf.Lerp(2.0f, separationWeight, t);
+
+            if (hasSeparation)
+                lateralWeight = Mathf.Lerp(LATERAL_WEIGHT_NEAR, 0f, t);
         }
 
-        totalForce = flowDir * flowWeight + separation * separationWeight + avoidance * avoidanceWeight;
+        if (radialConflict)
+            lateralWeight = Mathf.Max(lateralWeight, LATERAL_WEIGHT_NEAR);
+        if (lateralAssistActive)
+            lateralWeight = Mathf.Max(lateralWeight, LATERAL_WEIGHT_STUCK);
+
+        totalForce = flowDir * flowWeight
+                   + separation * separationWeight
+                   + avoidance * avoidanceWeight
+                   + lateral * lateralWeight;
         totalForce.y = 0;
 
         if (totalForce.sqrMagnitude < 0.0001f) return Vector3.zero;
@@ -175,7 +213,9 @@ public class EnemyChaseState : EnemyState
         Vector3 result = totalForce.normalized;
 
         // 只有没有明显安全力时才把方向拉回流场，避免分离/避障被 flow 抵消
-        bool hasSafetyForce = separation.sqrMagnitude > 0.01f || avoidance.sqrMagnitude > 0.01f;
+        bool hasSafetyForce = separation.sqrMagnitude > 0.01f
+                           || avoidance.sqrMagnitude > 0.01f
+                           || lateral.sqrMagnitude > 0.01f;
         if (!hasSafetyForce)
         {
             float finalAlignment = Vector3.Dot(result, flowDir);
@@ -194,6 +234,63 @@ public class EnemyChaseState : EnemyState
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 切向侧滑：在玩家附近拥挤或检测到振荡时，沿玩家周围切线方向绕开阻挡。
+    /// </summary>
+    private Vector3 ComputeLateralSlide(Vector3 pos, Vector3 targetPos, Vector3 flowDir, Vector3 separation, float distToTarget)
+    {
+        bool hasSeparation = separation.sqrMagnitude > 0.01f;
+        bool nearTarget = distToTarget < enemy.AttackRange + enemy.SeparationRadius;
+        bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
+        bool lateralAssistActive = _lateralAssistTimer > 0f;
+
+        if ((!nearTarget || !hasSeparation) && !radialConflict && !lateralAssistActive)
+            return Vector3.zero;
+
+        Vector3 toTarget = targetPos - pos;
+        toTarget.y = 0f;
+        if (toTarget.sqrMagnitude < 0.0001f) return Vector3.zero;
+
+        Vector3 radialDir = toTarget.normalized;
+        Vector3 rightTangent = Vector3.Cross(Vector3.up, radialDir).normalized;
+        if (rightTangent.sqrMagnitude < 0.001f) return Vector3.zero;
+
+        if (_orbitSide == 0 || _orbitLockTimer <= 0f)
+        {
+            _orbitSide = ChooseOrbitSide(pos, rightTangent, separation);
+            _orbitLockTimer = ORBIT_LOCK_DURATION;
+        }
+
+        return rightTangent * _orbitSide;
+    }
+
+    /// <summary>
+    /// 选择稳定绕行方向：先避开侧向障碍，再顺着分离切向，最后用实例 ID 分流。
+    /// </summary>
+    private int ChooseOrbitSide(Vector3 pos, Vector3 rightTangent, Vector3 separation)
+    {
+        float checkDist = Mathf.Max(enemy.ObstacleCheckDistance, enemy.SeparationRadius * 0.6f);
+        LayerMask mask = enemy.ObstacleLayerMask;
+
+        if (checkDist > 0f && mask != 0)
+        {
+            bool rightBlocked = Physics.Raycast(pos, rightTangent, checkDist, mask);
+            bool leftBlocked = Physics.Raycast(pos, -rightTangent, checkDist, mask);
+
+            if (rightBlocked && !leftBlocked) return -1;
+            if (leftBlocked && !rightBlocked) return 1;
+        }
+
+        if (separation.sqrMagnitude > 0.01f)
+        {
+            float sepTangent = Vector3.Dot(separation.normalized, rightTangent);
+            if (Mathf.Abs(sepTangent) > 0.2f)
+                return sepTangent >= 0f ? 1 : -1;
+        }
+
+        return (enemy.GetInstanceID() & 1) == 0 ? 1 : -1;
     }
 
     /// <summary>
