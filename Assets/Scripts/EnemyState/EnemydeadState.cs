@@ -10,7 +10,9 @@ public class EnemydeadState : EnemyState
 
     public override void Enter()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入死亡状态");
+#endif
 
         // 停止移动
         enemy.StopMoving();

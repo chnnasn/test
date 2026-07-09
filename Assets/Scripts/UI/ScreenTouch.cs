@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -45,6 +46,13 @@ public class ScreenTouch : MonoBehaviour
 	/// 是否已经记录上一帧触摸位置。
 	/// </summary>
 	private bool hasLastLookPosition;
+
+	/// <summary>
+	/// UI 射线检测缓存，避免触摸检测时每次 new PointerEventData/List。
+	/// </summary>
+	private EventSystem cachedEventSystem;
+	private PointerEventData cachedPointerEventData;
+	private readonly List<RaycastResult> uiRaycastResults = new List<RaycastResult>(8);
 
 	#endregion
 
@@ -151,16 +159,20 @@ public class ScreenTouch : MonoBehaviour
 	/// </summary>
 	private bool IsPointerOverUI(Vector2 screenPos)
 	{
-		if (EventSystem.current == null) return false;
+		EventSystem eventSystem = EventSystem.current;
+		if (eventSystem == null) return false;
 
-		var eventData = new PointerEventData(EventSystem.current)
+		if (cachedEventSystem != eventSystem || cachedPointerEventData == null)
 		{
-			position = screenPos
-		};
+			cachedEventSystem = eventSystem;
+			cachedPointerEventData = new PointerEventData(eventSystem);
+		}
 
-		var results = new System.Collections.Generic.List<RaycastResult>();
-		EventSystem.current.RaycastAll(eventData, results);
-		return results.Count > 0;
+		cachedPointerEventData.position = screenPos;
+		uiRaycastResults.Clear();
+
+		eventSystem.RaycastAll(cachedPointerEventData, uiRaycastResults);
+		return uiRaycastResults.Count > 0;
 	}
 
 	#endregion

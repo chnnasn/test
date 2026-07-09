@@ -2,22 +2,31 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 空间哈希分桶。每帧调用 RebuildAll() 重建网格，然后通过 QueryNeighbors 查询。
+/// 空间哈希分桶。通过 RebuildAll() 增量同步敌人所在格子，然后通过 QueryNeighbors 查询。
 /// 无论场景有多少敌人都是 O(1) 邻居查询。
 /// </summary>
 public static class SpatialGrid
 {
     private const float CELL_SIZE = 4f;
     private static readonly Dictionary<int, List<Enemy>> _cells = new Dictionary<int, List<Enemy>>(128);
-    private static readonly HashSet<Enemy> _allEnemies = new HashSet<Enemy>(256);
-    private static readonly HashSet<int> _activeKeys = new HashSet<int>(64);
+    private static readonly List<Enemy> _allEnemies = new List<Enemy>(256);
+    private static readonly Dictionary<Enemy, int> _enemyIndices = new Dictionary<Enemy, int>(256);
+    private static readonly Dictionary<Enemy, int> _enemyCells = new Dictionary<Enemy, int>(256);
 
     /// <summary>
     /// 注册敌人（OnEnable 调用）
     /// </summary>
     public static void Register(Enemy enemy)
     {
+        if (enemy == null || _enemyIndices.ContainsKey(enemy)) return;
+
+        int index = _allEnemies.Count;
         _allEnemies.Add(enemy);
+        _enemyIndices[enemy] = index;
+
+        int key = Hash(enemy.transform.position);
+        _enemyCells[enemy] = key;
+        AddToCell(key, enemy);
     }
 
     /// <summary>
@@ -25,34 +34,38 @@ public static class SpatialGrid
     /// </summary>
     public static void Unregister(Enemy enemy)
     {
-        _allEnemies.Remove(enemy);
+        if (enemy == null || !_enemyIndices.TryGetValue(enemy, out int index)) return;
+        RemoveAt(index);
     }
 
     /// <summary>
-    /// 每帧开始时调用：清空全部格子，重新哈希所有敌人
+    /// 每帧开始时调用：增量同步敌人所在格子，仅在跨格时移动列表。
     /// </summary>
     public static void RebuildAll()
     {
-        // 清空所有活跃格子
-        foreach (int key in _activeKeys)
+        for (int i = 0; i < _allEnemies.Count; i++)
         {
-            _cells[key].Clear();
-        }
-        _activeKeys.Clear();
-
-        // 重新哈希每个敌人到对应格子
-        foreach (Enemy enemy in _allEnemies)
-        {
-            if (enemy == null || !enemy.isActiveAndEnabled) continue;
-
-            int key = Hash(enemy.transform.position);
-            if (!_cells.TryGetValue(key, out var list))
+            Enemy enemy = _allEnemies[i];
+            if (enemy == null || !enemy.isActiveAndEnabled)
             {
-                list = new List<Enemy>(8);
-                _cells[key] = list;
-                _activeKeys.Add(key);
+                RemoveAt(i);
+                i--;
+                continue;
             }
-            list.Add(enemy);
+
+            int newKey = Hash(enemy.transform.position);
+            if (!_enemyCells.TryGetValue(enemy, out int oldKey))
+            {
+                _enemyCells[enemy] = newKey;
+                AddToCell(newKey, enemy);
+                continue;
+            }
+
+            if (oldKey == newKey) continue;
+
+            RemoveFromCell(oldKey, enemy);
+            AddToCell(newKey, enemy);
+            _enemyCells[enemy] = newKey;
         }
     }
 
@@ -90,6 +103,49 @@ public static class SpatialGrid
         }
 
         return outList.Count;
+    }
+
+    private static void AddToCell(int key, Enemy enemy)
+    {
+        if (!_cells.TryGetValue(key, out var list))
+        {
+            list = new List<Enemy>(8);
+            _cells[key] = list;
+        }
+
+        list.Add(enemy);
+    }
+
+    private static void RemoveFromCell(int key, Enemy enemy)
+    {
+        if (!_cells.TryGetValue(key, out var list)) return;
+        list.Remove(enemy);
+    }
+
+    private static void RemoveAt(int index)
+    {
+        Enemy enemy = _allEnemies[index];
+
+        if (enemy != null && _enemyCells.TryGetValue(enemy, out int key))
+        {
+            RemoveFromCell(key, enemy);
+            _enemyCells.Remove(enemy);
+        }
+
+        int lastIndex = _allEnemies.Count - 1;
+        Enemy lastEnemy = _allEnemies[lastIndex];
+
+        if (index != lastIndex)
+        {
+            _allEnemies[index] = lastEnemy;
+            if (lastEnemy != null)
+                _enemyIndices[lastEnemy] = index;
+        }
+
+        _allEnemies.RemoveAt(lastIndex);
+
+        if (enemy != null)
+            _enemyIndices.Remove(enemy);
     }
 
     private static int Hash(Vector3 pos)

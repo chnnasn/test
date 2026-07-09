@@ -78,7 +78,9 @@ public static class FlowField
         _hasTarget = false;
         _lastTargetPos = Vector3.zero;
         _initialized = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"[FlowField] 初始化完成: {_width}x{_height} 格 ({_width * _height} 个), 覆盖 {worldMin} ~ {worldMax}");
+#endif
     }
 
     /// <summary>

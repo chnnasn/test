@@ -13,7 +13,9 @@ public class EnemyAttackState : EnemyState
     public override void Enter()
     {
         _attackTimer = 0f;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入攻击状态");
+#endif
 
         // 停止移动，专注于攻击
         enemy.StopMoving();
@@ -46,7 +48,9 @@ public class EnemyAttackState : EnemyState
             if (!enemy.IsTargetInAttackRange())
             {
                 // 目标离开攻击范围 → 回到追击
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.Log($"{enemy.gameObject.name} 目标离开攻击范围，切换追击");
+#endif
                 stateMachine.ChangeState(stateMachine.chaseState);
             }
             // 否则目标仍在范围内 → 继续留在攻击状态，下一次攻击计时器继续
@@ -55,7 +59,9 @@ public class EnemyAttackState : EnemyState
 
     public override void Exit()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 退出攻击状态");
+#endif
     }
 
     /// <summary>
@@ -63,7 +69,9 @@ public class EnemyAttackState : EnemyState
     /// </summary>
     private void PerformAttack()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 发起攻击！");
+#endif
 
         var player = GameManager.Instance.GetPlayer();
         if (player != null)
