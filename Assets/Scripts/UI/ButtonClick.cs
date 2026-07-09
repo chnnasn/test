@@ -57,6 +57,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
             clickSequence.Append(buttonImage.DOColor(originalColor, pressDuration));
             
             clickSequence.OnComplete(() => {
+                Debug.Log("Click Complete");
                 TriggerAction();
             });
         }
@@ -67,9 +68,10 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         isPressed = true;
         buttonImage.DOColor(pressedColor, pressDuration);
         
-        // 长按开火：标记 holdingButtonFire，后续由 Character.Update 按武器射速自动连发
+        //长按
         if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
         {
+            Debug.Log("Longp Press");
             EventManager.Instance.SetExternalFire(true);
         }
     }

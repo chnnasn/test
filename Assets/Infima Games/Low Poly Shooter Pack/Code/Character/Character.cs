@@ -358,14 +358,13 @@ namespace InfimaGames.LowPolyShooterPack
 			layerActions = characterAnimator.GetLayerIndex("Layer Actions");
 			//缓存 Overlay 动画层索引
 			layerOverlay = characterAnimator.GetLayerIndex("Layer Overlay");
-
-			EventManager eventManager = EventManager.Instance;
-			eventManager.Fire += FireWeapon;
-			eventManager.Aim += SetAimingExternal;
-			eventManager.Reload += TryReload;
-			eventManager.ExternalFire += SetExternalFire;
-			eventManager.MoveInput += SetExternalMoveInput;
-			eventManager.ExternalRun += SetExternalRunning;
+			
+			EventManager.Instance.Fire += FireWeapon;
+			EventManager.Instance.Aim += SetAimingExternal;
+			EventManager.Instance.Reload += TryReload;
+			EventManager.Instance.ExternalFire += SetExternalFire;
+			EventManager.Instance.MoveInput += SetExternalMoveInput;
+			EventManager.Instance.ExternalRun += SetExternalRunning;
 		}
 
 		private void OnDisable()
