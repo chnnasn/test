@@ -359,22 +359,25 @@ namespace InfimaGames.LowPolyShooterPack
 			//缓存 Overlay 动画层索引
 			layerOverlay = characterAnimator.GetLayerIndex("Layer Overlay");
 
-			EventManager.Instance.Fire += FireWeapon;
-			EventManager.Instance.Aim += SetAimingExternal;
-			EventManager.Instance.Reload += TryReload;
-			EventManager.Instance.ExternalFire += SetExternalFire;
-			EventManager.Instance.MoveInput += SetExternalMoveInput;
-			EventManager.Instance.ExternalRun += SetExternalRunning;
+			EventManager eventManager = EventManager.Instance;
+			eventManager.Fire += FireWeapon;
+			eventManager.Aim += SetAimingExternal;
+			eventManager.Reload += TryReload;
+			eventManager.ExternalFire += SetExternalFire;
+			eventManager.MoveInput += SetExternalMoveInput;
+			eventManager.ExternalRun += SetExternalRunning;
 		}
 
 		private void OnDisable()
 		{
-			EventManager.Instance.Fire -= FireWeapon;
-			EventManager.Instance.Aim -= SetAimingExternal;
-			EventManager.Instance.Reload -= TryReload;
-			EventManager.Instance.ExternalFire -= SetExternalFire;
-			EventManager.Instance.MoveInput -= SetExternalMoveInput;
-			EventManager.Instance.ExternalRun -= SetExternalRunning;
+			if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+
+			eventManager.Fire -= FireWeapon;
+			eventManager.Aim -= SetAimingExternal;
+			eventManager.Reload -= TryReload;
+			eventManager.ExternalFire -= SetExternalFire;
+			eventManager.MoveInput -= SetExternalMoveInput;
+			eventManager.ExternalRun -= SetExternalRunning;
 		}
 
 		/// <summary>

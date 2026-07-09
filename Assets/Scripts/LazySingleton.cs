@@ -11,21 +11,25 @@ public abstract class LazySingleton<T> : MonoBehaviour where T : LazySingleton<T
         {
             if (!Application.isPlaying)
                 return _instance;
-            if (_isShuttingDown)
-                return null;
-            if (_instance == null)
+            if (_instance != null)
+                return _instance;
+            lock (_lock)
             {
-                lock (_lock)
+                if (_instance != null)
+                    return _instance;
+
+                _instance = FindObjectOfType<T>() as T;
+                if (_instance != null)
                 {
-                    if (_isShuttingDown)
-                        return null;
-                    _instance = FindObjectOfType<T>() as T;
-                    if (_instance == null)
-                    {
-                        GameObject go = new GameObject(typeof(T).Name);
-                        _instance = go.AddComponent<T>();
-                    }
+                    _isShuttingDown = false;
+                    return _instance;
                 }
+
+                if (_isShuttingDown)
+                    return null;
+
+                GameObject go = new GameObject(typeof(T).Name);
+                _instance = go.AddComponent<T>();
             }
             return _instance;
         }
@@ -37,11 +41,14 @@ public abstract class LazySingleton<T> : MonoBehaviour where T : LazySingleton<T
             return true;
         if (!Application.isPlaying)
             return false;
-        if (_isShuttingDown)
-            return false;
         instance = FindObjectOfType<T>() as T;
         _instance = instance;
-        return instance != null;
+        if (instance != null)
+        {
+            _isShuttingDown = false;
+            return true;
+        }
+        return false;
     }
     protected  virtual void Awake()
     {

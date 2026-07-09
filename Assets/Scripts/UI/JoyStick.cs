@@ -39,6 +39,9 @@ public class JoyStick : ScrollRect
 
     void Update()
     {
+        // ScrollRect 在编辑器非运行状态也可能刷新，此时不要访问运行时单例
+        if (!Application.isPlaying) return;
+
         // 松开后平滑回中
         if (!activePointerId.HasValue)
             diraction = Vector2.Lerp(diraction, Vector2.zero, _returnSpeed * Time.deltaTime);
@@ -46,10 +49,21 @@ public class JoyStick : ScrollRect
         Vector2 input = Vector2.ClampMagnitude(diraction / Radius, 1f);
         Direction = input.normalized;
 
-        // 摇杆推到阈值以上 + 向前 → 自动奔跑；松开则停止
-        EventManager.Instance.SetExternalRunning(input.magnitude >= _runThreshold && input.y > 0f);
+        bool isRunning = input.magnitude >= _runThreshold && input.y > 0f;
 
-        EventManager.Instance.SetExternalMoveInput(input);
+        EventManager eventManager = EventManager.Instance;
+        if (eventManager != null)
+        {
+            // 摇杆推到阈值以上 + 向前 → 自动奔跑；松开则停止
+            eventManager.SetExternalRunning(isRunning);
+            eventManager.SetExternalMoveInput(input);
+        }
+
+        Character character = GameManager.Instance.GetCharacter();
+        if (character == null) return;
+
+        character.SetExternalRunning(isRunning);
+        character.SetExternalMoveInput(input);
     }
 
     public override void OnBeginDrag(PointerEventData eventData)
