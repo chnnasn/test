@@ -33,7 +33,9 @@ public class Enemy : MonoBehaviour
     private CharacterController _characterController;
 
     public EnemyStateMachine stateMachine { get; private set; }
-
+    
+    private Animator _animator;
+    
     // 公开属性
     public Vector3 Velocity { get; set; }
     public float MoveSpeed => _moveSpeed;
@@ -79,9 +81,39 @@ public class Enemy : MonoBehaviour
 
     private void Start()
     {
+        _animator =  GetComponent<Animator>();
         stateMachine.ChangeState(stateMachine.BirthState);
     }
 
+    #region 相关动画进入或退出触发的方法
+
+    public void OnAnimationEnterEvent(AnimationState playerState)
+    {
+        switch (playerState)
+        {
+            case AnimationState.dead:
+                stateMachine.OnAnimationTranslateEvent(stateMachine.deadState);
+                break;
+
+        }
+            
+    }
+    public void OnAnimationExitEvent(AnimationState playerState)
+    {
+        switch (playerState)
+        {
+            case AnimationState.Birth:
+            case AnimationState.GetHit:
+                stateMachine.OnAnimationTranslateEvent(stateMachine.chaseState);
+                break;
+            case AnimationState.dead:
+                stateMachine.OnAnimationTranslateEvent(stateMachine.deadState);
+                break;
+
+        }
+    }
+    #endregion
+    
     private void Update()
     {
         stateMachine.Update();
@@ -177,6 +209,7 @@ public class Enemy : MonoBehaviour
     /// </summary>
     private void Die()
     {
-        stateMachine.ChangeState(stateMachine.deadState);
+        //播放动画通过animator来切换状态
+        
     }
 }

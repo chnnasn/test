@@ -24,7 +24,7 @@ public class EnemydeadState : EnemyState
             collider.enabled = false;
         }
 
-        // 死后一段时间销毁
+        // 死后一段时间销毁，计算dead死亡动画时间再加1.5f
         enemy.StartCoroutine(DestroyAfterDelay(1.5f));
     }
 
