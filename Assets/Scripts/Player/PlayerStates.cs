@@ -3,6 +3,8 @@ using UnityEngine;
 public class PlayerStates : MonoBehaviour, IDamage
 {
     [SerializeField] private float _maxHP = 100f;
+    [SerializeField] private int _level = 1;
+    [SerializeField] private PlayerLevelExperienceAsset _levelExperienceAsset;
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _maxHP;
@@ -31,6 +33,21 @@ public class PlayerStates : MonoBehaviour, IDamage
     private void AddExperience(float experience)
     {
         Experience.Value += experience;
+        CheckExper();
+    }
+
+    public void CheckExper()
+    {
+        if (_levelExperienceAsset.LevelExperienceRequirements[_level-1] > Experience.Value)
+        {
+            return;
+        }
+        else
+        {
+            Experience.Value -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
+            _level++;
+            //UImanager显示与抽取BUff池
+        }
     }
 
     public void TakeDamage(float damage)

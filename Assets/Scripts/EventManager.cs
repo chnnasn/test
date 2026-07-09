@@ -23,6 +23,7 @@ public class EventManager : LazySingleton<EventManager>
     private PlayerStates _playerStates;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _expBindings = new Dictionary<Delegate, Delegate>();
+    
 
     private PlayerStates PlayerStates
     {
