@@ -5,22 +5,21 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 全局流场路径。整个场景只计算一次，所有敌人共享。
+/// 全局流场路径。运行时读取编辑器 Bake 的静态障碍数据，所有敌人共享。
 /// Scene 视图中实时显示：网格边界、障碍物(红)、流向箭头(绿→蓝)、目标格(黄)。
 /// </summary>
 public static class FlowField
 {
-    private const float CELL_SIZE = 1f;
+    private const float DEFAULT_CELL_SIZE = 1f;
     private const float REBUILD_THRESHOLD = 1f;
 
     private static int _width, _height;
+    private static float _cellSize = DEFAULT_CELL_SIZE;
     private static Vector2 _origin;
 
+    private static bool[] _blockedCells;
     private static int[] _costs;
     private static Vector2[] _flowDirections;
-
-    private static LayerMask _obstacleMask;
-    private static Vector2 _checkHalfExtents;
 
     private static Vector3 _lastTargetPos;
     private static bool _hasTarget;
@@ -41,44 +40,83 @@ public static class FlowField
     public static bool IsInitialized => _initialized;
     public static int Width => _width;
     public static int Height => _height;
-    public static float CellSize => CELL_SIZE;
+    public static float CellSize => _cellSize;
     public static Vector2 Origin => _origin;
 
     /// <summary>
-    /// 初始化流场网格
+    /// 从编辑器 Bake 的资产初始化流场网格。
     /// </summary>
-    public static void Initialize(Vector3 worldMin, Vector3 worldMax, LayerMask obstacleMask)
+    public static void Initialize(FlowFieldAsset asset)
     {
-        _obstacleMask = obstacleMask;
-        _checkHalfExtents = new Vector2(CELL_SIZE * 0.45f, CELL_SIZE * 0.45f);
+        if (asset == null)
+        {
+            Debug.LogError("[FlowField] 初始化失败：FlowFieldAsset 为空");
+            _initialized = false;
+            return;
+        }
 
-        _origin = new Vector2(worldMin.x, worldMin.z);
-        _width = Mathf.CeilToInt((worldMax.x - worldMin.x) / CELL_SIZE);
-        _height = Mathf.CeilToInt((worldMax.z - worldMin.z) / CELL_SIZE);
+        if (!asset.IsValid)
+        {
+            Debug.LogError("[FlowField] 初始化失败：FlowFieldAsset 无效，请先在编辑器中 Bake");
+            _initialized = false;
+            return;
+        }
+
+        _cellSize = asset.CellSize;
+        _origin = new Vector2(asset.WorldMin.x, asset.WorldMin.z);
+        _width = asset.Width;
+        _height = asset.Height;
 
         int total = _width * _height;
+        _blockedCells = new bool[total];
+        asset.BlockedCells.CopyTo(_blockedCells, 0);
+        _costs = new int[total];
+        _flowDirections = new Vector2[total];
+        ResetCosts();
+
+        _hasTarget = false;
+        _lastTargetPos = Vector3.zero;
+        _initialized = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[FlowField] 从资产初始化完成: {_width}x{_height} 格 ({total} 个), 格大小={_cellSize}m");
+#endif
+    }
+
+    /// <summary>
+    /// 运行时扫描初始化，仅作为旧流程调试备用。正式运行请使用 Initialize(FlowFieldAsset)。
+    /// </summary>
+    [System.Obsolete("Use Initialize(FlowFieldAsset) with an editor-baked asset.")]
+    public static void Initialize(Vector3 worldMin, Vector3 worldMax, LayerMask obstacleMask)
+    {
+        _cellSize = DEFAULT_CELL_SIZE;
+        _origin = new Vector2(worldMin.x, worldMin.z);
+        _width = Mathf.CeilToInt((worldMax.x - worldMin.x) / _cellSize);
+        _height = Mathf.CeilToInt((worldMax.z - worldMin.z) / _cellSize);
+
+        int total = _width * _height;
+        _blockedCells = new bool[total];
         _costs = new int[total];
         _flowDirections = new Vector2[total];
 
-        // 标记障碍物格子
+        Vector2 checkHalfExtents = new Vector2(_cellSize * 0.45f, _cellSize * 0.45f);
         for (int y = 0; y < _height; y++)
         {
             for (int x = 0; x < _width; x++)
             {
                 int idx = y * _width + x;
                 Vector3 cellCenter = CellToWorld(x, y);
-                bool blocked = Physics.CheckBox(cellCenter,
-                    new Vector3(_checkHalfExtents.x, 1f, _checkHalfExtents.y),
-                    Quaternion.identity, _obstacleMask);
-                _costs[idx] = blocked ? -2 : -1;
+                _blockedCells[idx] = Physics.CheckBox(cellCenter,
+                    new Vector3(checkHalfExtents.x, 1f, checkHalfExtents.y),
+                    Quaternion.identity, obstacleMask);
             }
         }
 
+        ResetCosts();
         _hasTarget = false;
         _lastTargetPos = Vector3.zero;
         _initialized = true;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[FlowField] 初始化完成: {_width}x{_height} 格 ({_width * _height} 个), 覆盖 {worldMin} ~ {worldMax}");
+        Debug.LogWarning($"[FlowField] 使用运行时扫描初始化: {_width}x{_height} 格 ({total} 个), 覆盖 {worldMin} ~ {worldMax}");
 #endif
     }
 
@@ -98,17 +136,23 @@ public static class FlowField
         }
     }
 
-    private static void Rebuild(Vector3 targetPos)
+    private static void ResetCosts()
     {
         int total = _width * _height;
         for (int i = 0; i < total; i++)
         {
-            if (_costs[i] != -2) _costs[i] = -1;
+            _costs[i] = _blockedCells[i] ? -2 : -1;
+            _flowDirections[i] = Vector2.zero;
         }
+    }
+
+    private static void Rebuild(Vector3 targetPos)
+    {
+        ResetCosts();
 
         Vector2Int targetCell = WorldToCell(targetPos);
         int targetIdx = CellToIndex(targetCell);
-        if (targetIdx < 0 || targetIdx >= total || _costs[targetIdx] == -2)
+        if (targetIdx < 0 || targetIdx >= _costs.Length || _costs[targetIdx] == -2)
         {
             targetCell = FindNearestWalkable(targetCell);
             targetIdx = CellToIndex(targetCell);
@@ -205,8 +249,8 @@ public static class FlowField
 
     public static Vector2Int WorldToCell(Vector3 worldPos)
     {
-        int x = Mathf.FloorToInt((worldPos.x - _origin.x) / CELL_SIZE);
-        int y = Mathf.FloorToInt((worldPos.z - _origin.y) / CELL_SIZE);
+        int x = Mathf.FloorToInt((worldPos.x - _origin.x) / _cellSize);
+        int y = Mathf.FloorToInt((worldPos.z - _origin.y) / _cellSize);
         return new Vector2Int(x, y);
     }
 
@@ -220,8 +264,8 @@ public static class FlowField
 
     public static Vector3 CellToWorld(int x, int y)
     {
-        float wx = _origin.x + (x + 0.5f) * CELL_SIZE;
-        float wz = _origin.y + (y + 0.5f) * CELL_SIZE;
+        float wx = _origin.x + (x + 0.5f) * _cellSize;
+        float wz = _origin.y + (y + 0.5f) * _cellSize;
         return new Vector3(wx, 0, wz);
     }
 
@@ -239,13 +283,36 @@ public static class FlowField
 
     #if UNITY_EDITOR
     /// <summary>
+    /// 编辑器模式预览 Bake 资产中的静态障碍格。
+    /// </summary>
+    public static void DrawAssetPreview(FlowFieldAsset asset)
+    {
+        if (asset == null || !asset.IsValid) return;
+
+        DrawGridOutline(asset.WorldMin, asset.WorldMax, asset.CellSize, asset.Width, asset.Height);
+
+        float y = 0.05f;
+        for (int cy = 0; cy < asset.Height; cy++)
+        {
+            for (int cx = 0; cx < asset.Width; cx++)
+            {
+                if (!asset.IsBlocked(cx, cy)) continue;
+
+                Vector3 center = asset.CellToWorld(cx, cy);
+                center.y = y;
+                Handles.color = new Color(1, 0, 0, 0.5f);
+                Handles.CubeHandleCap(0, center, Quaternion.identity, asset.CellSize * 0.85f, EventType.Repaint);
+            }
+        }
+    }
+
+    /// <summary>
     /// Scene 视图 Gizmo：网格 + 障碍 + 方向 + 目标格
     /// </summary>
     public static void DrawGizmos(Vector3 targetPos)
     {
         if (!_initialized || _flowDirections == null) return;
 
-        float halfCell = CELL_SIZE * 0.45f;
         float y = 0.05f;
 
         for (int cy = 0; cy < _height; cy++)
@@ -262,7 +329,7 @@ public static class FlowField
                 if (_costs[idx] == -2)
                 {
                     Handles.color = new Color(1, 0, 0, 0.5f);
-                    Handles.CubeHandleCap(0, center, Quaternion.identity, CELL_SIZE * 0.85f, EventType.Repaint);
+                    Handles.CubeHandleCap(0, center, Quaternion.identity, _cellSize * 0.85f, EventType.Repaint);
                     continue;
                 }
 
@@ -270,13 +337,13 @@ public static class FlowField
                 if (_costs[idx] == 0)
                 {
                     Handles.color = Color.yellow;
-                    Handles.CubeHandleCap(0, center, Quaternion.identity, CELL_SIZE * 0.5f, EventType.Repaint);
+                    Handles.CubeHandleCap(0, center, Quaternion.identity, _cellSize * 0.5f, EventType.Repaint);
 
                     // 画十字标记
                     Handles.color = Color.white;
-                    Vector3 s = new Vector3(CELL_SIZE * 0.3f, 0, 0);
+                    Vector3 s = new Vector3(_cellSize * 0.3f, 0, 0);
                     Handles.DrawLine(center - s, center + s);
-                    s = new Vector3(0, 0, CELL_SIZE * 0.3f);
+                    s = new Vector3(0, 0, _cellSize * 0.3f);
                     Handles.DrawLine(center - s, center + s);
                     continue;
                 }
@@ -285,7 +352,7 @@ public static class FlowField
                 if (_costs[idx] == -1)
                 {
                     Handles.color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
-                    Handles.CubeHandleCap(0, center, Quaternion.identity, CELL_SIZE * 0.3f, EventType.Repaint);
+                    Handles.CubeHandleCap(0, center, Quaternion.identity, _cellSize * 0.3f, EventType.Repaint);
                     continue;
                 }
 
@@ -296,10 +363,10 @@ public static class FlowField
                 Vector3 dir = new Vector3(_flowDirections[idx].x, 0, _flowDirections[idx].y);
                 if (dir != Vector3.zero)
                 {
-                    Vector3 end = center + dir * CELL_SIZE * 0.55f;
+                    Vector3 end = center + dir * _cellSize * 0.55f;
                     Handles.DrawLine(center + dir * 0.15f, end, 2f);
                     // 箭头尖
-                    DrawArrowHead(end, dir, CELL_SIZE * 0.15f);
+                    DrawArrowHead(end, dir, _cellSize * 0.15f);
                 }
             }
         }
@@ -317,6 +384,11 @@ public static class FlowField
     /// </summary>
     public static void DrawGridOutline(Vector3 worldMin, Vector3 worldMax)
     {
+        DrawGridOutline(worldMin, worldMax, _cellSize, _width, _height);
+    }
+
+    public static void DrawGridOutline(Vector3 worldMin, Vector3 worldMax, float cellSize, int width, int height)
+    {
         Vector3 min = worldMin;
         Vector3 max = worldMax;
         min.y = 0;
@@ -330,32 +402,30 @@ public static class FlowField
         Handles.DrawLine(max, new Vector3(min.x, 0, max.z));
         Handles.DrawLine(new Vector3(min.x, 0, max.z), min);
 
-        // 网格线（每隔 10 格画一根粗线，以示分区）
-        if (!_initialized) return;
+        if (width <= 0 || height <= 0 || cellSize <= 0f) return;
 
-        float cell = CELL_SIZE;
         Handles.color = new Color(0.5f, 0.5f, 0.5f, 0.15f);
 
-        for (int x = 1; x < _width; x++)
+        for (int x = 1; x < width; x++)
         {
             float thick = (x % 10 == 0) ? 0.5f : 0.1f;
             Handles.color = (x % 10 == 0)
                 ? new Color(0.6f, 0.6f, 0.6f, 0.4f)
                 : new Color(0.4f, 0.4f, 0.4f, 0.12f);
 
-            Vector3 a = new Vector3(_origin.x + x * cell, 0, _origin.y);
-            Vector3 b = new Vector3(_origin.x + x * cell, 0, _origin.y + _height * cell);
+            Vector3 a = new Vector3(worldMin.x + x * cellSize, 0, worldMin.z);
+            Vector3 b = new Vector3(worldMin.x + x * cellSize, 0, worldMin.z + height * cellSize);
             Handles.DrawLine(a, b, thick);
         }
-        for (int y = 1; y < _height; y++)
+        for (int y = 1; y < height; y++)
         {
             float thick = (y % 10 == 0) ? 0.5f : 0.1f;
             Handles.color = (y % 10 == 0)
                 ? new Color(0.6f, 0.6f, 0.6f, 0.4f)
                 : new Color(0.4f, 0.4f, 0.4f, 0.12f);
 
-            Vector3 a = new Vector3(_origin.x, 0, _origin.y + y * cell);
-            Vector3 b = new Vector3(_origin.x + _width * cell, 0, _origin.y + y * cell);
+            Vector3 a = new Vector3(worldMin.x, 0, worldMin.z + y * cellSize);
+            Vector3 b = new Vector3(worldMin.x + width * cellSize, 0, worldMin.z + y * cellSize);
             Handles.DrawLine(a, b, thick);
         }
     }
@@ -372,7 +442,6 @@ public static class FlowField
             normal = { textColor = Color.white }
         };
 
-        Vector3 pos = worldMin + new Vector3(1, 0, 1);
         Handles.BeginGUI();
         float x = 10, y = 10;
 
@@ -388,7 +457,7 @@ public static class FlowField
             }
 
             GUI.color = Color.white;
-            GUI.Label(new Rect(x, y, 300, 20), $"Flow Field: {_width}x{_height} 格 (格大小={CELL_SIZE}m)", style);
+            GUI.Label(new Rect(x, y, 300, 20), $"Flow Field: {_width}x{_height} 格 (格大小={_cellSize}m)", style);
             y += 18;
             style.normal.textColor = Color.red;
             GUI.Label(new Rect(x, y, 200, 20), $"■ 障碍物: {obstacleCount} 格", style);
@@ -405,7 +474,7 @@ public static class FlowField
         else
         {
             GUI.color = Color.yellow;
-            GUI.Label(new Rect(x, y, 300, 20), "Flow Field 未初始化 (运行游戏后自动生成)", style);
+            GUI.Label(new Rect(x, y, 330, 20), "Flow Field 未初始化或未赋 Bake 资产", style);
         }
 
         Handles.EndGUI();

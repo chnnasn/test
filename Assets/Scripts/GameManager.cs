@@ -6,9 +6,7 @@ using InfimaGames.LowPolyShooterPack;
 public class GameManager : LazySingleton<GameManager>
 {
     [Header("Flow Field 设置")]
-    [SerializeField] private Vector3 _worldMin = new Vector3(-50, 0, -50);
-    [SerializeField] private Vector3 _worldMax = new Vector3(50, 0, 50);
-    [SerializeField] private LayerMask _obstacleMask;
+    [SerializeField] private FlowFieldAsset _flowFieldAsset;
 
     private Character _character;
     private bool _flowFieldInitialized;
@@ -38,8 +36,15 @@ public class GameManager : LazySingleton<GameManager>
     private void InitFlowField()
     {
         if (_flowFieldInitialized) return;
-        _flowFieldInitialized = true;
-        FlowField.Initialize(_worldMin, _worldMax, _obstacleMask);
+
+        if (_flowFieldAsset == null)
+        {
+            Debug.LogError("[GameManager] FlowFieldAsset 未设置，请先创建并 Bake 流场资产");
+            return;
+        }
+
+        FlowField.Initialize(_flowFieldAsset);
+        _flowFieldInitialized = FlowField.IsInitialized;
     }
 
     private void InitCharacter()
@@ -69,17 +74,26 @@ public class GameManager : LazySingleton<GameManager>
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        // 始终绘制网格边界框（编辑模式下也能看到范围）
-        FlowField.DrawGridOutline(_worldMin, _worldMax);
-
-        // 运行时绘制完整的流场方向 + 障碍物
-        if (Application.isPlaying && FlowField.IsInitialized && _character != null)
+        if (_flowFieldAsset != null)
         {
-            FlowField.DrawGizmos(_character.transform.position);
-        }
+            // 编辑模式下预览 Bake 资产，运行时显示完整流场方向
+            if (Application.isPlaying && FlowField.IsInitialized && _character != null)
+            {
+                FlowField.DrawGridOutline(_flowFieldAsset.WorldMin, _flowFieldAsset.WorldMax,
+                    _flowFieldAsset.CellSize, _flowFieldAsset.Width, _flowFieldAsset.Height);
+                FlowField.DrawGizmos(_character.transform.position);
+            }
+            else
+            {
+                FlowField.DrawAssetPreview(_flowFieldAsset);
+            }
 
-        // 图例
-        FlowField.DrawLegend(_worldMin);
+            FlowField.DrawLegend(_flowFieldAsset.WorldMin);
+        }
+        else
+        {
+            FlowField.DrawLegend(Vector3.zero);
+        }
     }
 #endif
 }
