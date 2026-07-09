@@ -24,6 +24,7 @@ public static class FlowField
     private static Vector2 _checkHalfExtents;
 
     private static Vector3 _lastTargetPos;
+    private static bool _hasTarget;
     private static bool _initialized;
 
     private static readonly Queue<Vector2Int> _bfsQueue = new Queue<Vector2Int>(4096);
@@ -74,6 +75,8 @@ public static class FlowField
             }
         }
 
+        _hasTarget = false;
+        _lastTargetPos = Vector3.zero;
         _initialized = true;
         Debug.Log($"[FlowField] 初始化完成: {_width}x{_height} 格 ({_width * _height} 个), 覆盖 {worldMin} ~ {worldMax}");
     }
@@ -86,8 +89,9 @@ public static class FlowField
         if (!_initialized) return;
 
         float moved = Vector3.Distance(targetPos, _lastTargetPos);
-        if (moved > REBUILD_THRESHOLD)
+        if (!_hasTarget || moved > REBUILD_THRESHOLD)
         {
+            _hasTarget = true;
             _lastTargetPos = targetPos;
             Rebuild(targetPos);
         }

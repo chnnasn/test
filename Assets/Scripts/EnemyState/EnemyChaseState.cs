@@ -20,7 +20,7 @@ public class EnemyChaseState : EnemyState
     private float _flipWindowTimer;
     private const float FLIP_WINDOW = 0.6f;   // 检测窗口
     private const int MAX_FLIPS = 3;           // 窗口内允许的最大方向翻转次数
-    private const float STUCK_BIAS = 0.7f;     // 检测到振荡时偏向流场的比例
+    private const float STUCK_BIAS = 0.35f;    // 检测到振荡时偏向流场的比例
 
     public EnemyChaseState(EnemyStateMachine machine) : base(machine) { }
 
@@ -151,51 +151,38 @@ public class EnemyChaseState : EnemyState
         // ── 2. Boids 分离力（空间分桶查询邻居）──
         Vector3 separation = ComputeSeparation(pos);
 
-        // 关键修复：如果分离力方向与流场方向夹角 > 120°（即几乎反向），
-        // 大幅削弱分离力，防止"被推开→分离减弱→流场拉回→又被推开"的振荡循环
-        if (separation != Vector3.zero)
-        {
-            float sepMag = separation.magnitude;
-            Vector3 sepNorm = separation / sepMag;
-            float sepAlignment = Vector3.Dot(sepNorm, flowDir);
-            if (sepAlignment < -0.5f)
-            {
-                // 分离力与流场严重反向 → 保留 20%
-                separation *= 0.2f;
-            }
-            else if (sepAlignment < 0f)
-            {
-                // 分离力与流场轻度反向 → 保留 50%
-                separation *= 0.5f;
-            }
-        }
-
         // ── 3. 射线避障：使用实际移动方向替代 transform.forward，确保检测与移动一致 ──
         Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
 
-        // 同样对避障力做方向抑制
-        if (avoidance != Vector3.zero)
+        // ── 组合：FlowField 负责导航，分离/避障作为安全力优先保留 ──
+        float flowWeight = 1.0f;
+        float separationWeight = 1.2f;
+        float avoidanceWeight = 1.6f;
+
+        float crowdDistance = enemy.AttackRange + enemy.SeparationRadius;
+        if (distToTarget < crowdDistance)
         {
-            float avoidMag = avoidance.magnitude;
-            Vector3 avoidNorm = avoidance / avoidMag;
-            float avoidAlignment = Vector3.Dot(avoidNorm, flowDir);
-            if (avoidAlignment < -0.5f)
-                avoidance *= 0.3f;
+            float t = Mathf.InverseLerp(enemy.AttackRange, crowdDistance, distToTarget);
+            flowWeight = Mathf.Lerp(0.25f, flowWeight, t);
+            separationWeight = Mathf.Lerp(2.0f, separationWeight, t);
         }
 
-        // ── 组合：FlowField 权重提高为主导航力，分离/避障弱化为辅助修正 ──
-        totalForce = flowDir * 1.5f + separation * 0.8f + avoidance * 1.0f;
+        totalForce = flowDir * flowWeight + separation * separationWeight + avoidance * avoidanceWeight;
         totalForce.y = 0;
 
         if (totalForce.sqrMagnitude < 0.0001f) return Vector3.zero;
 
         Vector3 result = totalForce.normalized;
 
-        // 最终安全检查：如果合成方向与流场夹角 > 90°，直接偏向流场
-        float finalAlignment = Vector3.Dot(result, flowDir);
-        if (finalAlignment < 0.2f)
+        // 只有没有明显安全力时才把方向拉回流场，避免分离/避障被 flow 抵消
+        bool hasSafetyForce = separation.sqrMagnitude > 0.01f || avoidance.sqrMagnitude > 0.01f;
+        if (!hasSafetyForce)
         {
-            result = Vector3.Lerp(result, flowDir, 0.5f).normalized;
+            float finalAlignment = Vector3.Dot(result, flowDir);
+            if (finalAlignment < 0.2f)
+            {
+                result = Vector3.Lerp(result, flowDir, 0.5f).normalized;
+            }
         }
 
         // ── 到达减速：接近目标时降低速度，避免冲过头导致来回振荡 ──

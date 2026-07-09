@@ -11,10 +11,19 @@ public class GameManager : LazySingleton<GameManager>
     [SerializeField] private LayerMask _obstacleMask;
 
     private Character _character;
-    private bool _characterInitialized;
     private bool _flowFieldInitialized;
 
     public Action<float> AttackAction;
+
+    private void Start()
+    {
+        InitCharacter();
+
+        if (_flowFieldInitialized && _character != null)
+        {
+            FlowField.SetTarget(_character.transform.position);
+        }
+    }
 
     private void Update()
     {
@@ -35,8 +44,7 @@ public class GameManager : LazySingleton<GameManager>
 
     private void InitCharacter()
     {
-        if (_characterInitialized) return;
-        _characterInitialized = true;
+        if (_character != null) return;
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
@@ -48,6 +56,7 @@ public class GameManager : LazySingleton<GameManager>
 
     public GameObject GetPlayer()
     {
+        InitCharacter();
         return _character != null ? _character.gameObject : null;
     }
 

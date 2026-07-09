@@ -26,8 +26,10 @@ public class EnemyAttackState : EnemyState
     {
         if (!enemy.IsAlive) return;
 
-        Transform target = GameManager.Instance.GetPlayer().transform;
-        if (target == null) return;
+        GameObject player = GameManager.Instance.GetPlayer();
+        if (player == null) return;
+
+        Transform target = player.transform;
 
         // 始终面向目标
         enemy.FaceTarget();
