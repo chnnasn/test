@@ -145,6 +145,8 @@ GameObject:
   - component: {fileID: 5825890016907462321}
   - component: {fileID: 2463948159009774806}
   - component: {fileID: 8163849254627183921}
+  - component: {fileID: 3498124652387619041}
+  - component: {fileID: 3498124652387619042}
   m_Layer: 0
   m_Name: Enemy_Zombie
   m_TagString: Untagged
@@ -228,8 +230,6 @@ MonoBehaviour:
   _maxHP: 100
   _birthDuration: 1.5
   _deadDestroyExtraDelay: 1.5
-  _moveSpeed: 3.5
-  _rotationSpeed: 10
   _attackRange: 2.5
   _attackDamage: 10
   _attackInterval: 1.2
@@ -238,15 +238,6 @@ MonoBehaviour:
   _playerLayerMask:
     serializedVersion: 2
     m_Bits: 1024
-  _separationRadius: 2.5
-  _separationForce: 4
-  _hardPushDistance: 1
-  _hardPushForce: 6
-  _obstacleCheckDistance: 2
-  _obstacleAvoidForce: 5
-  _obstacleLayerMask:
-    serializedVersion: 2
-    m_Bits: 2048
 --- !u!143 &8163849254627183921
 CharacterController:
   m_ObjectHideFlags: 0
@@ -273,6 +264,41 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.40725338, z: 0}
+--- !u!114 &3498124652387619041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1159361799200795126}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db103ec48f9d6224db3d3f7782b032ef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _moveSpeed: 3.5
+  _rotationSpeed: 10
+  _separationRadius: 2.5
+  _separationForce: 4
+  _hardPushDistance: 1
+  _hardPushForce: 6
+  _obstacleCheckDistance: 2
+  _obstacleAvoidForce: 5
+  _obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 2048
+--- !u!114 &3498124652387619042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1159361799200795126}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1 &1464659764991309516
 GameObject:
   m_ObjectHideFlags: 0

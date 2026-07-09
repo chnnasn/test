@@ -20,14 +20,10 @@ public class EnemyDeadState : EnemyState
 #endif
 
         // 停止移动
-        enemy.StopMoving();
+        movement.Stop();
 
         // 禁用碰撞体，避免死后还能被攻击或阻挡
-        var collider = enemy.GetComponent<Collider>();
-        if (collider != null)
-        {
-            collider.enabled = false;
-        }
+        movement.DisableCollision();
 
         // 死后一段时间销毁，计算 Dead 死亡动画时间再加 1.5f
         enemy.StartCoroutine(DestroyAfterDelay(enemy.DeadDestroyDelay));

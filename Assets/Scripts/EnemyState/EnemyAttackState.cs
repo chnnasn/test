@@ -15,16 +15,16 @@ public class EnemyAttackState : EnemyState
     public override void Enter()
     {
         _attackTimer = 0f;
-        enemy.SetChaseState(1f);
+        enemyAnimator.SetChaseState(1f);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入攻击状态");
 #endif
 
         // 停止移动，专注于攻击
-        enemy.StopMoving();
+        movement.Stop();
         
         // 面向目标
-        enemy.FaceTarget();
+        movement.FaceTarget(enemy.Target);
     }
 
     public override void Update()
@@ -37,7 +37,7 @@ public class EnemyAttackState : EnemyState
         Transform target = player.transform;
 
         // 始终面向目标
-        enemy.FaceTarget();
+        movement.FaceTarget(enemy.Target);
 
         _attackTimer += Time.deltaTime;
 

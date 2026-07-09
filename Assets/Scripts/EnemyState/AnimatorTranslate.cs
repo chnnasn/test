@@ -14,7 +14,7 @@ public  enum AnimationState
 
 public class AnimatorTranslate : StateMachineBehaviour
 {
-    Enemy enemy;
+    EnemyAnimator enemyAnimator;
 
     [SerializeField] public  AnimationState onEnterAnimationState;
         
@@ -26,9 +26,9 @@ public class AnimatorTranslate : StateMachineBehaviour
             return;
         }
 
-        if (animator.TryGetComponent<Enemy>(out enemy))
+        if (animator.TryGetComponent<EnemyAnimator>(out enemyAnimator))
         {
-            enemy.OnAnimationEnterEvent(onEnterAnimationState, stateInfo.length);
+            enemyAnimator.OnAnimationEnterEvent(onEnterAnimationState, stateInfo.length);
         }
     }
 
@@ -41,9 +41,9 @@ public class AnimatorTranslate : StateMachineBehaviour
             return;
         }
 
-        if (animator.TryGetComponent<Enemy>(out enemy))
+        if (animator.TryGetComponent<EnemyAnimator>(out enemyAnimator))
         {
-            enemy.OnAnimationExitEvent(onEnterAnimationState);
+            enemyAnimator.OnAnimationExitEvent(onEnterAnimationState);
         }
     }
     

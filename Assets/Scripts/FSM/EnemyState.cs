@@ -4,6 +4,8 @@ public abstract class EnemyState : IState
 {
     protected EnemyStateMachine stateMachine { get; }
     protected Enemy enemy { get; }
+    protected EnemyMovement movement => enemy.Movement;
+    protected EnemyAnimator enemyAnimator => enemy.AnimatorController;
 
     protected EnemyState(EnemyStateMachine machine)
     {

@@ -42,7 +42,7 @@ public class EnemyChaseState : EnemyState
     public override void Enter()
     {
         _updateTimer = 0f;
-        enemy.SetChaseState(0f);
+        enemyAnimator.SetChaseState(0f);
         _orbitSide = 0;
         _orbitLockTimer = 0f;
         _lateralAssistTimer = 0f;
@@ -64,7 +64,7 @@ public class EnemyChaseState : EnemyState
         // 进入攻击范围 → 攻击
         if (enemy.IsTargetInAttackRange())
         {
-            enemy.StopMoving();
+            movement.Stop();
             stateMachine.ChangeState(stateMachine.attackState);
             return;
         }
@@ -145,19 +145,19 @@ public class EnemyChaseState : EnemyState
             _lastStableDirection = _smoothedDirection.normalized;
             Vector3 moveDirection = ConstrainByObstacle(_smoothedDirection);
             if (moveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-                enemy.MoveByTransform(moveDirection);
+                movement.Move(moveDirection);
             else
-                enemy.StopMoving();
+                movement.Stop();
         }
         else
         {
-            enemy.StopMoving();
+            movement.Stop();
         }
     }
 
     public override void Exit()
     {
-        enemy.StopMoving();
+        movement.Stop();
     }
 
     /// <summary>
@@ -208,7 +208,7 @@ public class EnemyChaseState : EnemyState
         float avoidanceWeight = 1.6f;
         float lateralWeight = 0f;
 
-        float crowdDistance = enemy.AttackRange + enemy.SeparationRadius;
+        float crowdDistance = enemy.AttackRange + movement.SeparationRadius;
         bool hasSeparation = separation.sqrMagnitude > 0.01f;
         bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
         bool lateralAssistActive = _lateralAssistTimer > 0f;
@@ -291,7 +291,7 @@ public class EnemyChaseState : EnemyState
 
     private Vector3 GetCastOrigin(Vector3 pos)
     {
-        Vector3 center = enemy.ColliderCenter;
+        Vector3 center = movement.ColliderCenter;
         return pos + new Vector3(0f, Mathf.Max(center.y, 0.5f), 0f);
     }
 
@@ -300,20 +300,20 @@ public class EnemyChaseState : EnemyState
         hit = default(RaycastHit);
         if (direction.sqrMagnitude < 0.0001f) return false;
 
-        float radius = Mathf.Max(0.1f, enemy.ColliderRadius * 0.9f);
+        float radius = Mathf.Max(0.1f, movement.ColliderRadius * 0.9f);
         return Physics.SphereCast(origin, radius, direction.normalized, out hit, distance,
-            enemy.ObstacleLayerMask, QueryTriggerInteraction.Ignore);
+            movement.ObstacleLayerMask, QueryTriggerInteraction.Ignore);
     }
 
     private Vector3 ConstrainByObstacle(Vector3 moveDirection)
     {
         float magnitude = moveDirection.magnitude;
-        if (magnitude < 0.0001f || enemy.ObstacleLayerMask == 0)
+        if (magnitude < 0.0001f || movement.ObstacleLayerMask == 0)
             return moveDirection;
 
         Vector3 dir = moveDirection / magnitude;
         Vector3 origin = GetCastOrigin(enemy.transform.position);
-        float checkDistance = Mathf.Max(enemy.ColliderRadius + 0.05f, enemy.MoveSpeed * Time.deltaTime + enemy.ColliderRadius);
+        float checkDistance = Mathf.Max(movement.ColliderRadius + 0.05f, movement.MoveSpeed * Time.deltaTime + movement.ColliderRadius);
         if (!SphereCheck(origin, dir, checkDistance, out RaycastHit hit))
             return moveDirection;
 
@@ -328,7 +328,7 @@ public class EnemyChaseState : EnemyState
     private Vector3 ComputeLateralSlide(Vector3 pos, Vector3 targetPos, Vector3 flowDir, Vector3 separation, float distToTarget)
     {
         bool hasSeparation = separation.sqrMagnitude > 0.01f;
-        bool nearTarget = distToTarget < enemy.AttackRange + enemy.SeparationRadius;
+        bool nearTarget = distToTarget < enemy.AttackRange + movement.SeparationRadius;
         bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
         bool lateralAssistActive = _lateralAssistTimer > 0f;
 
@@ -357,8 +357,8 @@ public class EnemyChaseState : EnemyState
     /// </summary>
     private int ChooseOrbitSide(Vector3 pos, Vector3 rightTangent, Vector3 separation)
     {
-        float checkDist = Mathf.Max(enemy.ObstacleCheckDistance, enemy.SeparationRadius * 0.6f);
-        LayerMask mask = enemy.ObstacleLayerMask;
+        float checkDist = Mathf.Max(movement.ObstacleCheckDistance, movement.SeparationRadius * 0.6f);
+        LayerMask mask = movement.ObstacleLayerMask;
 
         if (checkDist > 0f && mask != 0)
         {
@@ -385,7 +385,7 @@ public class EnemyChaseState : EnemyState
     private Vector3 ComputeSeparation(Vector3 pos)
     {
         Vector3 force = Vector3.zero;
-        int count = SpatialGrid.QueryNeighbors(pos, enemy.SeparationRadius, enemy, _neighborBuffer);
+        int count = SpatialGrid.QueryNeighbors(pos, movement.SeparationRadius, enemy, _neighborBuffer);
         if (count == 0) return force;
 
         for (int i = 0; i < count; i++)
@@ -398,16 +398,16 @@ public class EnemyChaseState : EnemyState
             Vector3 awayDir = away / dist;
 
             // 硬推开：近距离直接排斥（使用平滑衰减替代线性，减少弹力振荡）
-            if (dist < enemy.HardPushDistance)
+            if (dist < movement.HardPushDistance)
             {
-                float t = 1f - (dist / enemy.HardPushDistance);
+                float t = 1f - (dist / movement.HardPushDistance);
                 t = t * t; // 平方衰减，使力在远处更快减小，减少弹簧效应
-                force += awayDir * enemy.HardPushForce * t;
+                force += awayDir * movement.HardPushForce * t;
             }
             else
             {
                 // 速度分离：反比于距离
-                force += awayDir * (enemy.SeparationForce / dist);
+                force += awayDir * (movement.SeparationForce / dist);
             }
         }
 
@@ -426,8 +426,8 @@ public class EnemyChaseState : EnemyState
     /// </summary>
     private Vector3 ComputeObstacleAvoidance(Vector3 pos, Vector3 moveDirection)
     {
-        float checkDist = enemy.ObstacleCheckDistance;
-        LayerMask mask = enemy.ObstacleLayerMask;
+        float checkDist = movement.ObstacleCheckDistance;
+        LayerMask mask = movement.ObstacleLayerMask;
         if (checkDist <= 0 || mask == 0) return Vector3.zero;
 
         // 使用实际移动方向替代 transform.forward，确保避障检测与移动方向一致
@@ -454,6 +454,6 @@ public class EnemyChaseState : EnemyState
             avoidForce -= right * 1.5f;
 
         if (avoidForce == Vector3.zero) return Vector3.zero;
-        return avoidForce.normalized * enemy.ObstacleAvoidForce;
+        return avoidForce.normalized * movement.ObstacleAvoidForce;
     }
 }
