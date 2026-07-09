@@ -6,7 +6,7 @@ public class EnemyStateMachine : StateMachine
     public EnemyBirthState BirthState { get; }
     public EnemyChaseState chaseState { get; }
     public EnemyAttackState attackState { get; }
-    public EnemydeadState deadState { get; }
+    public EnemyDeadState deadState { get; }
 
     public EnemyStateMachine(Enemy enemyController)
     {
@@ -14,6 +14,6 @@ public class EnemyStateMachine : StateMachine
         BirthState = new EnemyBirthState(this);
         chaseState = new EnemyChaseState(this);
         attackState = new EnemyAttackState(this);
-        deadState = new EnemydeadState(this);
+        deadState = new EnemyDeadState(this);
     }
 }

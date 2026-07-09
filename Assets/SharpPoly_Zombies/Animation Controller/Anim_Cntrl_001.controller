@@ -211,7 +211,7 @@ AnimatorController:
   m_Name: Anim_Cntrl_001
   serializedVersion: 5
   m_AnimatorParameters:
-  - m_Name: Blend
+  - m_Name: ChaseState
     m_Type: 1
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -424,17 +424,17 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: -5045268965480041147}
-    m_Position: {x: 350, y: 210, z: 0}
+    m_Position: {x: 230, y: 220, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -4033724647894623420}
     m_Position: {x: 320.3944, y: 86.83899, z: 0}
   m_ChildStateMachines:
   - serializedVersion: 1
     m_StateMachine: {fileID: -1347455547833400996}
-    m_Position: {x: -60, y: 230, z: 0}
+    m_Position: {x: -70, y: 200, z: 0}
   - serializedVersion: 1
     m_StateMachine: {fileID: 6921786195230570024}
-    m_Position: {x: 100, y: 300, z: 0}
+    m_Position: {x: 90, y: 310, z: 0}
   m_AnyStateTransitions: []
   m_EntryTransitions:
   - {fileID: 1084098733692729904}
@@ -640,7 +640,7 @@ BlendTree:
     m_CycleOffset: 0
     m_DirectBlendParameter: Blend
     m_Mirror: 0
-  m_BlendParameter: Blend
+  m_BlendParameter: ChaseState
   m_BlendParameterY: Blend
   m_MinThreshold: 0
   m_MaxThreshold: 1

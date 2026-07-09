@@ -37,6 +37,7 @@ public class EnemyChaseState : EnemyState
     public override void Enter()
     {
         _updateTimer = 0f;
+        enemy.SetChaseState(0f);
         _orbitSide = 0;
         _orbitLockTimer = 0f;
         _lateralAssistTimer = 0f;

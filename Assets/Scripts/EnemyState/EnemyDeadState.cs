@@ -2,14 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EnemydeadState : EnemyState
+public class EnemyDeadState : EnemyState
 {
-    public EnemydeadState(EnemyStateMachine machine) : base(machine)
+    private bool _destroyScheduled;
+
+    public EnemyDeadState(EnemyStateMachine machine) : base(machine)
     {
     }
 
     public override void Enter()
     {
+        if (_destroyScheduled) return;
+        _destroyScheduled = true;
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入死亡状态");
 #endif
@@ -24,8 +29,8 @@ public class EnemydeadState : EnemyState
             collider.enabled = false;
         }
 
-        // 死后一段时间销毁，计算dead死亡动画时间再加1.5f
-        enemy.StartCoroutine(DestroyAfterDelay(1.5f));
+        // 死后一段时间销毁，计算 Dead 死亡动画时间再加 1.5f
+        enemy.StartCoroutine(DestroyAfterDelay(enemy.DeadDestroyDelay));
     }
 
     private IEnumerator DestroyAfterDelay(float delay)

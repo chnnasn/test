@@ -28,7 +28,7 @@ public class AnimatorTranslate : StateMachineBehaviour
 
         if (animator.TryGetComponent<Enemy>(out enemy))
         {
-            enemy.OnAnimationEnterEvent(onEnterAnimationState);
+            enemy.OnAnimationEnterEvent(onEnterAnimationState, stateInfo.length);
         }
     }
 

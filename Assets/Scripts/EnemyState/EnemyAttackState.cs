@@ -13,6 +13,7 @@ public class EnemyAttackState : EnemyState
     public override void Enter()
     {
         _attackTimer = 0f;
+        enemy.SetChaseState(1f);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入攻击状态");
 #endif

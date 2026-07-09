@@ -2,11 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Enemy : MonoBehaviour
+public class Enemy : MonoBehaviour,IDamage
 {
+    private static readonly int ChaseStateHash = Animator.StringToHash("ChaseState");
+    private const string DeadStateName = "Dead";
+    private const string GetHitStateName = "GeiHit";
+
     [Header("基础属性")]
     [SerializeField] private float _maxHP = 100f;
     [SerializeField] private float _birthDuration = 1.5f;
+    [SerializeField] private float _deadDestroyExtraDelay = 1.5f;
 
     [Header("移动属性")]
     [SerializeField] private float _moveSpeed = 3.5f;
@@ -35,6 +40,8 @@ public class Enemy : MonoBehaviour
     public EnemyStateMachine stateMachine { get; private set; }
     
     private Animator _animator;
+    private float _deadAnimationDuration;
+    private bool _isDying;
     
     // 公开属性
     public Vector3 Velocity { get; set; }
@@ -51,6 +58,7 @@ public class Enemy : MonoBehaviour
     public float AttackRange => _attackRange;
     public float AttackDamage => _attackDamage;
     public float AttackInterval => _attackInterval;
+    public float DeadDestroyDelay => Mathf.Max(_deadAnimationDuration, 0f) + _deadDestroyExtraDelay;
 
     /// <summary>
     /// 目标是否在攻击范围内
@@ -65,6 +73,7 @@ public class Enemy : MonoBehaviour
     private void Awake()
     {
         _characterController = GetComponent<CharacterController>();
+        _animator = GetComponent<Animator>();
         _currentHP = _maxHP;
         stateMachine = new EnemyStateMachine(this);
     }
@@ -81,22 +90,22 @@ public class Enemy : MonoBehaviour
 
     private void Start()
     {
-        _animator =  GetComponent<Animator>();
         stateMachine.ChangeState(stateMachine.BirthState);
     }
 
     #region 相关动画进入或退出触发的方法
 
-    public void OnAnimationEnterEvent(AnimationState playerState)
+    public void OnAnimationEnterEvent(AnimationState playerState, float animationLength = 0f)
     {
         switch (playerState)
         {
             case AnimationState.dead:
+                _deadAnimationDuration = animationLength;
                 stateMachine.OnAnimationTranslateEvent(stateMachine.deadState);
                 break;
 
         }
-            
+
     }
     public void OnAnimationExitEvent(AnimationState playerState)
     {
@@ -105,9 +114,6 @@ public class Enemy : MonoBehaviour
             case AnimationState.Birth:
             case AnimationState.GetHit:
                 stateMachine.OnAnimationTranslateEvent(stateMachine.chaseState);
-                break;
-            case AnimationState.dead:
-                stateMachine.OnAnimationTranslateEvent(stateMachine.deadState);
                 break;
 
         }
@@ -188,12 +194,30 @@ public class Enemy : MonoBehaviour
         Velocity = Vector3.zero;
     }
 
+    public void SetChaseState(float value)
+    {
+        if (_animator == null) return;
+        _animator.SetFloat(ChaseStateHash, value);
+    }
+
+    private void PlayDead()
+    {
+        if (_animator == null) return;
+        _animator.Play(DeadStateName, 0, 0f);
+    }
+
+    private void PlayGetHit()
+    {
+        if (_animator == null || _isDying) return;
+        _animator.Play(GetHitStateName, 0, 0f);
+    }
+
     /// <summary>
     /// 受到伤害
     /// </summary>
     public void TakeDamage(float damage)
     {
-        if (!IsAlive) return;
+        if (!IsAlive || _isDying) return;
 
         _currentHP -= damage;
 
@@ -201,7 +225,10 @@ public class Enemy : MonoBehaviour
         {
             _currentHP = 0;
             Die();
+            return;
         }
+
+        PlayGetHit();
     }
 
     /// <summary>
@@ -209,7 +236,13 @@ public class Enemy : MonoBehaviour
     /// </summary>
     private void Die()
     {
-        //播放动画通过animator来切换状态
-        
+        if (_isDying) return;
+
+        _isDying = true;
+        StopMoving();
+        if (_animator != null)
+            PlayDead();
+        else
+            stateMachine.ChangeState(stateMachine.deadState);
     }
 }

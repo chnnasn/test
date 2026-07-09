@@ -12,8 +12,9 @@ public abstract class StateMachine
     /// </summary>
     /// <param name="newState"></param>
     public void ChangeState(IState newState)
-    { 
-               
+    {
+        if (ReferenceEquals(currentState.Value, newState)) return;
+
         //可能为空用？逻辑符
         currentState.Value?.Exit();
 
