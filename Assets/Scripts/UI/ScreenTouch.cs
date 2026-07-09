@@ -54,6 +54,16 @@ public class ScreenTouch : MonoBehaviour
 	private PointerEventData cachedPointerEventData;
 	private readonly List<RaycastResult> uiRaycastResults = new List<RaycastResult>(8);
 
+	/// <summary>
+	/// 记录哪些手指曾在 UI 上按下，永久排除它们成为视角控制手指。
+	/// </summary>
+	private readonly HashSet<int> uiFingerIndices = new HashSet<int>();
+
+	/// <summary>
+	/// 预分配缓冲区，用于清理已结束的手指索引，避免 GC。
+	/// </summary>
+	private readonly List<int> _fingerRemoveBuffer = new List<int>(4);
+
 	#endregion
 
 	#region UNITY
@@ -98,6 +108,27 @@ public class ScreenTouch : MonoBehaviour
 			return;
 		}
 
+		// 清理已结束的手指索引（手动迭代，避免 RemoveWhere 委托产生 GC）
+		_fingerRemoveBuffer.Clear();
+		foreach (int idx in uiFingerIndices)
+		{
+			bool stillActive = false;
+			var fingers = Touch.activeFingers;
+			for (int i = 0; i < fingers.Count; i++)
+			{
+				var f = fingers[i];
+				if (f.index == idx && f.currentTouch.valid)
+				{
+					stillActive = true;
+					break;
+				}
+			}
+			if (!stillActive)
+				_fingerRemoveBuffer.Add(idx);
+		}
+		for (int i = 0; i < _fingerRemoveBuffer.Count; i++)
+			uiFingerIndices.Remove(_fingerRemoveBuffer[i]);
+
 		if (lookFinger != null)
 		{
 			var touch = lookFinger.currentTouch;
@@ -122,9 +153,23 @@ public class ScreenTouch : MonoBehaviour
 			foreach (var finger in Touch.activeFingers)
 			{
 				var touch = finger.currentTouch;
+
+				// Began 阶段：标记"非 shoot 按钮"的 UI 手指，永久排除
+				if (touch.phase == UnityEngine.InputSystem.TouchPhase.Began)
+				{
+					if (IsBlockingUI(touch.screenPosition))
+					{
+						uiFingerIndices.Add(finger.index);
+						continue;
+					}
+				}
+
+				// 排除已在 UI 上按下的手指
+				if (uiFingerIndices.Contains(finger.index))
+					continue;
+
 				if (touch.phase == UnityEngine.InputSystem.TouchPhase.Began
-				    && touch.valid
-				    && !IsPointerOverUI(touch.screenPosition))
+				    && touch.valid)
 				{
 					lookFinger = finger;
 					lastLookPosition = touch.screenPosition;
@@ -155,9 +200,11 @@ public class ScreenTouch : MonoBehaviour
 	}
 
 	/// <summary>
-	/// 判断屏幕位置是否在 UI 上。触碰到 UI 时不处理视角旋转。
+	/// 判断屏幕位置是否在需要屏蔽视角控制的 UI 上。
+	/// shoot 按钮不屏蔽（允许按住开火的同时拖动瞄准），
+	/// 其他 UI（摇杆、换弹、Buff 等）全部屏蔽。
 	/// </summary>
-	private bool IsPointerOverUI(Vector2 screenPos)
+	private bool IsBlockingUI(Vector2 screenPos)
 	{
 		EventSystem eventSystem = EventSystem.current;
 		if (eventSystem == null) return false;
@@ -170,9 +217,18 @@ public class ScreenTouch : MonoBehaviour
 
 		cachedPointerEventData.position = screenPos;
 		uiRaycastResults.Clear();
-
 		eventSystem.RaycastAll(cachedPointerEventData, uiRaycastResults);
-		return uiRaycastResults.Count > 0;
+
+		if (uiRaycastResults.Count == 0)
+			return false;   // 没有命中任何 UI → 不屏蔽
+
+		// 命中 UI，检查最上层是否是 shoot 按钮
+		GameObject topObject = uiRaycastResults[0].gameObject;
+		ButtonClick btn = topObject.GetComponentInParent<ButtonClick>();
+		if (btn != null && btn.Type == ButtonType.shoot)
+			return false;   // shoot 按钮 → 不屏蔽，允许视角控制
+
+		return true;        // 其他 UI → 屏蔽
 	}
 
 	#endregion

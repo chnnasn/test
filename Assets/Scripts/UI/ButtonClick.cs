@@ -14,13 +14,13 @@ public enum ButtonType
 {   shoot,
     anim,
     reload,
-    buff
 }
 
 public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
 {
     [SerializeField]
-    ButtonType type;
+    private ButtonType _type;
+    public ButtonType Type => _type;
     
     [SerializeField]
     private ButtonTriggerType triggerType = ButtonTriggerType.SingleClick; // 触发方式
@@ -69,7 +69,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         buttonImage.DOColor(pressedColor, pressDuration);
         
         //长按
-        if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
+        if (triggerType == ButtonTriggerType.LongpPress && _type == ButtonType.shoot)
         {
             Debug.Log("Longp Press");
             EventManager.Instance.SetExternalFire(true);
@@ -82,7 +82,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         buttonImage.DOColor(originalColor, pressDuration);
 
         // 长按开火松开：清除 holdingButtonFire
-        if (triggerType == ButtonTriggerType.LongpPress && type == ButtonType.shoot)
+        if (triggerType == ButtonTriggerType.LongpPress && _type == ButtonType.shoot)
         {
             EventManager.Instance.SetExternalFire(false);
         }
@@ -90,16 +90,16 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
     
     private void TriggerAction()
     {
-        if (type == ButtonType.shoot)
+        if (_type == ButtonType.shoot)
         {
            EventManager.Instance.FireWeapon();
         }
-        else if (type == ButtonType.anim)
+        else if (_type == ButtonType.anim)
         {
             _animAiming = !_animAiming;
             EventManager.Instance.SetAimingExternal(_animAiming);
         }
-        else if (type == ButtonType.reload)
+        else if (_type == ButtonType.reload)
         {
             EventManager.Instance.TryReload();
         }

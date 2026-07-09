@@ -31,8 +31,10 @@ public class PlayerStates : MonoBehaviour, IDamage
     private void OnDisable()
     {
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
+        {
             eventManager.OnAttackedAction -= TakeDamage;
-        EventManager.Instance.AddExper -= AddExperience;
+            eventManager.AddExper -= AddExperience;
+        }
     }
 
     private void AddExperience(float experience)
