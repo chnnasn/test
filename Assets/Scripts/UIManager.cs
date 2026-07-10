@@ -23,7 +23,7 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.BindPlayerHp(OnHpChanged);
         EventManager.Instance.BindPlayerLevel(OnLevelChanged);
         EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
-        EventManager.Instance.TriggerBuff += OnBuffChosen;
+        EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
         BindCharacterToCross();
 
@@ -40,7 +40,7 @@ public class UIManager : MonoBehaviour
             eventManager.UnbindPlayerHp(OnHpChanged);
             eventManager.UnbindPlayerLevel(OnLevelChanged);
             eventManager.UnbindLevelUpBuffs(OnLevelUpBuffs);
-            eventManager.TriggerBuff -= OnBuffChosen;
+            eventManager.LevelUpBuffsFinished -= OnLevelUpBuffsFinished;
         }
 
         UnbindCharacterFromCross();
@@ -165,6 +165,12 @@ public class UIManager : MonoBehaviour
     #region BuffChoose 绑定
 
     private void OnBuffChosen(int index)
+    {
+        if (BuffChoose != null)
+            BuffChoose.SetCanChoose(false);
+    }
+
+    private void OnLevelUpBuffsFinished()
     {
         if (BuffChoose != null)
             BuffChoose.gameObject.SetActive(false);

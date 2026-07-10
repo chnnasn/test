@@ -11,6 +11,7 @@ public class EventManager : LazySingleton<EventManager>
 
     public Action<int> TriggerBuff;
     public Action<string[]> LevelUpBuffs;
+    public Action LevelUpBuffsFinished;
 
     public Action Fire;
     public Action Reload;
@@ -308,6 +309,11 @@ public class EventManager : LazySingleton<EventManager>
     public void SetLevelUpBuffs(string[] buffstrStrings)
     {
         LevelUpBuffs?.Invoke(buffstrStrings);
+    }
+
+    public void SetLevelUpBuffsFinished()
+    {
+        LevelUpBuffsFinished?.Invoke();
     }
 
     public void FireWeapon()

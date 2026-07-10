@@ -11,6 +11,7 @@ public class PlayerStates : MonoBehaviour, IDamage
     [SerializeField] private PlayerBuffPoolAsset _buffPoolAsset;
 
     private float _experience;
+    private int _pendingBuffChooseCount;
     private PlayerBuffAsset[] _currentLevelUpBuffs;
     private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
 
@@ -55,19 +56,39 @@ public class PlayerStates : MonoBehaviour, IDamage
         if (_levelExperienceAsset == null || _levelExperienceAsset.LevelExperienceRequirements == null)
             return;
 
+        int levelBefore = _level;
+
         while (_level - 1 < _levelExperienceAsset.LevelExperienceRequirements.Length &&
                _experience >= _levelExperienceAsset.LevelExperienceRequirements[_level - 1])
         {
             _experience -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
             _level++;
             Level.Value = _level;
-            DrawLevelUpBuffs();
         }
+
+        int levelUpCount = _level - levelBefore;
+        if (levelUpCount <= 0) return;
+
+        _pendingBuffChooseCount += levelUpCount;
+        DrawLevelUpBuffs();
     }
 
     private void DrawLevelUpBuffs()
     {
-        if (_buffPoolAsset == null) return;
+        if (_pendingBuffChooseCount <= 0)
+        {
+            _currentLevelUpBuffs = null;
+            EventManager.Instance.SetLevelUpBuffsFinished();
+            return;
+        }
+
+        if (_buffPoolAsset == null)
+        {
+            _pendingBuffChooseCount = 0;
+            _currentLevelUpBuffs = null;
+            EventManager.Instance.SetLevelUpBuffsFinished();
+            return;
+        }
 
         _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs);
         EventManager.Instance.SetLevelUpBuffs(GetBuffDescriptions(_currentLevelUpBuffs));
@@ -107,7 +128,10 @@ public class PlayerStates : MonoBehaviour, IDamage
         PlayerBuffAsset buff = GetCurrentLevelUpBuff(index);
         if (buff == null) return;
 
-        ApplyBuff(buff);
+        if (!ApplyBuff(buff)) return;
+
+        _pendingBuffChooseCount = Mathf.Max(0, _pendingBuffChooseCount - 1);
+        DrawLevelUpBuffs();
     }
 
     private bool ApplyBuff(PlayerBuffAsset buff)

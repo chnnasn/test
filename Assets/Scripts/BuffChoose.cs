@@ -12,10 +12,12 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     private string[] _buffs;
 
     private int _index = -1;
+    private bool _canChoose;
 
     private void OnEnable()
     {
         _index = -1;
+        _canChoose = true;
     }
 
     private void Start()
@@ -39,7 +41,14 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     public void SetBuffs(string[] buffs)
     {
         _buffs = buffs;
+        _index = -1;
+        _canChoose = true;
         RefreshTexts();
+    }
+
+    public void SetCanChoose(bool canChoose)
+    {
+        _canChoose = canChoose;
     }
 
     private void RefreshTexts()
@@ -55,6 +64,8 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (!_canChoose) return;
+
         GameObject clickedObject = GetValidTarget(eventData.pointerCurrentRaycast.gameObject);
         if (clickedObject == null)
         {
@@ -89,12 +100,11 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
 
     public void ChooseBuff()
     {
-        if (_index!=-1)
-        {
-            EventManager.Instance.SetBuffIndex(_index);
-            _buffs = null;
-            _index = -1;
-        }
+        if (!_canChoose || _index == -1) return;
 
+        _canChoose = false;
+        EventManager.Instance.SetBuffIndex(_index);
+        _buffs = null;
+        _index = -1;
     }
 }
