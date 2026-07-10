@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using InfimaGames.LowPolyShooterPack;
 
 public class UIManager : MonoBehaviour
 {
@@ -12,19 +11,18 @@ public class UIManager : MonoBehaviour
     [Header("准星")]
     public Cross cross;
 
-    private Character _character;
-    private PlayerStates _playerStates;
-
     private void OnEnable()
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
         EventManager.Instance.BindPlayerExp(OnExperienceChanged);
+        EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
         EventManager.Instance.TriggerBuff += OnBuffChosen;
 
-        BindPlayerStatesToBuffChoose();
-
-        // ---- 绑定 Character 的 GenericProperty 到准星 ----
+        // ---- 通过 EventManager 绑定 Character 的 GenericProperty 到准星 ----
         BindCharacterToCross();
+
+        if (BuffChooseObject != null)
+            BuffChooseObject.SetActive(false);
     }
 
     private void OnDisable()
@@ -33,50 +31,39 @@ public class UIManager : MonoBehaviour
         {
             eventManager.UnbindPlayerHp(OnHpChanged);
             eventManager.UnbindPlayerExp(OnExperienceChanged);
+            eventManager.UnbindLevelUpBuffs(OnLevelUpBuffs);
             eventManager.TriggerBuff -= OnBuffChosen;
         }
 
-        UnbindPlayerStatesFromBuffChoose();
         UnbindCharacterFromCross();
     }
 
     #region Character → Cross 绑定
 
     /// <summary>
-    /// 获取 Character 组件，订阅其 GenericProperty，建立与 cross 的绑定。
+    /// 通过 EventManager 订阅角色状态变化，建立与 cross 的绑定。
     /// </summary>
     private void BindCharacterToCross()
     {
         if (cross == null) return;
 
-        _character = GameManager.Instance.GetCharacter();
-        if (_character == null) return;
-
-        // 订阅状态变化 → 转发给 cross
-        _character.IsAimingProp.OnValueChanged += OnAimingChanged;
-        _character.IsRunningProp.OnValueChanged += OnRunningChanged;
-        _character.IsFiringProp.OnValueChanged += OnFiringChanged;
-
-        // 订阅武器散布变化 → 转发给 cross
-        _character.CurrentWeaponSpreadProp.OnValueChanged += OnWeaponSpreadChanged;
-
-        // 初始同步当前状态
-        OnWeaponSpreadChanged(_character.GetCurrentWeaponSpread());
+        EventManager.Instance.BindCharacterAiming(OnAimingChanged);
+        EventManager.Instance.BindCharacterRunning(OnRunningChanged);
+        EventManager.Instance.BindCharacterFiring(OnFiringChanged);
+        EventManager.Instance.BindCurrentWeaponSpread(OnWeaponSpreadChanged);
     }
 
     /// <summary>
-    /// 解绑 Character 的 GenericProperty 回调。
+    /// 通过 EventManager 解绑角色状态变化回调。
     /// </summary>
     private void UnbindCharacterFromCross()
     {
-        if (_character == null) return;
+        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
 
-        _character.IsAimingProp.OnValueChanged -= OnAimingChanged;
-        _character.IsRunningProp.OnValueChanged -= OnRunningChanged;
-        _character.IsFiringProp.OnValueChanged -= OnFiringChanged;
-        _character.CurrentWeaponSpreadProp.OnValueChanged -= OnWeaponSpreadChanged;
-
-        _character = null;
+        eventManager.UnbindCharacterAiming(OnAimingChanged);
+        eventManager.UnbindCharacterRunning(OnRunningChanged);
+        eventManager.UnbindCharacterFiring(OnFiringChanged);
+        eventManager.UnbindCurrentWeaponSpread(OnWeaponSpreadChanged);
     }
 
     private void OnAimingChanged(bool isAiming)
@@ -106,27 +93,6 @@ public class UIManager : MonoBehaviour
     #endregion
 
     #region BuffChoose 绑定
-
-    private void BindPlayerStatesToBuffChoose()
-    {
-        GameObject player = GameManager.Instance.GetPlayer();
-        if (player == null) return;
-
-        _playerStates = player.GetComponent<PlayerStates>();
-        if (_playerStates == null) return;
-
-        _playerStates.LevelUpBuffs.OnValueChanged += OnLevelUpBuffs;
-        if (BuffChooseObject != null)
-            BuffChooseObject.SetActive(false);
-    }
-
-    private void UnbindPlayerStatesFromBuffChoose()
-    {
-        if (_playerStates == null) return;
-
-        _playerStates.LevelUpBuffs.OnValueChanged -= OnLevelUpBuffs;
-        _playerStates = null;
-    }
 
     private void OnBuffChosen(int index)
     {

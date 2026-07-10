@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 using System;
 
@@ -22,8 +23,14 @@ public class EventManager : LazySingleton<EventManager>
     public Action<float> AddExper;
 
     private PlayerStates _playerStates;
+    private Character _character;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _expBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _levelUpBuffBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _aimingBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _runningBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _firingBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _weaponSpreadBindings = new Dictionary<Delegate, Delegate>();
     
 
     private PlayerStates PlayerStates
@@ -33,6 +40,16 @@ public class EventManager : LazySingleton<EventManager>
             if (_playerStates == null)
                 _playerStates = GameManager.Instance.GetPlayer()?.GetComponent<PlayerStates>();
             return _playerStates;
+        }
+    }
+
+    private Character Character
+    {
+        get
+        {
+            if (_character == null)
+                _character = GameManager.Instance.GetCharacter();
+            return _character;
         }
     }
 
@@ -80,6 +97,122 @@ public class EventManager : LazySingleton<EventManager>
         {
             ps.Experience.OnValueChanged -= callback;
             _expBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定升级 Buff 候选数组变化回调 </summary>
+    public void BindLevelUpBuffs(Action<PlayerBuffAsset[]> callback)
+    {
+        var ps = PlayerStates;
+        if (ps == null) return;
+
+        _levelUpBuffBindings[callback] = callback;
+        ps.LevelUpBuffs.OnValueChanged += callback;
+    }
+
+    /// <summary> 解绑升级 Buff 候选数组变化回调 </summary>
+    public void UnbindLevelUpBuffs(Action<PlayerBuffAsset[]> callback)
+    {
+        var ps = PlayerStates;
+        if (ps == null) return;
+
+        if (_levelUpBuffBindings.ContainsKey(callback))
+        {
+            ps.LevelUpBuffs.OnValueChanged -= callback;
+            _levelUpBuffBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定角色瞄准状态变化回调 </summary>
+    public void BindCharacterAiming(Action<bool> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        _aimingBindings[callback] = callback;
+        character.IsAimingProp.OnValueChanged += callback;
+    }
+
+    /// <summary> 解绑角色瞄准状态变化回调 </summary>
+    public void UnbindCharacterAiming(Action<bool> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        if (_aimingBindings.ContainsKey(callback))
+        {
+            character.IsAimingProp.OnValueChanged -= callback;
+            _aimingBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定角色跑步状态变化回调 </summary>
+    public void BindCharacterRunning(Action<bool> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        _runningBindings[callback] = callback;
+        character.IsRunningProp.OnValueChanged += callback;
+    }
+
+    /// <summary> 解绑角色跑步状态变化回调 </summary>
+    public void UnbindCharacterRunning(Action<bool> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        if (_runningBindings.ContainsKey(callback))
+        {
+            character.IsRunningProp.OnValueChanged -= callback;
+            _runningBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定角色开火状态变化回调 </summary>
+    public void BindCharacterFiring(Action<bool> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        _firingBindings[callback] = callback;
+        character.IsFiringProp.OnValueChanged += callback;
+    }
+
+    /// <summary> 解绑角色开火状态变化回调 </summary>
+    public void UnbindCharacterFiring(Action<bool> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        if (_firingBindings.ContainsKey(callback))
+        {
+            character.IsFiringProp.OnValueChanged -= callback;
+            _firingBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定当前武器散布变化回调 </summary>
+    public void BindCurrentWeaponSpread(Action<float> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        _weaponSpreadBindings[callback] = callback;
+        character.CurrentWeaponSpreadProp.OnValueChanged += callback;
+        callback(character.GetCurrentWeaponSpread());
+    }
+
+    /// <summary> 解绑当前武器散布变化回调 </summary>
+    public void UnbindCurrentWeaponSpread(Action<float> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        if (_weaponSpreadBindings.ContainsKey(callback))
+        {
+            character.CurrentWeaponSpreadProp.OnValueChanged -= callback;
+            _weaponSpreadBindings.Remove(callback);
         }
     }
 
