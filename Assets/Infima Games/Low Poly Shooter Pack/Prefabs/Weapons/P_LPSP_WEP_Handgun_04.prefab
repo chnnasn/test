@@ -212,7 +212,7 @@ MonoBehaviour:
   scopeDefaultBehaviour: {fileID: 7672607115631127433}
   scopeIndex: -1
   scopeIndexFirst: -1
-  scopeIndexRandom: 1
+  scopeIndexRandom: 0
   scopeArray:
   - {fileID: 8891494454968021583}
   - {fileID: 8188394911732542762}
@@ -223,25 +223,25 @@ MonoBehaviour:
   - {fileID: 2654101162872501892}
   - {fileID: 7197773841612218521}
   muzzleIndex: 2
-  muzzleIndexRandom: 1
+  muzzleIndexRandom: 0
   muzzleArray:
   - {fileID: 8165926081501738631}
   - {fileID: 1566752226275488716}
   - {fileID: 4783422164365875712}
   - {fileID: 9097164123056213577}
-  laserIndex: 0
-  laserIndexRandom: 1
+  laserIndex: -1
+  laserIndexRandom: 0
   laserArray:
   - {fileID: 1040405353313248713}
   - {fileID: 2883315388428168683}
-  gripIndex: 0
-  gripIndexRandom: 1
+  gripIndex: -1
+  gripIndexRandom: 0
   gripArray:
   - {fileID: 7007887213165296786}
   - {fileID: 3721660050492248912}
   - {fileID: 6058569716809073228}
   magazineIndex: 0
-  magazineIndexRandom: 1
+  magazineIndexRandom: 0
   magazineArray:
   - {fileID: 4184475140985726511}
 --- !u!114 &1375935857344257949

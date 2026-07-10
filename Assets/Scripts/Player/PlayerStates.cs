@@ -1,3 +1,4 @@
+using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 
 public class PlayerStates : MonoBehaviour, IDamage
@@ -26,6 +27,7 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         EventManager.Instance.OnAttackedAction += TakeDamage;
         EventManager.Instance.AddExper += AddExperience;
+        EventManager.Instance.TriggerBuff += ApplySelectedBuff;
     }
 
     private void OnDisable()
@@ -34,6 +36,7 @@ public class PlayerStates : MonoBehaviour, IDamage
         {
             eventManager.OnAttackedAction -= TakeDamage;
             eventManager.AddExper -= AddExperience;
+            eventManager.TriggerBuff -= ApplySelectedBuff;
         }
     }
 
@@ -71,6 +74,41 @@ public class PlayerStates : MonoBehaviour, IDamage
             return null;
 
         return _currentLevelUpBuffs[index];
+    }
+
+    private void ApplySelectedBuff(int index)
+    {
+        PlayerBuffAsset buff = GetCurrentLevelUpBuff(index);
+        if (buff == null) return;
+
+        ApplyBuff(buff);
+    }
+
+    private bool ApplyBuff(PlayerBuffAsset buff)
+    {
+        Character character = GameManager.Instance.GetCharacter();
+        if (character == null) return false;
+
+        if (buff.Kind == PlayerBuffKind.Weapon)
+            return character.EquipWeaponRuntime(buff.TargetIndex);
+
+        WeaponBehaviour weapon = character.GetInventory()?.GetEquipped();
+        WeaponAttachmentManagerBehaviour attachmentManager = weapon?.GetAttachmentManager();
+        if (attachmentManager == null) return false;
+
+        bool applied = buff.Kind switch
+        {
+            PlayerBuffKind.Scope => attachmentManager.EquipScope(buff.TargetIndex),
+            PlayerBuffKind.Muzzle => attachmentManager.EquipMuzzle(buff.TargetIndex),
+            PlayerBuffKind.Grip => attachmentManager.EquipGrip(buff.TargetIndex),
+            PlayerBuffKind.Magazine => attachmentManager.EquipMagazine(buff.TargetIndex),
+            _ => false
+        };
+
+        if (applied)
+            character.RefreshCurrentWeaponSetup();
+
+        return applied;
     }
 
     public void TakeDamage(float damage)

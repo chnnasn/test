@@ -64,5 +64,26 @@ namespace InfimaGames.LowPolyShooterPack
         public abstract GripBehaviour GetEquippedGrip();
 
         #endregion
+
+        #region METHODS
+
+        /// <summary>
+        /// 运行时装备指定索引的瞄准镜。负数表示使用默认瞄具。
+        /// </summary>
+        public abstract bool EquipScope(int index);
+        /// <summary>
+        /// 运行时装备指定索引的枪口。
+        /// </summary>
+        public abstract bool EquipMuzzle(int index);
+        /// <summary>
+        /// 运行时装备指定索引的握把。负数表示不装备握把。
+        /// </summary>
+        public abstract bool EquipGrip(int index);
+        /// <summary>
+        /// 运行时装备指定索引的弹匣。
+        /// </summary>
+        public abstract bool EquipMagazine(int index);
+
+        #endregion
     }
-}
+}

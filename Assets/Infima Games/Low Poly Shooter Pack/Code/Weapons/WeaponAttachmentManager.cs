@@ -48,7 +48,7 @@ namespace InfimaGames.LowPolyShooterPack
 
         [Tooltip("是否在游戏开始时随机选择一个枪口？")]
         [SerializeField]
-        private bool muzzleIndexRandom = true;
+        private bool muzzleIndexRandom = false;
 
         [Tooltip("此武器可使用的所有枪口配件数组！")]
         [SerializeField]
@@ -62,7 +62,7 @@ namespace InfimaGames.LowPolyShooterPack
 
         [Tooltip("是否在游戏开始时随机选择一个激光？")]
         [SerializeField]
-        private bool laserIndexRandom = true;
+        private bool laserIndexRandom = false;
 
         [Tooltip("此武器可使用的所有激光配件数组！")]
         [SerializeField]
@@ -76,7 +76,7 @@ namespace InfimaGames.LowPolyShooterPack
 
         [Tooltip("是否在游戏开始时随机选择一个握把？")]
         [SerializeField]
-        private bool gripIndexRandom = true;
+        private bool gripIndexRandom = false;
 
         [Tooltip("此武器可使用的所有握把配件数组！")]
         [SerializeField]
@@ -90,7 +90,7 @@ namespace InfimaGames.LowPolyShooterPack
 
         [Tooltip("是否在游戏开始时随机选择一个弹匣？")]
         [SerializeField]
-        private bool magazineIndexRandom = true;
+        private bool magazineIndexRandom = false;
 
         [Tooltip("此武器可使用的所有弹匣配件数组！注意这里使用具体的Magazine类型而非抽象类型。")]
         [SerializeField]
@@ -133,42 +133,34 @@ namespace InfimaGames.LowPolyShooterPack
         protected override void Awake()
         {
             //随机化瞄准镜选择！这为游戏增加了一些随机变化！
-            if (scopeIndexRandom)
+            if (scopeIndexRandom && scopeArray.IsValid())
                 scopeIndex = Random.Range(scopeIndexFirst, scopeArray.Length);
             //选择瞄准镜！
-            scopeBehaviour = scopeArray.SelectAndSetActive(scopeIndex);
-            //检查是否没有获得瞄准镜。索引不正确时可能发生这种情况。
-            if (scopeBehaviour == null)
-            {
-                //选择默认瞄准镜作为回退方案。
-                scopeBehaviour = scopeDefaultBehaviour;
-                //根据配置决定是否激活默认瞄准镜。
-                scopeBehaviour.gameObject.SetActive(scopeDefaultShow);
-            }
+            ApplyScope(scopeIndex);
 
             //随机化枪口选择！这为游戏增加了一些随机变化！
-            if (muzzleIndexRandom)
+            if (muzzleIndexRandom && muzzleArray.IsValid())
                 muzzleIndex = Random.Range(0, muzzleArray.Length);
             //选择枪口！
-            muzzleBehaviour = muzzleArray.SelectAndSetActive(muzzleIndex);
+            ApplyMuzzle(muzzleIndex);
 
             //随机化激光选择！这为游戏增加了一些随机变化！
-            if (laserIndexRandom)
+            if (laserIndexRandom && laserArray.IsValid())
                 laserIndex = Random.Range(0, laserArray.Length);
             //选择激光！
             laserBehaviour = laserArray.SelectAndSetActive(laserIndex);
 
             //随机化握把选择！这为游戏增加了一些随机变化！
-            if (gripIndexRandom)
+            if (gripIndexRandom && gripArray.IsValid())
                 gripIndex = Random.Range(0, gripArray.Length);
             //选择握把！
-            gripBehaviour = gripArray.SelectAndSetActive(gripIndex);
+            ApplyGrip(gripIndex);
 
             //随机化弹匣选择！这为游戏增加了一些随机变化！
-            if (magazineIndexRandom)
+            if (magazineIndexRandom && magazineArray.IsValid())
                 magazineIndex = Random.Range(0, magazineArray.Length);
             //选择弹匣！
-            magazineBehaviour = magazineArray.SelectAndSetActive(magazineIndex);
+            ApplyMagazine(magazineIndex);
         }
 
         #endregion
@@ -203,5 +195,72 @@ namespace InfimaGames.LowPolyShooterPack
         public override GripBehaviour GetEquippedGrip() => gripBehaviour;
 
         #endregion
+
+        #region METHODS
+
+        public override bool EquipScope(int index) => ApplyScope(index);
+        public override bool EquipMuzzle(int index) => ApplyMuzzle(index);
+        public override bool EquipGrip(int index) => ApplyGrip(index);
+        public override bool EquipMagazine(int index) => ApplyMagazine(index);
+
+        /// <summary>
+        /// 应用指定瞄准镜索引。负数时使用默认瞄具。
+        /// </summary>
+        private bool ApplyScope(int index)
+        {
+            scopeIndex = index;
+            scopeBehaviour = scopeArray.SelectAndSetActive(scopeIndex);
+            if (scopeBehaviour != null)
+            {
+                if (scopeDefaultBehaviour != null)
+                    scopeDefaultBehaviour.gameObject.SetActive(false);
+                return true;
+            }
+
+            scopeBehaviour = scopeDefaultBehaviour;
+            if (scopeBehaviour == null)
+                return false;
+
+            scopeBehaviour.gameObject.SetActive(scopeDefaultShow);
+            return true;
+        }
+
+        /// <summary>
+        /// 应用指定枪口索引。
+        /// </summary>
+        private bool ApplyMuzzle(int index)
+        {
+            if (!muzzleArray.IsValidIndex(index))
+                return false;
+
+            muzzleIndex = index;
+            muzzleBehaviour = muzzleArray.SelectAndSetActive(muzzleIndex);
+            return muzzleBehaviour != null;
+        }
+
+        /// <summary>
+        /// 应用指定握把索引。负数时表示不装备握把。
+        /// </summary>
+        private bool ApplyGrip(int index)
+        {
+            gripIndex = index;
+            gripBehaviour = gripArray.SelectAndSetActive(gripIndex);
+            return gripIndex < 0 || gripBehaviour != null;
+        }
+
+        /// <summary>
+        /// 应用指定弹匣索引。
+        /// </summary>
+        private bool ApplyMagazine(int index)
+        {
+            if (!magazineArray.IsValidIndex(index))
+                return false;
+
+            magazineIndex = index;
+            magazineBehaviour = magazineArray.SelectAndSetActive(magazineIndex);
+            return magazineBehaviour != null;
+        }
+
+        #endregion
     }
-}
+}

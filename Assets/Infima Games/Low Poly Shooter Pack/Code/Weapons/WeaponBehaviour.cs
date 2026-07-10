@@ -203,6 +203,11 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public abstract void EjectCasing();
 
+        /// <summary>
+        /// 刷新当前武器缓存的配件引用。运行时更换配件后调用。
+        /// </summary>
+        public abstract void RefreshAttachments(bool clampAmmo = true);
+
         #endregion
     }
 }

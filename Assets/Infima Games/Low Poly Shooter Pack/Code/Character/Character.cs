@@ -836,6 +836,37 @@ namespace InfimaGames.LowPolyShooterPack
 		}
 
 		/// <summary>
+		/// 刷新当前武器和配件缓存。运行时更换武器或配件后调用。
+		/// </summary>
+		public void RefreshCurrentWeaponSetup(bool refreshWeaponAttachments = true)
+		{
+			if (refreshWeaponAttachments)
+				equippedWeapon?.RefreshAttachments();
+
+			RefreshWeaponSetup();
+
+			if (aiming && equippedWeaponScope != null)
+				equippedWeaponScope.OnAim();
+		}
+
+		/// <summary>
+		/// 运行时直接装备指定索引的武器。
+		/// </summary>
+		public bool EquipWeaponRuntime(int index)
+		{
+			if (inventory == null || !CanChangeWeapon())
+				return false;
+
+			WeaponBehaviour previousWeapon = inventory.GetEquipped();
+			WeaponBehaviour weapon = inventory.Equip(index);
+			if (weapon == null || weapon == previousWeapon)
+				return false;
+
+			RefreshWeaponSetup();
+			return true;
+		}
+
+		/// <summary>
 		/// 空仓射击（无弹药时扣动扳机）。记录时间并播放空仓音效动画。
 		/// </summary>
 		private void FireEmpty()
@@ -1619,7 +1650,8 @@ namespace InfimaGames.LowPolyShooterPack
 		public override void SetActiveMagazine(int active)
 		{
 			//设置弹匣 GameObject 的激活状态
-			equippedWeaponMagazine.gameObject.SetActive(active != 0);
+			if (equippedWeaponMagazine != null)
+				equippedWeaponMagazine.gameObject.SetActive(active != 0);
 		}
 
 		/// <summary>

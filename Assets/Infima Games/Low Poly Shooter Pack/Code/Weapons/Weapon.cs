@@ -236,25 +236,11 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         protected override void Start()
         {
-            #region 缓存配件引用
-
-            //获取已装备的瞄准镜。
-            scopeBehaviour = attachmentManager.GetEquippedScope();
-
-            //获取已装备的弹匣。
-            magazineBehaviour = attachmentManager.GetEquippedMagazine();
-            //获取已装备的枪口。
-            muzzleBehaviour = attachmentManager.GetEquippedMuzzle();
-
-            //获取已装备的激光。
-            laserBehaviour = attachmentManager.GetEquippedLaser();
-            //获取已装备的握把。
-            gripBehaviour = attachmentManager.GetEquippedGrip();
-
-            #endregion
+            RefreshAttachments(false);
 
             //将弹药补满至弹匣容量上限。
-            ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
+            if (magazineBehaviour != null)
+                ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
 
             if (prefabProjectile != null && projectilePoolPrewarm > 0)
                 global::ProjectilePool.Prewarm(prefabProjectile, projectilePoolPrewarm);
@@ -358,7 +344,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// <summary>
         /// 获取开火音频片段。从枪口配件获取，因为不同枪口可能有不同的开火音效。
         /// </summary>
-        public override AudioClip GetAudioClipFire() => muzzleBehaviour.GetAudioClipFire();
+        public override AudioClip GetAudioClipFire() => muzzleBehaviour != null ? muzzleBehaviour.GetAudioClipFire() : null;
         /// <summary>
         /// 获取当前弹药数。
         /// </summary>
@@ -367,7 +353,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// <summary>
         /// 获取弹匣总容量。从弹匣配件获取。
         /// </summary>
-        public override int GetAmmunitionTotal() => magazineBehaviour.GetAmmunitionTotal();
+        public override int GetAmmunitionTotal() => magazineBehaviour != null ? magazineBehaviour.GetAmmunitionTotal() : 0;
         /// <summary>
         /// 是否使用循环换弹模式。
         /// </summary>
@@ -407,7 +393,7 @@ namespace InfimaGames.LowPolyShooterPack
 	/// <summary>
 	/// 弹药是否已满（当前弹药量等于弹匣容量）。
 	/// </summary>
-	public override bool IsFull() => ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
+	public override bool IsFull() => magazineBehaviour != null && ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
         /// <summary>
         /// 是否还有剩余弹药。
         /// </summary>
@@ -465,7 +451,7 @@ namespace InfimaGames.LowPolyShooterPack
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
             //减少弹药！刚刚射击了一发，需要扣除一发弹药。Clamp确保不会低于0。
-            ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
+            ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, GetAmmunitionTotal());
 
             //如果弹药耗尽，设置空仓挂机状态(slide back)。
             if (ammunitionCurrent == 0)
@@ -509,7 +495,7 @@ namespace InfimaGames.LowPolyShooterPack
         {
             //如果amount为0则填满弹匣，否则增加指定数量的弹药（注意上限为弹匣容量）。
             ammunitionCurrent = amount != 0 ? Mathf.Clamp(ammunitionCurrent + amount,
-                0, GetAmmunitionTotal()) : magazineBehaviour.GetAmmunitionTotal();
+                0, GetAmmunitionTotal()) : GetAmmunitionTotal();
         }
         /// <summary>
         /// 设置空仓挂机(slide back)状态。用于控制Animator中的SlideBack布尔参数。
@@ -537,6 +523,24 @@ namespace InfimaGames.LowPolyShooterPack
             if (pooledCasing == null)
                 pooledCasing = casing.AddComponent<global::PooledCasing>();
             pooledCasing.Initialize();
+        }
+
+        /// <summary>
+        /// 刷新从附件管理器缓存的配件引用。运行时切换配件后调用。
+        /// </summary>
+        public override void RefreshAttachments(bool clampAmmo = true)
+        {
+            if (attachmentManager == null)
+                return;
+
+            scopeBehaviour = attachmentManager.GetEquippedScope();
+            magazineBehaviour = attachmentManager.GetEquippedMagazine();
+            muzzleBehaviour = attachmentManager.GetEquippedMuzzle();
+            laserBehaviour = attachmentManager.GetEquippedLaser();
+            gripBehaviour = attachmentManager.GetEquippedGrip();
+
+            if (clampAmmo && magazineBehaviour != null)
+                ammunitionCurrent = Mathf.Clamp(ammunitionCurrent, 0, magazineBehaviour.GetAmmunitionTotal());
         }
 
         #endregion
