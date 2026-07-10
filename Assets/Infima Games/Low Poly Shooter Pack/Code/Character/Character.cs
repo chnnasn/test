@@ -296,6 +296,35 @@ namespace InfimaGames.LowPolyShooterPack
 		public Vector2 AutoMoveInput { get; set; }
 
 		/// <summary>
+		/// 准星系统可监听的瞄准状态属性。
+		/// </summary>
+		public GenericProperty<bool> IsAimingProp { get; private set; } = new GenericProperty<bool>();
+		/// <summary>
+		/// 准星系统可监听的跑步状态属性。
+		/// </summary>
+		public GenericProperty<bool> IsRunningProp { get; private set; } = new GenericProperty<bool>();
+		/// <summary>
+		/// 准星系统可监听的射击状态属性。
+		/// </summary>
+		public GenericProperty<bool> IsFiringProp { get; private set; } = new GenericProperty<bool>();
+
+		/// <summary>
+		/// 获取当前装备武器的散布值。若未装备武器则返回默认值。
+		/// </summary>
+		public float GetCurrentWeaponSpread()
+		{
+			return equippedWeapon != null ? equippedWeapon.GetSpread() : 0.25f;
+		}
+
+		/// <summary>
+		/// 获取当前武器的射速（每分钟发射数）。
+		/// </summary>
+		public float GetCurrentWeaponRateOfFire()
+		{
+			return equippedWeapon != null ? equippedWeapon.GetRateOfFire() : 200f;
+		}
+
+		/// <summary>
 		/// 设置外部移动输入（由 PlayerMove 调用，驱动动画系统）。
 		/// </summary>
 		public void SetExternalMoveInput(Vector2 input) => axisMovement = input;
@@ -389,6 +418,11 @@ namespace InfimaGames.LowPolyShooterPack
 			aiming = holdingButtonAim && CanAim();
 			//根据按键状态和能力检查更新跑步状态
 			running = holdingButtonRun && CanRun();
+
+			// 更新准星系统可监听的 GenericProperty 状态
+			IsAimingProp.Value = aiming;
+			IsRunningProp.Value = running;
+			IsFiringProp.Value = holdingButtonFire;
 
 			//检测瞄准状态变化并通知瞄准镜组件
 			switch (aiming)

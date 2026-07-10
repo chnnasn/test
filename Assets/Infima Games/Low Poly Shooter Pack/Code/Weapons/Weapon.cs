@@ -398,12 +398,16 @@ namespace InfimaGames.LowPolyShooterPack
         /// <summary>
         /// 获取射速（每分钟发射数）。
         /// </summary>
-        public override float GetRateOfFire() => roundsPerMinutes;
+	public override float GetRateOfFire() => roundsPerMinutes;
+	/// <summary>
+	/// 获取武器基础散布值。
+	/// </summary>
+	public override float GetSpread() => spread;
 
-        /// <summary>
-        /// 弹药是否已满（当前弹药量等于弹匣容量）。
-        /// </summary>
-        public override bool IsFull() => ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
+	/// <summary>
+	/// 弹药是否已满（当前弹药量等于弹匣容量）。
+	/// </summary>
+	public override bool IsFull() => ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
         /// <summary>
         /// 是否还有剩余弹药。
         /// </summary>

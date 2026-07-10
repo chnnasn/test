@@ -151,12 +151,16 @@ namespace InfimaGames.LowPolyShooterPack
         /// <summary>
         /// 返回武器的射速（每分钟发射数）。
         /// </summary>
-        public abstract float GetRateOfFire();
+	public abstract float GetRateOfFire();
+	/// <summary>
+	/// 返回武器基础散布值。
+	/// </summary>
+	public abstract float GetSpread();
 
-        /// <summary>
-        /// 返回瞄准时摄像机的视野乘数。用于实现瞄准时放大画面效果。
-        /// </summary>
-        public abstract float GetFieldOfViewMultiplierAim();
+	/// <summary>
+	/// 返回瞄准时摄像机的视野乘数。用于实现瞄准时放大画面效果。
+	/// </summary>
+	public abstract float GetFieldOfViewMultiplierAim();
         /// <summary>
         /// 返回瞄准时武器专用摄像机的视野乘数。
         /// </summary>
@@ -201,4 +205,4 @@ namespace InfimaGames.LowPolyShooterPack
 
         #endregion
     }
-}
+}
