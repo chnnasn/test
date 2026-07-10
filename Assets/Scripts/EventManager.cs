@@ -10,7 +10,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action<float> OnAttackedAction;
 
     public Action<int> TriggerBuff;
-    public Action<PlayerBuffAsset[]> LevelUpBuffs;
+    public Action<string[]> LevelUpBuffs;
 
     public Action Fire;
     public Action Reload;
@@ -35,6 +35,7 @@ public class EventManager : LazySingleton<EventManager>
     private Dictionary<Delegate, Delegate> _firingBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _weaponSpreadBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveNumberBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _waveTotalBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveCountdownBindings = new Dictionary<Delegate, Delegate>();
     
 
@@ -77,6 +78,7 @@ public class EventManager : LazySingleton<EventManager>
         Action<float> handler = hp => callback(hp, ps.MaxHP);
         _hpBindings[callback] = handler;
         ps.CurrentHP.OnValueChanged += handler;
+        callback(ps.CurrentHP.Value, ps.MaxHP);
     }
 
     /// <summary> 解绑 HP 变化回调 </summary>
@@ -116,25 +118,19 @@ public class EventManager : LazySingleton<EventManager>
         }
     }
 
-    /// <summary> 绑定升级 Buff 候选数组变化回调 </summary>
-    public void BindLevelUpBuffs(Action<PlayerBuffAsset[]> callback)
+    /// <summary> 绑定升级 Buff 候选描述变化回调 </summary>
+    public void BindLevelUpBuffs(Action<string[]> callback)
     {
-        var ps = PlayerStates;
-        if (ps == null) return;
-
         _levelUpBuffBindings[callback] = callback;
-        ps.LevelUpBuffs.OnValueChanged += callback;
+        LevelUpBuffs += callback;
     }
 
-    /// <summary> 解绑升级 Buff 候选数组变化回调 </summary>
-    public void UnbindLevelUpBuffs(Action<PlayerBuffAsset[]> callback)
+    /// <summary> 解绑升级 Buff 候选描述变化回调 </summary>
+    public void UnbindLevelUpBuffs(Action<string[]> callback)
     {
-        var ps = PlayerStates;
-        if (ps == null) return;
-
         if (_levelUpBuffBindings.ContainsKey(callback))
         {
-            ps.LevelUpBuffs.OnValueChanged -= callback;
+            LevelUpBuffs -= callback;
             _levelUpBuffBindings.Remove(callback);
         }
     }
@@ -256,6 +252,30 @@ public class EventManager : LazySingleton<EventManager>
         }
     }
 
+    /// <summary> 绑定总波次变化回调 </summary>
+    public void BindWaveTotal(Action<int> callback)
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        _waveTotalBindings[callback] = callback;
+        wm.WaveTotal.OnValueChanged += callback;
+        callback(wm.WaveTotal.Value);
+    }
+
+    /// <summary> 解绑总波次变化回调 </summary>
+    public void UnbindWaveTotal(Action<int> callback)
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        if (_waveTotalBindings.ContainsKey(callback))
+        {
+            wm.WaveTotal.OnValueChanged -= callback;
+            _waveTotalBindings.Remove(callback);
+        }
+    }
+
     /// <summary> 绑定波次倒计时变化回调 </summary>
     public void BindWaveCountdown(Action<float> callback)
     {
@@ -285,9 +305,9 @@ public class EventManager : LazySingleton<EventManager>
         TriggerBuff?.Invoke(index);
     }
 
-    public void SetLevelUpBuffs(PlayerBuffAsset[] buffs)
+    public void SetLevelUpBuffs(string[] buffstrStrings)
     {
-        LevelUpBuffs?.Invoke(buffs);
+        LevelUpBuffs?.Invoke(buffstrStrings);
     }
 
     public void FireWeapon()

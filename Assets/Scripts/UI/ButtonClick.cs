@@ -57,7 +57,6 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
             clickSequence.Append(buttonImage.DOColor(originalColor, pressDuration));
             
             clickSequence.OnComplete(() => {
-                Debug.Log("Click Complete");
                 TriggerAction();
             });
         }
@@ -71,7 +70,6 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         //长按
         if (triggerType == ButtonTriggerType.LongpPress && _type == ButtonType.shoot)
         {
-            Debug.Log("Longp Press");
             EventManager.Instance.SetExternalFire(true);
         }
     }

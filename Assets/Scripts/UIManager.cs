@@ -4,10 +4,10 @@ using UnityEngine.UI;
 public class UIManager : MonoBehaviour
 {
     public Slider hpSlider;
-    public Text[] BuffTexts;
     public Text HpText;
-    public GameObject BuffChooseObject;
+    public BuffChoose BuffChoose;
 
+    public Text WaveCountDown;
     public Text WaveText;
     public Text LVText;
 
@@ -15,6 +15,7 @@ public class UIManager : MonoBehaviour
     public Cross cross;
 
     private int _currentWaveNumber;
+    private int _totalWaveNumber;
     private float _currentWaveCountdown;
 
     private void OnEnable()
@@ -23,13 +24,13 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.BindPlayerLevel(OnLevelChanged);
         EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
         EventManager.Instance.TriggerBuff += OnBuffChosen;
-        
+
         BindCharacterToCross();
-        
+
         BindWaveToText();
 
-        if (BuffChooseObject != null)
-            BuffChooseObject.SetActive(false);
+        if (BuffChoose != null)
+            BuffChoose.gameObject.SetActive(false);
     }
 
     private void OnDisable()
@@ -109,6 +110,7 @@ public class UIManager : MonoBehaviour
     private void BindWaveToText()
     {
         EventManager.Instance.BindWaveNumber(OnWaveNumberChanged);
+        EventManager.Instance.BindWaveTotal(OnWaveTotalChanged);
         EventManager.Instance.BindWaveCountdown(OnWaveCountdownChanged);
     }
 
@@ -117,12 +119,19 @@ public class UIManager : MonoBehaviour
         if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
 
         eventManager.UnbindWaveNumber(OnWaveNumberChanged);
+        eventManager.UnbindWaveTotal(OnWaveTotalChanged);
         eventManager.UnbindWaveCountdown(OnWaveCountdownChanged);
     }
 
     private void OnWaveNumberChanged(int waveNumber)
     {
         _currentWaveNumber = waveNumber;
+        RefreshWaveText();
+    }
+
+    private void OnWaveTotalChanged(int totalWaveNumber)
+    {
+        _totalWaveNumber = totalWaveNumber;
         RefreshWaveText();
     }
 
@@ -134,16 +143,20 @@ public class UIManager : MonoBehaviour
 
     private void RefreshWaveText()
     {
-        if (WaveText == null) return;
+        if (WaveText != null)
+            WaveText.text = $"第 {_currentWaveNumber}/{_totalWaveNumber} 波";
+
+        if (WaveCountDown == null) return;
 
         if (_currentWaveCountdown > 0f)
         {
-            WaveText.text = $"第 {_currentWaveNumber}波: {_currentWaveCountdown:F0}s";
-            WaveText.gameObject.SetActive(true);
+            WaveCountDown.text = $"第 {_currentWaveNumber} 波倒计时: {_currentWaveCountdown:F0}s";
+            WaveCountDown.gameObject.SetActive(true);
         }
         else
         {
-            WaveText.gameObject.SetActive(false);
+            WaveCountDown.text = string.Empty;
+            WaveCountDown.gameObject.SetActive(false);
         }
     }
 
@@ -153,8 +166,8 @@ public class UIManager : MonoBehaviour
 
     private void OnBuffChosen(int index)
     {
-        if (BuffChooseObject != null)
-            BuffChooseObject.SetActive(false);
+        if (BuffChoose != null)
+            BuffChoose.gameObject.SetActive(false);
 
         EventManager.Instance.SetGameResume();
     }
@@ -181,32 +194,19 @@ public class UIManager : MonoBehaviour
             LVText.text = $"LV: {level}";
     }
 
-    private void OnLevelUpBuffs(PlayerBuffAsset[] buffs)
+    private void OnLevelUpBuffs(string[] levelUpBuffs)
     {
-        bool hasBuffs = buffs != null && buffs.Length > 0;
+        bool hasBuffs = levelUpBuffs != null && levelUpBuffs.Length > 0;
 
-        if (BuffChooseObject != null)
-            BuffChooseObject.SetActive(hasBuffs);
+        if (BuffChoose != null)
+        {
+            BuffChoose.gameObject.SetActive(hasBuffs);
+            if (hasBuffs)
+                BuffChoose.SetBuffs(levelUpBuffs);
+        }
 
         if (hasBuffs)
             EventManager.Instance.SetGamePause();
-
-        if (BuffTexts == null || buffs == null) return;
-
-        for (int i = 0; i < BuffTexts.Length; i++)
-        {
-            if (BuffTexts[i] == null) continue;
-
-            if (i >= buffs.Length || buffs[i] == null)
-            {
-                BuffTexts[i].text = string.Empty;
-                continue;
-            }
-
-            string buffName = buffs[i].BuffName;
-            string description = buffs[i].Description;
-            BuffTexts[i].text = string.IsNullOrEmpty(description) ? buffName : $"{buffName}\n{description}";
-        }
     }
 
     #endregion

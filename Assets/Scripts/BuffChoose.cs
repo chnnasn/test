@@ -1,11 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class BuffChoose : MonoBehaviour, IPointerClickHandler
 {
     private Dictionary<GameObject, int> _childIndexMap;
     private HashSet<GameObject> _validTargets;
+
+    [SerializeField]private Text[] _texts;
+    private string[] _buffs;
 
     private int _index = -1;
 
@@ -29,6 +33,23 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
             GameObject child = transform.GetChild(i).gameObject;
             _childIndexMap[child] = i;
             _validTargets.Add(child);
+        }
+    }
+
+    public void SetBuffs(string[] buffs)
+    {
+        _buffs = buffs;
+        RefreshTexts();
+    }
+
+    private void RefreshTexts()
+    {
+        if (_texts == null) return;
+
+        for (int i = 0; i < _texts.Length; i++)
+        {
+            if (_texts[i] == null) continue;
+            _texts[i].text = _buffs != null && i < _buffs.Length ? _buffs[i] : string.Empty;
         }
     }
 
@@ -71,6 +92,7 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         if (_index!=-1)
         {
             EventManager.Instance.SetBuffIndex(_index);
+            _buffs = null;
             _index = -1;
         }
 

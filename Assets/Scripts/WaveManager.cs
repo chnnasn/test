@@ -16,10 +16,10 @@ public class WaveManager : MonoBehaviour
     private bool _isWaveRunning;
     private int _activePortals;
     private int _aliveEnemies;
-    private bool _skipFirstTimer;
-
     /// <summary> 当前波次（1-based），通过 EventManager 绑定到 UI </summary>
     public GenericProperty<int> WaveNumber { get; private set; } = new GenericProperty<int>();
+    /// <summary> 总波次，通过 EventManager 绑定到 UI </summary>
+    public GenericProperty<int> WaveTotal { get; private set; } = new GenericProperty<int>();
     /// <summary> 下一波倒计时（秒），通过 EventManager 绑定到 UI </summary>
     public GenericProperty<float> WaveCountdown { get; private set; } = new GenericProperty<float>();
 
@@ -30,25 +30,13 @@ public class WaveManager : MonoBehaviour
         int totalWaves = _portalWaves != null ? _portalWaves.Length : 0;
 
         // 初始化波次显示
+        WaveTotal.Value = totalWaves;
         WaveNumber.Value = totalWaves > 0 ? 1 : 0;
+        WaveCountdown.Value = 0f;
 
-        if (_skipFirstTimerOnNextStart)
-        {
-            _skipFirstTimer = true;
-            _skipFirstTimerOnNextStart = false;
-        }
-
-        if (_skipFirstTimer)
-        {
-            SpawnNextWave();
-        }
-        else
-        {
+        if (totalWaves > 0)
             StartCoroutine(FirstWaveCountdown(5));
-        }
     }
-
-    private static bool _skipFirstTimerOnNextStart;
 
     public static void PrewarmFirstWave(PortalWave firstWave)
     {
@@ -56,11 +44,6 @@ public class WaveManager : MonoBehaviour
             return;
 
         PrewarmWaveEnemies(firstWave);
-    }
-
-    public static void SkipFirstWaveTimerOnNextStart()
-    {
-        _skipFirstTimerOnNextStart = true;
     }
 
     /// <summary> GameManager 热机调用，预生成第一波可能用到的僵尸并放入对象池 </summary>
@@ -72,12 +55,6 @@ public class WaveManager : MonoBehaviour
         PrewarmFirstWave(_portalWaves[0]);
     }
 
-    /// <summary> GameManager 调用，跳过首次等待，立即生成第一波 </summary>
-    public void SkipFirstWaveTimer()
-    {
-        _skipFirstTimer = true;
-    }
-
     public void SpawnNextWave()
     {
         if (!_canSpawnWaves || _isWaveRunning)
@@ -87,6 +64,7 @@ public class WaveManager : MonoBehaviour
         {
             if (currentWave < _portalWaves.Length)
             {
+                WaveNumber.Value = currentWave + 1;
                 ResetSpawnPoints();
                 _isWaveRunning = true;
                 _activePortals = 0;
@@ -112,11 +90,6 @@ public class WaveManager : MonoBehaviour
                     TrySpawnNextWave();
             }
             currentWave++;
-
-            // 更新波次显示（1-based）
-            int totalWaves = _portalWaves != null ? _portalWaves.Length : 0;
-            if (currentWave < totalWaves)
-                WaveNumber.Value = currentWave + 1;
         }
     }
 

@@ -22,6 +22,8 @@ public class LoadingSceneController : MonoBehaviour
 
     private IEnumerator LoadRoutine()
     {
+        Time.timeScale = 1f;
+
         GameManager gameManager = GameManager.Instance;
         if (gameManager == null)
         {
@@ -37,7 +39,6 @@ public class LoadingSceneController : MonoBehaviour
         }
 
         WaveManager.PrewarmFirstWave(_firstWave);
-        WaveManager.SkipFirstWaveTimerOnNextStart();
 
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(_demoSceneName);
         if (loadOperation == null)
