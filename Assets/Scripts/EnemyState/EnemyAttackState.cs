@@ -1,11 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyAttackState : EnemyState
 {
-    private static readonly RaycastHit[] _attackHits = new RaycastHit[8];
-
     private float _attackTimer;
 
     public EnemyAttackState(EnemyStateMachine machine) : base(machine)
@@ -22,7 +18,8 @@ public class EnemyAttackState : EnemyState
 
         // 停止移动，专注于攻击
         movement.Stop();
-        
+        enemy.SetAttackDetectCallback(OnAttackDetectResult);
+
         // 面向目标
         movement.FaceTarget(enemy.Target);
     }
@@ -31,10 +28,7 @@ public class EnemyAttackState : EnemyState
     {
         if (!enemy.IsAlive) return;
 
-        GameObject player = GameManager.Instance.GetPlayer();
-        if (player == null) return;
-
-        Transform target = player.transform;
+        if (GameManager.Instance.GetPlayer() == null) return;
 
         // 始终面向目标
         movement.FaceTarget(enemy.Target);
@@ -45,7 +39,9 @@ public class EnemyAttackState : EnemyState
         if (_attackTimer >= enemy.AttackInterval)
         {
             _attackTimer = 0f;
-            PerformAttack();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"{enemy.gameObject.name} 发起攻击！");
+#endif
 
             // 攻击动作结束后，判断目标距离决定下一步
             if (!enemy.IsTargetInAttackRange())
@@ -62,36 +58,20 @@ public class EnemyAttackState : EnemyState
 
     public override void Exit()
     {
+        enemy.SetAttackDetectCallback(null);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 退出攻击状态");
 #endif
     }
 
     /// <summary>
-    /// 执行一次攻击
+    /// 处理动画事件触发后的攻击检测结果
     /// </summary>
-    private void PerformAttack()
+    private void OnAttackDetectResult(bool hitPlayer)
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"{enemy.gameObject.name} 发起攻击！");
-#endif
+        if (!hitPlayer) return;
 
-        GameObject player = GameManager.Instance.GetPlayer();
-        if (player == null) return;
-
-        Vector3 origin = enemy.transform.position + enemy.AttackCastOffset;
-        Vector3 direction = enemy.transform.forward;
-        float distance = Mathf.Max(enemy.AttackRange - enemy.AttackSphereRadius, 0f);
-        int hitCount = Physics.SphereCastNonAlloc(origin, enemy.AttackSphereRadius, direction, _attackHits, distance, enemy.PlayerLayerMask, QueryTriggerInteraction.Ignore);
-
-        for (int i = 0; i < hitCount; i++)
-        {
-            Collider hitCollider = _attackHits[i].collider;
-            if (hitCollider == null || !hitCollider.transform.IsChildOf(player.transform)) continue;
-
-            //事件发送扣除玩家血量
-            EventManager.Instance.OnAttackedAction?.Invoke(enemy.AttackDamage);
-            break;
-        }
+        //事件发送扣除玩家血量
+        EventManager.Instance.OnAttackedAction?.Invoke(enemy.AttackDamage);
     }
 }

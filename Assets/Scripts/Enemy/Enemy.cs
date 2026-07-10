@@ -5,6 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyAnimator))]
 public class Enemy : MonoBehaviour,IDamage
 {
+    private static readonly RaycastHit[] _attackHits = new RaycastHit[8];
+
     [Header("基础属性")]
     [SerializeField] private float _maxHP = 100f;
     [SerializeField] private float _experienceReward = 1000f;
@@ -22,6 +24,7 @@ public class Enemy : MonoBehaviour,IDamage
     private float _currentHP;
     private Transform _target;
     private bool _isDying;
+    private Action<bool> _attackDetectCallback;
     private Action<Enemy> _poolReleaseCallback;
 
     public EnemyStateMachine stateMachine { get; private set; }
@@ -40,6 +43,43 @@ public class Enemy : MonoBehaviour,IDamage
     public LayerMask PlayerLayerMask => _playerLayerMask;
     public float ExperienceReward => _experienceReward;
     public float DeadDestroyDelay => Mathf.Max(AnimatorController != null ? AnimatorController.DeadAnimationDuration : 0f, 0f) + _deadDestroyExtraDelay;
+
+    public void SetAttackDetectCallback(Action<bool> callback)
+    {
+        _attackDetectCallback = callback;
+    }
+
+    /// <summary>
+    /// 动画事件触发攻击检测
+    /// </summary>
+    public void OnAttackAnimationEvent()
+    {
+        bool hitPlayer = DetectAttackHitPlayer();
+        _attackDetectCallback?.Invoke(hitPlayer);
+    }
+
+    /// <summary>
+    /// 攻击射线检测是否命中玩家
+    /// </summary>
+    private bool DetectAttackHitPlayer()
+    {
+        GameObject player = GameManager.Instance.GetPlayer();
+        if (player == null) return false;
+
+        Vector3 origin = transform.position + _attackCastOffset;
+        Vector3 direction = transform.forward;
+        float distance = Mathf.Max(_attackRange - _attackSphereRadius, 0f);
+        int hitCount = Physics.SphereCastNonAlloc(origin, _attackSphereRadius, direction, _attackHits, distance, _playerLayerMask, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hitCollider = _attackHits[i].collider;
+            if (hitCollider != null && hitCollider.transform.IsChildOf(player.transform))
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// 目标是否在攻击范围内
@@ -67,6 +107,7 @@ public class Enemy : MonoBehaviour,IDamage
     private void OnDisable()
     {
         SpatialGrid.Unregister(this);
+        _attackDetectCallback = null;
     }
 
     private void Start()
@@ -125,6 +166,7 @@ public class Enemy : MonoBehaviour,IDamage
             return;
         }
 
+        Movement.Stop();
         AnimatorController?.PlayGetHit();
     }
 

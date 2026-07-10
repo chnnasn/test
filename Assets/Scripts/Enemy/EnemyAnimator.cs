@@ -46,6 +46,9 @@ public class EnemyAnimator : MonoBehaviour
 
         switch (playerState)
         {
+            case AnimationState.Attack:
+                _enemy.OnAttackAnimationEvent();
+                break;
             case AnimationState.dead:
                 _deadAnimationDuration = animationLength;
                 _enemy.stateMachine.OnAnimationTranslateEvent(_enemy.stateMachine.deadState);
