@@ -78,7 +78,7 @@ public class Enemy : MonoBehaviour,IDamage
         _currentHP = _maxHP;
         _isDying = false;
         _target = null;
-        Movement?.EnableCollision();
+        Movement?.DisableCollision();
         stateMachine.ResetStates();
         stateMachine.ChangeState(stateMachine.BirthState);
     }

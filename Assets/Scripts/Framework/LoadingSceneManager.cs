@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class LoadingSceneController : MonoBehaviour
+public class LoadingSceneManager : MonoBehaviour
 {
     [SerializeField] private string _demoSceneName = "Demo";
     [SerializeField] private PortalWave _firstWave;

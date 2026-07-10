@@ -13,8 +13,11 @@ MonoBehaviour:
   m_Name: PlayerBuffPool
   m_EditorClassIdentifier: 
   _buffs:
-  - {fileID: 11400000, guid: b4abaed242a47734dad876c1601c652c, type: 2}
   - {fileID: 11400000, guid: 3db2e28d03b21e542875924ba287a18a, type: 2}
   - {fileID: 11400000, guid: f6f5755134b4d7b47926e694b3861a1b, type: 2}
   - {fileID: 11400000, guid: e0620032fd95dfd4e844174ddf3072ac, type: 2}
   - {fileID: 11400000, guid: 5e042be57626e984896a7e2095da2652, type: 2}
+  - {fileID: 11400000, guid: b4abaed242a47734dad876c1601c652c, type: 2}
+  - {fileID: 11400000, guid: b4abaed242a47734dad876c1601c652c, type: 2}
+  - {fileID: 11400000, guid: b4abaed242a47734dad876c1601c652c, type: 2}
+  - {fileID: 11400000, guid: b4abaed242a47734dad876c1601c652c, type: 2}
