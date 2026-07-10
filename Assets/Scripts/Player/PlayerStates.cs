@@ -19,6 +19,7 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<float> Experience { get; private set; } = new GenericProperty<float>();
+    public GenericProperty<PlayerBuffAsset[]> LevelUpBuffs { get; private set; } = new GenericProperty<PlayerBuffAsset[]>();
 
     void Start()
     {
@@ -67,8 +68,7 @@ public class PlayerStates : MonoBehaviour, IDamage
         if (_buffPoolAsset == null) return;
 
         _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs);
-
-        
+        LevelUpBuffs.Value = _currentLevelUpBuffs;
     }
 
     public PlayerBuffAsset GetCurrentLevelUpBuff(int index)

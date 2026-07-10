@@ -7,17 +7,21 @@ public class UIManager : MonoBehaviour
     public Slider hpSlider;
     public Text[] BuffTexts;
     public Text HpText;
+    public GameObject BuffChooseObject;
 
     [Header("准星")]
     public Cross cross;
 
     private Character _character;
+    private PlayerStates _playerStates;
 
     private void OnEnable()
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
         EventManager.Instance.BindPlayerExp(OnExperienceChanged);
-        EventManager.Instance.LevelUpBuffs += OnLevelUpBuffs;
+        EventManager.Instance.TriggerBuff += OnBuffChosen;
+
+        BindPlayerStatesToBuffChoose();
 
         // ---- 绑定 Character 的 GenericProperty 到准星 ----
         BindCharacterToCross();
@@ -29,10 +33,10 @@ public class UIManager : MonoBehaviour
         {
             eventManager.UnbindPlayerHp(OnHpChanged);
             eventManager.UnbindPlayerExp(OnExperienceChanged);
-            eventManager.LevelUpBuffs -= OnLevelUpBuffs;
+            eventManager.TriggerBuff -= OnBuffChosen;
         }
 
-        // ---- 解绑 Character 的 GenericProperty ----
+        UnbindPlayerStatesFromBuffChoose();
         UnbindCharacterFromCross();
     }
 
@@ -101,6 +105,37 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
+    #region BuffChoose 绑定
+
+    private void BindPlayerStatesToBuffChoose()
+    {
+        GameObject player = GameManager.Instance.GetPlayer();
+        if (player == null) return;
+
+        _playerStates = player.GetComponent<PlayerStates>();
+        if (_playerStates == null) return;
+
+        _playerStates.LevelUpBuffs.OnValueChanged += OnLevelUpBuffs;
+        if (BuffChooseObject != null)
+            BuffChooseObject.SetActive(false);
+    }
+
+    private void UnbindPlayerStatesFromBuffChoose()
+    {
+        if (_playerStates == null) return;
+
+        _playerStates.LevelUpBuffs.OnValueChanged -= OnLevelUpBuffs;
+        _playerStates = null;
+    }
+
+    private void OnBuffChosen(int index)
+    {
+        if (BuffChooseObject != null)
+            BuffChooseObject.SetActive(false);
+    }
+
+    #endregion
+
     #region HP / 经验 / Buff 回调
 
     private void OnHpChanged(float currentHp, float maxHp)
@@ -123,15 +158,23 @@ public class UIManager : MonoBehaviour
 
     private void OnLevelUpBuffs(PlayerBuffAsset[] buffs)
     {
+        if (BuffChooseObject != null)
+            BuffChooseObject.SetActive(buffs != null && buffs.Length > 0);
+
         if (BuffTexts == null || buffs == null) return;
 
-        int count = Mathf.Min(BuffTexts.Length, buffs.Length);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < BuffTexts.Length; i++)
         {
             if (BuffTexts[i] == null) continue;
 
-            string buffName = buffs[i] != null ? buffs[i].BuffName : string.Empty;
-            string description = buffs[i] != null ? buffs[i].Description : string.Empty;
+            if (i >= buffs.Length || buffs[i] == null)
+            {
+                BuffTexts[i].text = string.Empty;
+                continue;
+            }
+
+            string buffName = buffs[i].BuffName;
+            string description = buffs[i].Description;
             BuffTexts[i].text = string.IsNullOrEmpty(description) ? buffName : $"{buffName}\n{description}";
         }
     }
