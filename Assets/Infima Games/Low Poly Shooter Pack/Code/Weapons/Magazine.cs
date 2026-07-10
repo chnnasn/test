@@ -31,6 +31,12 @@ namespace InfimaGames.LowPolyShooterPack
         /// 获取弹匣总弹药量。
         /// </summary>
         public override int GetAmmunitionTotal() => ammunitionTotal;
+
+        public void AddAmmunitionTotal(int amount)
+        {
+            ammunitionTotal += Mathf.Max(0, amount);
+        }
+
         /// <summary>
         /// 获取弹匣的精灵图标。
         /// </summary>

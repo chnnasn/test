@@ -121,10 +121,10 @@ public class PlayerStates : MonoBehaviour, IDamage
 
         bool applied = buff.Kind switch
         {
-            PlayerBuffKind.Scope => attachmentManager.EquipScope(buff.TargetIndex),
-            PlayerBuffKind.Laser => attachmentManager.EquipLaser(buff.TargetIndex),
-            PlayerBuffKind.Grip => attachmentManager.EquipGrip(buff.TargetIndex),
-            PlayerBuffKind.Magazine => attachmentManager.EquipMagazine(buff.TargetIndex),
+            PlayerBuffKind.Scope => attachmentManager.EquipScope(0),
+            PlayerBuffKind.Laser => attachmentManager.EquipLaser(0),
+            PlayerBuffKind.Grip => attachmentManager.EquipGrip(0),
+            PlayerBuffKind.Magazine => AddMagazineCapacity(attachmentManager),
             PlayerBuffKind.Hp => true,
             _ => false
         };
@@ -132,17 +132,28 @@ public class PlayerStates : MonoBehaviour, IDamage
         if (applied)
         {
             character.RefreshCurrentWeaponSetup();
-            MarkUniqueBuffUsed(buff);
+            if (buff != null && buff.Unique)
+                _usedUniqueBuffs.Add(buff);
+            
+            Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
         }
 
         return applied;
     }
 
-    private void MarkUniqueBuffUsed(PlayerBuffAsset buff)
+    private bool AddMagazineCapacity(WeaponAttachmentManagerBehaviour attachmentManager)
     {
-        if (buff != null && buff.Unique)
-            _usedUniqueBuffs.Add(buff);
+        if (attachmentManager.GetEquippedMagazine() is not Magazine magazine)
+            return false;
+
+        int increase = Mathf.FloorToInt(magazine.GetAmmunitionTotal() * 0.1f);
+        if (increase <= 0)
+            return false;
+
+        magazine.AddAmmunitionTotal(increase);
+        return true;
     }
+
 
     public void TakeDamage(float damage)
     {

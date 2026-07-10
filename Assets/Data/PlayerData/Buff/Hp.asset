@@ -12,8 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Hp
   m_EditorClassIdentifier: 
-  _buffName: HP
+  _buffName: "\u8840\u5305"
   _description: "\u52A0\u8840"
   _kind: 4
-  _targetIndex: 0
   _unique: 0

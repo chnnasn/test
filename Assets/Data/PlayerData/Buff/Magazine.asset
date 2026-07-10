@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
-  m_Name: Laser
+  m_Name: Magazine
   m_EditorClassIdentifier: 
-  _buffName: "\u5C04\u7EBF"
-  _description: "\u589E\u52A0\u5C04\u7EBF\u8F85\u52A9\u7784\u51C6"
-  _kind: 1
+  _buffName: "\u5F39\u5939"
+  _description: "\u589E\u52A0\u5F39\u5BB9\u91CF"
+  _kind: 3
   _unique: 1
