@@ -8,21 +8,74 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private SpawnPoint[] _spawnPoints;
     [SerializeField] private int _enemyPoolMaxSize = 30;
 
-    private readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
-    private readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
+    private static readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
+    private static readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
 
     int currentWave;
     private bool _canSpawnWaves = true;
     private bool _isWaveRunning;
     private int _activePortals;
     private int _aliveEnemies;
+    private bool _skipFirstTimer;
+
+    /// <summary> 当前波次（1-based），通过 EventManager 绑定到 UI </summary>
+    public GenericProperty<int> WaveNumber { get; private set; } = new GenericProperty<int>();
+    /// <summary> 下一波倒计时（秒），通过 EventManager 绑定到 UI </summary>
+    public GenericProperty<float> WaveCountdown { get; private set; } = new GenericProperty<float>();
 
     void Start()
     {
         _spawnPoints = GetComponentsInChildren<SpawnPoint>();
         currentWave = 0;
+        int totalWaves = _portalWaves != null ? _portalWaves.Length : 0;
 
-        StartCoroutine(FirstWaveTimer(5));
+        // 初始化波次显示
+        WaveNumber.Value = totalWaves > 0 ? 1 : 0;
+
+        if (_skipFirstTimerOnNextStart)
+        {
+            _skipFirstTimer = true;
+            _skipFirstTimerOnNextStart = false;
+        }
+
+        if (_skipFirstTimer)
+        {
+            SpawnNextWave();
+        }
+        else
+        {
+            StartCoroutine(FirstWaveCountdown(5));
+        }
+    }
+
+    private static bool _skipFirstTimerOnNextStart;
+
+    public static void PrewarmFirstWave(PortalWave firstWave)
+    {
+        if (firstWave == null)
+            return;
+
+        PrewarmWaveEnemies(firstWave);
+    }
+
+    public static void SkipFirstWaveTimerOnNextStart()
+    {
+        _skipFirstTimerOnNextStart = true;
+    }
+
+    /// <summary> GameManager 热机调用，预生成第一波可能用到的僵尸并放入对象池 </summary>
+    public void PrewarmFirstWave()
+    {
+        if (_portalWaves == null || _portalWaves.Length == 0 || _portalWaves[0] == null)
+            return;
+
+        PrewarmFirstWave(_portalWaves[0]);
+    }
+
+    /// <summary> GameManager 调用，跳过首次等待，立即生成第一波 </summary>
+    public void SkipFirstWaveTimer()
+    {
+        _skipFirstTimer = true;
     }
 
     public void SpawnNextWave()
@@ -38,6 +91,7 @@ public class WaveManager : MonoBehaviour
                 _isWaveRunning = true;
                 _activePortals = 0;
                 _aliveEnemies = 0;
+                WaveCountdown.Value = 0f;
 
                 PortalWave wave = _portalWaves[currentWave];
                 int portalNumber = wave.spawnPortals.Length;
@@ -58,6 +112,11 @@ public class WaveManager : MonoBehaviour
                     TrySpawnNextWave();
             }
             currentWave++;
+
+            // 更新波次显示（1-based）
+            int totalWaves = _portalWaves != null ? _portalWaves.Length : 0;
+            if (currentWave < totalWaves)
+                WaveNumber.Value = currentWave + 1;
         }
     }
 
@@ -65,6 +124,7 @@ public class WaveManager : MonoBehaviour
     {
         Enemy enemy = GetEnemyFromPool(prefab);
         Transform enemyTransform = enemy.transform;
+        enemyTransform.SetParent(null, false);
         enemyTransform.SetPositionAndRotation(position, rotation);
         enemy.gameObject.SetActive(true);
         enemy.SetPoolReleaseCallback(ReleaseEnemy);
@@ -85,6 +145,7 @@ public class WaveManager : MonoBehaviour
         }
 
         enemy.gameObject.SetActive(false);
+        enemy.transform.SetParent(ProjectilePool.Root, false);
         if (!_enemyPool.TryGetValue(prefab, out Queue<Enemy> pool))
         {
             pool = new Queue<Enemy>();
@@ -118,8 +179,49 @@ public class WaveManager : MonoBehaviour
             }
         }
 
-        GameObject enemyObject = Instantiate(prefab);
+        return CreateEnemyInstance(prefab);
+    }
+
+    private static void PrewarmWaveEnemies(PortalWave wave)
+    {
+        if (wave.spawnPortals == null) return;
+
+        Dictionary<GameObject, int> prewarmCounts = new Dictionary<GameObject, int>();
+        for (int i = 0; i < wave.spawnPortals.Length; i++)
+        {
+            SpawnPortal portal = wave.spawnPortals[i];
+            if (portal != null)
+                portal.CollectPrewarmEnemies(prewarmCounts);
+        }
+
+        foreach (KeyValuePair<GameObject, int> pair in prewarmCounts)
+        {
+            PrewarmEnemy(pair.Key, pair.Value);
+        }
+    }
+
+    private static void PrewarmEnemy(GameObject prefab, int count)
+    {
+        if (prefab == null || count <= 0) return;
+
+        if (!_enemyPool.TryGetValue(prefab, out Queue<Enemy> pool))
+        {
+            pool = new Queue<Enemy>(count);
+            _enemyPool[prefab] = pool;
+        }
+
+        for (int i = pool.Count; i < count; i++)
+        {
+            Enemy enemy = CreateEnemyInstance(prefab);
+            pool.Enqueue(enemy);
+        }
+    }
+
+    private static Enemy CreateEnemyInstance(GameObject prefab)
+    {
+        GameObject enemyObject = Object.Instantiate(prefab);
         enemyObject.SetActive(false);
+        enemyObject.transform.SetParent(ProjectilePool.Root, false);
         Enemy newEnemy = enemyObject.GetComponent<Enemy>();
         _enemyPrefabMap[newEnemy] = prefab;
         return newEnemy;
@@ -137,7 +239,14 @@ public class WaveManager : MonoBehaviour
     IEnumerator canSpawnWavesCoroutine()
     {
         _canSpawnWaves = false;
-        yield return new WaitForSeconds(8.0f);
+        float timer = 8.0f;
+        while (timer > 0f)
+        {
+            WaveCountdown.Value = timer;
+            yield return null;
+            timer -= Time.deltaTime;
+        }
+        WaveCountdown.Value = 0f;
         _canSpawnWaves = true;
         SpawnNextWave();
     }
@@ -150,10 +259,16 @@ public class WaveManager : MonoBehaviour
         }
     }
 
-    private IEnumerator FirstWaveTimer(float time)
+    private IEnumerator FirstWaveCountdown(float time)
     {
-        yield return new WaitForSeconds(time);
+        float timer = time;
+        while (timer > 0f)
+        {
+            WaveCountdown.Value = timer;
+            yield return null;
+            timer -= Time.deltaTime;
+        }
+        WaveCountdown.Value = 0f;
         SpawnNextWave();
-        yield break;
     }
 }

@@ -697,6 +697,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _demoSceneName: Demo
+  _firstWave: {fileID: 11400000, guid: 7c7a0e7afd0db4740bb4bf90d9ddcac9, type: 2}
   _progressSlider: {fileID: 1871353839}
   _minLoadingTime: 0
 --- !u!1 &1673699975

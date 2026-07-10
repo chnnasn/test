@@ -16,6 +16,26 @@ public class SpawnPortal : MonoBehaviour
     private Func<GameObject, Vector3, Quaternion, Enemy> _spawnEnemy;
     private Action _onPortalFinished;
 
+    public int MaxEnemySpawnCount => Mathf.Max(0, _waveNumber) * Mathf.Max(0, _averageEnemyPerWave + 1);
+
+    public void CollectPrewarmEnemies(Dictionary<GameObject, int> counts)
+    {
+        if (counts == null || _enemies == null) return;
+
+        int count = MaxEnemySpawnCount;
+        if (count <= 0) return;
+
+        for (int i = 0; i < _enemies.Length; i++)
+        {
+            GameObject enemyPrefab = _enemies[i];
+            if (enemyPrefab == null) continue;
+
+            if (!counts.ContainsKey(enemyPrefab))
+                counts[enemyPrefab] = 0;
+            counts[enemyPrefab] += count;
+        }
+    }
+
     public void Init(Func<GameObject, Vector3, Quaternion, Enemy> spawnEnemy, Action onPortalFinished)
     {
         _spawnEnemy = spawnEnemy;

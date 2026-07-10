@@ -1999,7 +1999,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &612035048
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9415,7 +9415,7 @@ MonoBehaviour:
   BuffTexts: []
   HpText: {fileID: 505160709}
   BuffChooseObject: {fileID: 0}
-  WaveText: {fileID: 0}
+  WaveText: {fileID: 612035049}
   cross: {fileID: 2077569606}
 --- !u!1001 &921227753
 PrefabInstance:
@@ -11202,6 +11202,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7eb147229c639474ea549b8b9116ca22, type: 2}
   - {fileID: 11400000, guid: da97c145a42cf44479b7e7b91a9af612, type: 2}
   _spawnPoints: []
+  _enemyPoolMaxSize: 30
 --- !u!1 &1269856214
 GameObject:
   m_ObjectHideFlags: 0

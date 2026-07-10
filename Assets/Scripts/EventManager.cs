@@ -24,6 +24,7 @@ public class EventManager : LazySingleton<EventManager>
 
     private PlayerStates _playerStates;
     private Character _character;
+    private WaveManager _waveManager;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _expBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _levelUpBuffBindings = new Dictionary<Delegate, Delegate>();
@@ -31,6 +32,8 @@ public class EventManager : LazySingleton<EventManager>
     private Dictionary<Delegate, Delegate> _runningBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _firingBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _weaponSpreadBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _waveNumberBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _waveCountdownBindings = new Dictionary<Delegate, Delegate>();
     
 
     private PlayerStates PlayerStates
@@ -50,6 +53,16 @@ public class EventManager : LazySingleton<EventManager>
             if (_character == null)
                 _character = GameManager.Instance.GetCharacter();
             return _character;
+        }
+    }
+
+    private WaveManager WaveManager
+    {
+        get
+        {
+            if (_waveManager == null)
+                _waveManager = FindObjectOfType<WaveManager>();
+            return _waveManager;
         }
     }
 
@@ -213,6 +226,54 @@ public class EventManager : LazySingleton<EventManager>
         {
             character.CurrentWeaponSpreadProp.OnValueChanged -= callback;
             _weaponSpreadBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定波次变化回调 </summary>
+    public void BindWaveNumber(Action<int> callback)
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        _waveNumberBindings[callback] = callback;
+        wm.WaveNumber.OnValueChanged += callback;
+        callback(wm.WaveNumber.Value);
+    }
+
+    /// <summary> 解绑波次变化回调 </summary>
+    public void UnbindWaveNumber(Action<int> callback)
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        if (_waveNumberBindings.ContainsKey(callback))
+        {
+            wm.WaveNumber.OnValueChanged -= callback;
+            _waveNumberBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定波次倒计时变化回调 </summary>
+    public void BindWaveCountdown(Action<float> callback)
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        _waveCountdownBindings[callback] = callback;
+        wm.WaveCountdown.OnValueChanged += callback;
+        callback(wm.WaveCountdown.Value);
+    }
+
+    /// <summary> 解绑波次倒计时变化回调 </summary>
+    public void UnbindWaveCountdown(Action<float> callback)
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        if (_waveCountdownBindings.ContainsKey(callback))
+        {
+            wm.WaveCountdown.OnValueChanged -= callback;
+            _waveCountdownBindings.Remove(callback);
         }
     }
 

@@ -13,6 +13,9 @@ public class UIManager : MonoBehaviour
     [Header("准星")]
     public Cross cross;
 
+    private int _currentWaveNumber;
+    private float _currentWaveCountdown;
+
     private void OnEnable()
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
@@ -22,6 +25,9 @@ public class UIManager : MonoBehaviour
 
         // ---- 通过 EventManager 绑定 Character 的 GenericProperty 到准星 ----
         BindCharacterToCross();
+
+        // ---- 通过 EventManager 绑定 WaveManager 的 GenericProperty 到 WaveText ----
+        BindWaveToText();
 
         if (BuffChooseObject != null)
             BuffChooseObject.SetActive(false);
@@ -38,6 +44,7 @@ public class UIManager : MonoBehaviour
         }
 
         UnbindCharacterFromCross();
+        UnbindWaveFromText();
     }
 
     #region Character → Cross 绑定
@@ -90,6 +97,55 @@ public class UIManager : MonoBehaviour
     {
         if (cross != null)
             cross.SetWeaponSpread(weaponSpread);
+    }
+
+    #endregion
+
+    #region WaveText 绑定
+
+    /// <summary>
+    /// 通过 EventManager 订阅 WaveManager 的 GenericProperty，显示波次与倒计时。
+    /// UIManager 不直接持有 WaveManager 引用，完全通过 EventManager 中介。
+    /// </summary>
+    private void BindWaveToText()
+    {
+        EventManager.Instance.BindWaveNumber(OnWaveNumberChanged);
+        EventManager.Instance.BindWaveCountdown(OnWaveCountdownChanged);
+    }
+
+    private void UnbindWaveFromText()
+    {
+        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+
+        eventManager.UnbindWaveNumber(OnWaveNumberChanged);
+        eventManager.UnbindWaveCountdown(OnWaveCountdownChanged);
+    }
+
+    private void OnWaveNumberChanged(int waveNumber)
+    {
+        _currentWaveNumber = waveNumber;
+        RefreshWaveText();
+    }
+
+    private void OnWaveCountdownChanged(float countdown)
+    {
+        _currentWaveCountdown = countdown;
+        RefreshWaveText();
+    }
+
+    private void RefreshWaveText()
+    {
+        if (WaveText == null) return;
+
+        if (_currentWaveCountdown > 0f)
+        {
+            WaveText.text = $"Wave {_currentWaveNumber}  {_currentWaveCountdown:F1}s";
+            WaveText.gameObject.SetActive(true);
+        }
+        else
+        {
+            WaveText.gameObject.SetActive(false);
+        }
     }
 
     #endregion

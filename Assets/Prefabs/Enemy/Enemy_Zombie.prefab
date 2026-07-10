@@ -283,7 +283,7 @@ MonoBehaviour:
   _hardPushDistance: 1
   _hardPushForce: 6
   _obstacleCheckDistance: 1
-  _obstacleAvoidForce: 3
+  _obstacleAvoidForce: 2
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 2048

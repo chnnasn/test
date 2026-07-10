@@ -8,6 +8,8 @@ public static class ProjectilePool
     private static readonly Dictionary<GameObject, Queue<GameObject>> _pools = new Dictionary<GameObject, Queue<GameObject>>();
     private static Transform _root;
 
+    public static Transform Root => GetRoot();
+
     public static GameObject Spawn(GameObject prefab, Vector3 position, Quaternion rotation)
     {
         if (prefab == null) return null;

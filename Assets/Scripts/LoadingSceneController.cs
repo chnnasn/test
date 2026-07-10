@@ -6,6 +6,7 @@ using UnityEngine.UI;
 public class LoadingSceneController : MonoBehaviour
 {
     [SerializeField] private string _demoSceneName = "Demo";
+    [SerializeField] private PortalWave _firstWave;
     [SerializeField] private Slider _progressSlider;
     [SerializeField] private float _minLoadingTime;
 
@@ -34,6 +35,9 @@ public class LoadingSceneController : MonoBehaviour
             Debug.LogError("[LoadingSceneController] FlowField 热机失败，请检查 GameManager 的 FlowFieldAsset");
             yield break;
         }
+
+        WaveManager.PrewarmFirstWave(_firstWave);
+        WaveManager.SkipFirstWaveTimerOnNextStart();
 
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(_demoSceneName);
         if (loadOperation == null)
