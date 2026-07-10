@@ -16,4 +16,9 @@ public class EnemyStateMachine : StateMachine
         attackState = new EnemyAttackState(this);
         deadState = new EnemyDeadState(this);
     }
+
+    public void ResetStates()
+    {
+        deadState.ResetState();
+    }
 }

@@ -105,4 +105,13 @@ public class EnemyMovement : MonoBehaviour
             colliders[i].enabled = false;
         }
     }
+
+    public void EnableCollision()
+    {
+        Collider[] colliders = GetComponents<Collider>();
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].enabled = true;
+        }
+    }
 }

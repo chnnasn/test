@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(EnemyMovement))]
@@ -20,6 +21,7 @@ public class Enemy : MonoBehaviour,IDamage
     private float _currentHP;
     private Transform _target;
     private bool _isDying;
+    private Action<Enemy> _poolReleaseCallback;
 
     public EnemyStateMachine stateMachine { get; private set; }
     public EnemyMovement Movement { get; private set; }
@@ -51,8 +53,8 @@ public class Enemy : MonoBehaviour,IDamage
     {
         Movement = GetComponent<EnemyMovement>();
         AnimatorController = GetComponent<EnemyAnimator>();
-        _currentHP = _maxHP;
         stateMachine = new EnemyStateMachine(this);
+        ResetEnemy();
     }
 
     private void OnEnable()
@@ -67,7 +69,29 @@ public class Enemy : MonoBehaviour,IDamage
 
     private void Start()
     {
+    }
+
+    public void ResetEnemy()
+    {
+        _currentHP = _maxHP;
+        _isDying = false;
+        _target = null;
+        Movement?.EnableCollision();
+        stateMachine.ResetStates();
         stateMachine.ChangeState(stateMachine.BirthState);
+    }
+
+    public void SetPoolReleaseCallback(Action<Enemy> callback)
+    {
+        _poolReleaseCallback = callback;
+    }
+
+    public void ReleaseToPool()
+    {
+        if (_poolReleaseCallback != null)
+            _poolReleaseCallback.Invoke(this);
+        else
+            Destroy(gameObject);
     }
 
     private void Update()

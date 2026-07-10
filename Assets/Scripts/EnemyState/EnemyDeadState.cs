@@ -29,11 +29,16 @@ public class EnemyDeadState : EnemyState
         enemy.StartCoroutine(DestroyAfterDelay(enemy.DeadDestroyDelay));
     }
 
+    public void ResetState()
+    {
+        _destroyScheduled = false;
+    }
+
     private IEnumerator DestroyAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
         EventManager.Instance.SetAddExperience(1000f);
-        Object.Destroy(enemy.gameObject);
+        enemy.ReleaseToPool();
     }
 
     public override void Update()
