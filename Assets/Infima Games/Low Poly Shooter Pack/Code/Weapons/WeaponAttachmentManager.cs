@@ -148,7 +148,7 @@ namespace InfimaGames.LowPolyShooterPack
             if (laserIndexRandom && laserArray.IsValid())
                 laserIndex = Random.Range(0, laserArray.Length);
             //选择激光！
-            laserBehaviour = laserArray.SelectAndSetActive(laserIndex);
+            ApplyLaser(laserIndex);
 
             //随机化握把选择！这为游戏增加了一些随机变化！
             if (gripIndexRandom && gripArray.IsValid())
@@ -200,6 +200,7 @@ namespace InfimaGames.LowPolyShooterPack
 
         public override bool EquipScope(int index) => ApplyScope(index);
         public override bool EquipMuzzle(int index) => ApplyMuzzle(index);
+        public override bool EquipLaser(int index) => ApplyLaser(index);
         public override bool EquipGrip(int index) => ApplyGrip(index);
         public override bool EquipMagazine(int index) => ApplyMagazine(index);
 
@@ -236,6 +237,16 @@ namespace InfimaGames.LowPolyShooterPack
             muzzleIndex = index;
             muzzleBehaviour = muzzleArray.SelectAndSetActive(muzzleIndex);
             return muzzleBehaviour != null;
+        }
+
+        /// <summary>
+        /// 应用指定激光索引。负数时表示不装备激光。
+        /// </summary>
+        private bool ApplyLaser(int index)
+        {
+            laserIndex = index;
+            laserBehaviour = laserArray.SelectAndSetActive(laserIndex);
+            return laserIndex < 0 || laserBehaviour != null;
         }
 
         /// <summary>

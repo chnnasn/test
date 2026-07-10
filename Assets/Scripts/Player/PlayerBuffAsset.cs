@@ -2,9 +2,9 @@ using UnityEngine;
 
 public enum PlayerBuffKind
 {
-    Weapon,
     Scope,
     Muzzle,
+    Laser,
     Grip,
     Magazine
 }
@@ -17,9 +17,11 @@ public class PlayerBuffAsset : ScriptableObject
     [SerializeField] private string _description;
     [SerializeField] private PlayerBuffKind _kind;
     [SerializeField] private int _targetIndex;
+    [SerializeField] private bool _unique;
 
     public string BuffName => _buffName;
     public string Description => _description;
     public PlayerBuffKind Kind => _kind;
     public int TargetIndex => _targetIndex;
+    public bool Unique => _unique;
 }

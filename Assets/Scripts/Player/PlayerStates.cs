@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 
@@ -10,6 +11,7 @@ public class PlayerStates : MonoBehaviour, IDamage
     [SerializeField] private PlayerBuffPoolAsset _buffPoolAsset;
 
     private PlayerBuffAsset[] _currentLevelUpBuffs;
+    private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _maxHP;
@@ -64,8 +66,9 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (_buffPoolAsset == null) return;
 
-        _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount);
-        EventManager.Instance.SetLevelUpBuffs(_currentLevelUpBuffs);
+        _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs);
+
+        
     }
 
     public PlayerBuffAsset GetCurrentLevelUpBuff(int index)
@@ -89,9 +92,6 @@ public class PlayerStates : MonoBehaviour, IDamage
         Character character = GameManager.Instance.GetCharacter();
         if (character == null) return false;
 
-        if (buff.Kind == PlayerBuffKind.Weapon)
-            return character.EquipWeaponRuntime(buff.TargetIndex);
-
         WeaponBehaviour weapon = character.GetInventory()?.GetEquipped();
         WeaponAttachmentManagerBehaviour attachmentManager = weapon?.GetAttachmentManager();
         if (attachmentManager == null) return false;
@@ -100,15 +100,25 @@ public class PlayerStates : MonoBehaviour, IDamage
         {
             PlayerBuffKind.Scope => attachmentManager.EquipScope(buff.TargetIndex),
             PlayerBuffKind.Muzzle => attachmentManager.EquipMuzzle(buff.TargetIndex),
+            PlayerBuffKind.Laser => attachmentManager.EquipLaser(buff.TargetIndex),
             PlayerBuffKind.Grip => attachmentManager.EquipGrip(buff.TargetIndex),
             PlayerBuffKind.Magazine => attachmentManager.EquipMagazine(buff.TargetIndex),
             _ => false
         };
 
         if (applied)
+        {
             character.RefreshCurrentWeaponSetup();
+            MarkUniqueBuffUsed(buff);
+        }
 
         return applied;
+    }
+
+    private void MarkUniqueBuffUsed(PlayerBuffAsset buff)
+    {
+        if (buff != null && buff.Unique)
+            _usedUniqueBuffs.Add(buff);
     }
 
     public void TakeDamage(float damage)
