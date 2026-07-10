@@ -207,6 +207,7 @@ public class WaveManager : MonoBehaviour
 
         _isWaveRunning = false;
         StartCoroutine(canSpawnWavesCoroutine());
+        WaveNumber.Value += 1;
     }
 
     IEnumerator canSpawnWavesCoroutine()
@@ -226,9 +227,9 @@ public class WaveManager : MonoBehaviour
 
     private void ResetSpawnPoints()
     {
-        foreach (SpawnPoint spawnPoint in _spawnPoints)
+        for (int i = 0; i < _spawnPoints.Length; i++)
         {
-            spawnPoint.busy = false;
+            _spawnPoints[i].busy = false;
         }
     }
 
