@@ -295,26 +295,30 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		public Vector2 AutoMoveInput { get; set; }
 
-		/// <summary>
-		/// 准星系统可监听的瞄准状态属性。
-		/// </summary>
-		public GenericProperty<bool> IsAimingProp { get; private set; } = new GenericProperty<bool>();
-		/// <summary>
-		/// 准星系统可监听的跑步状态属性。
-		/// </summary>
-		public GenericProperty<bool> IsRunningProp { get; private set; } = new GenericProperty<bool>();
-		/// <summary>
-		/// 准星系统可监听的射击状态属性。
-		/// </summary>
-		public GenericProperty<bool> IsFiringProp { get; private set; } = new GenericProperty<bool>();
+	/// <summary>
+	/// 准星系统可监听的瞄准状态属性。
+	/// </summary>
+	public GenericProperty<bool> IsAimingProp { get; private set; } = new GenericProperty<bool>();
+	/// <summary>
+	/// 准星系统可监听的跑步状态属性。
+	/// </summary>
+	public GenericProperty<bool> IsRunningProp { get; private set; } = new GenericProperty<bool>();
+	/// <summary>
+	/// 准星系统可监听的射击状态属性。
+	/// </summary>
+	public GenericProperty<bool> IsFiringProp { get; private set; } = new GenericProperty<bool>();
+	/// <summary>
+	/// 当前武器散布值变化通知。武器切换时自动更新。
+	/// </summary>
+	public GenericProperty<float> CurrentWeaponSpreadProp { get; private set; } = new GenericProperty<float>();
 
-		/// <summary>
-		/// 获取当前装备武器的散布值。若未装备武器则返回默认值。
-		/// </summary>
-		public float GetCurrentWeaponSpread()
-		{
-			return equippedWeapon != null ? equippedWeapon.GetSpread() : 0.25f;
-		}
+	/// <summary>
+	/// 获取当前装备武器的散布值。若未装备武器则返回默认值。
+	/// </summary>
+	public float GetCurrentWeaponSpread()
+	{
+		return equippedWeapon != null ? equippedWeapon.GetSpread() : 0.25f;
+	}
 
 		/// <summary>
 		/// 获取当前武器的射速（每分钟发射数）。
@@ -826,6 +830,9 @@ namespace InfimaGames.LowPolyShooterPack
 			equippedWeaponScope = weaponAttachmentManager.GetEquippedScope();
 			//获取装备的弹匣配置
 			equippedWeaponMagazine = weaponAttachmentManager.GetEquippedMagazine();
+
+			// 通知订阅者武器散布已更新（UI 系统可据此刷新准星）
+			CurrentWeaponSpreadProp.Value = GetCurrentWeaponSpread();
 		}
 
 		/// <summary>

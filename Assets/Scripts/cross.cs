@@ -1,5 +1,4 @@
 using UnityEngine;
-using InfimaGames.LowPolyShooterPack;
 
 public class Cross : MonoBehaviour
 {
@@ -44,13 +43,13 @@ public class Cross : MonoBehaviour
 
 	#region 运行时状态
 
-	// ---- 通过 GenericProperty 从 Character 监听的状态 ----
+	// ---- 输入状态（由 UIManager 设置） ----
 	private bool _isAiming;
 	private bool _isRunning;
 	private bool _isFiring;
 
-	// ---- 武器散布参数（从 Character 的武器动态读取） ----
-	private float _currentWeaponSpread;
+	// ---- 武器散布参数（由 UIManager 传入） ----
+	private float _weaponSpread;
 
 	// ---- 插值中间量 ----
 	private float _currentExtraSpread;
@@ -64,21 +63,29 @@ public class Cross : MonoBehaviour
 	// ---- 各部件默认基准位置（prefab 中设计好的静止位置） ----
 	private Vector3 _topBasePos, _bottomBasePos, _leftBasePos, _rightBasePos;
 
-	// ---- Character 引用 ----
-	private Character _character;
-
 	#endregion
 
-	#region 公共接口
+	#region 公共接口 —— 由 UIManager 调用
 
 	/// <summary>
-	/// 手动刷新武器散布参数（武器切换时由 Character 通知调用）。
+	/// 设置瞄准状态。
 	/// </summary>
-	public void RefreshWeaponSpread()
-	{
-		if (_character != null)
-			_currentWeaponSpread = _character.GetCurrentWeaponSpread();
-	}
+	public void SetAiming(bool aiming) => _isAiming = aiming;
+
+	/// <summary>
+	/// 设置跑步状态。
+	/// </summary>
+	public void SetRunning(bool running) => _isRunning = running;
+
+	/// <summary>
+	/// 设置射击状态。
+	/// </summary>
+	public void SetFiring(bool firing) => _isFiring = firing;
+
+	/// <summary>
+	/// 设置武器散布参数（由 UIManager 从 Character 的武器读取后传入）。
+	/// </summary>
+	public void SetWeaponSpread(float weaponSpread) => _weaponSpread = weaponSpread;
 
 	#endregion
 
@@ -87,53 +94,16 @@ public class Cross : MonoBehaviour
 	private void Start()
 	{
 		CacheDefaultPositions();
-
-		// 查找 Character 组件
-		_character = GameManager.Instance.GetCharacter();
-		if (_character != null)
-		{
-			// 订阅 GenericProperty 状态变化
-			_character.IsAimingProp.OnValueChanged += OnAimingChanged;
-			_character.IsRunningProp.OnValueChanged += OnRunningChanged;
-			_character.IsFiringProp.OnValueChanged += OnFiringChanged;
-
-			// 读取初始武器散布
-			RefreshWeaponSpread();
-		}
-
 		_currentExtraSpread = 0f;
 		_currentAlpha = defaultAlpha;
 	}
 
-	private void OnDestroy()
-	{
-		// 解绑 GenericProperty 回调
-		if (_character != null)
-		{
-			_character.IsAimingProp.OnValueChanged -= OnAimingChanged;
-			_character.IsRunningProp.OnValueChanged -= OnRunningChanged;
-			_character.IsFiringProp.OnValueChanged -= OnFiringChanged;
-		}
-	}
-
 	private void Update()
 	{
-		// 每帧动态读取武器散布值（武器切换时自动更新）
-		if (_character != null)
-			_currentWeaponSpread = _character.GetCurrentWeaponSpread();
-
 		ComputeTargets(out float targetSpread, out float targetAlpha);
 		SmoothValues(targetSpread, targetAlpha);
 		ApplyToParts();
 	}
-
-	#endregion
-
-	#region GenericProperty 回调 —— 由 Character 自动触发
-
-	private void OnAimingChanged(bool aiming) => _isAiming = aiming;
-	private void OnRunningChanged(bool running) => _isRunning = running;
-	private void OnFiringChanged(bool firing) => _isFiring = firing;
 
 	#endregion
 
@@ -158,7 +128,7 @@ public class Cross : MonoBehaviour
 	private void ComputeTargets(out float targetSpread, out float targetAlpha)
 	{
 		// 动态计算当前武器的视觉散布值
-		float maxFireSpread = _currentWeaponSpread * spreadVisualScale;
+		float maxFireSpread = _weaponSpread * spreadVisualScale;
 		float runExtraSpread = maxFireSpread * runSpreadRatio;
 
 		// ---------- 瞄准（最高优先级） ----------

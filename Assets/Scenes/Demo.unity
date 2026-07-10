@@ -9123,7 +9123,7 @@ MonoBehaviour:
   hpSlider: {fileID: 1871353839}
   BuffTexts: []
   HpText: {fileID: 505160709}
-  crossComponent: {fileID: 2077569606}
+  cross: {fileID: 2077569606}
 --- !u!1001 &921227753
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14234,7 +14234,8 @@ MonoBehaviour:
   bottomPart: {fileID: 1286759795}
   leftPart: {fileID: 1420566316}
   rightPart: {fileID: 948138881}
-  runExtraSpread: 30
+  spreadVisualScale: 200
+  runSpreadRatio: 0.4
   runAlpha: 0.35
   defaultAlpha: 1
   fireSpreadCurve:
@@ -14261,7 +14262,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  maxFireSpread: 80
   fireBuildUpTime: 1.2
   fireRecoveryTime: 0.5
   smoothTime: 0.08
