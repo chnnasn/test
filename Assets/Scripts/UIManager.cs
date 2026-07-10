@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     public GameObject BuffChooseObject;
 
     public Text WaveText;
+    public Text LVText;
 
     [Header("准星")]
     public Cross cross;
@@ -19,14 +20,12 @@ public class UIManager : MonoBehaviour
     private void OnEnable()
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
-        EventManager.Instance.BindPlayerExp(OnExperienceChanged);
+        EventManager.Instance.BindPlayerLevel(OnLevelChanged);
         EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
         EventManager.Instance.TriggerBuff += OnBuffChosen;
-
-        // ---- 通过 EventManager 绑定 Character 的 GenericProperty 到准星 ----
+        
         BindCharacterToCross();
-
-        // ---- 通过 EventManager 绑定 WaveManager 的 GenericProperty 到 WaveText ----
+        
         BindWaveToText();
 
         if (BuffChooseObject != null)
@@ -38,7 +37,7 @@ public class UIManager : MonoBehaviour
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
         {
             eventManager.UnbindPlayerHp(OnHpChanged);
-            eventManager.UnbindPlayerExp(OnExperienceChanged);
+            eventManager.UnbindPlayerLevel(OnLevelChanged);
             eventManager.UnbindLevelUpBuffs(OnLevelUpBuffs);
             eventManager.TriggerBuff -= OnBuffChosen;
         }
@@ -139,7 +138,7 @@ public class UIManager : MonoBehaviour
 
         if (_currentWaveCountdown > 0f)
         {
-            WaveText.text = $"Wave {_currentWaveNumber}  {_currentWaveCountdown:F1}s";
+            WaveText.text = $"第 {_currentWaveNumber}波: {_currentWaveCountdown:F0}s";
             WaveText.gameObject.SetActive(true);
         }
         else
@@ -156,11 +155,13 @@ public class UIManager : MonoBehaviour
     {
         if (BuffChooseObject != null)
             BuffChooseObject.SetActive(false);
+
+        EventManager.Instance.SetGameResume();
     }
 
     #endregion
 
-    #region HP / 经验 / Buff 回调
+    #region HP / Buff 回调
 
     private void OnHpChanged(float currentHp, float maxHp)
     {
@@ -174,16 +175,21 @@ public class UIManager : MonoBehaviour
             HpText.text = $"HP: {currentHp:F0} / {maxHp}";
     }
 
-    private void OnExperienceChanged(float exp)
+    private void OnLevelChanged(int level)
     {
-        Debug.Log($"经验值变化: {exp}");
-        // TODO: 更新经验条 UI
+        if (LVText != null)
+            LVText.text = $"LV: {level}";
     }
 
     private void OnLevelUpBuffs(PlayerBuffAsset[] buffs)
     {
+        bool hasBuffs = buffs != null && buffs.Length > 0;
+
         if (BuffChooseObject != null)
-            BuffChooseObject.SetActive(buffs != null && buffs.Length > 0);
+            BuffChooseObject.SetActive(hasBuffs);
+
+        if (hasBuffs)
+            EventManager.Instance.SetGamePause();
 
         if (BuffTexts == null || buffs == null) return;
 

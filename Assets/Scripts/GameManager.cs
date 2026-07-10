@@ -20,12 +20,23 @@ public class GameManager : LazySingleton<GameManager>
     private void Start()
     {
         Application.targetFrameRate = 120;
+        EventManager.Instance.GamePause += OnGamePause;
+        EventManager.Instance.GameResume += OnGameResume;
         InitCharacter();
         InitFrameText();
 
         if (_flowFieldInitialized && _character != null)
         {
             FlowField.SetTarget(_character.transform.position);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (EventManager.TryGetExistingInstance(out EventManager eventManager))
+        {
+            eventManager.GamePause -= OnGamePause;
+            eventManager.GameResume -= OnGameResume;
         }
     }
 
@@ -117,6 +128,16 @@ public class GameManager : LazySingleton<GameManager>
     {
         InitCharacter();
         return _character;
+    }
+
+    private void OnGamePause()
+    {
+        Time.timeScale = 0f;
+    }
+
+    private void OnGameResume()
+    {
+        Time.timeScale = 1f;
     }
 
 #if UNITY_EDITOR

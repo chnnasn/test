@@ -7,7 +7,12 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     private Dictionary<GameObject, int> _childIndexMap;
     private HashSet<GameObject> _validTargets;
 
-    private int _index;
+    private int _index = -1;
+
+    private void OnEnable()
+    {
+        _index = -1;
+    }
 
     private void Start()
     {
@@ -63,6 +68,11 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
 
     public void ChooseBuff()
     {
-        EventManager.Instance.SetBuffIndex(_index);
+        if (_index!=-1)
+        {
+            EventManager.Instance.SetBuffIndex(_index);
+            _index = -1;
+        }
+
     }
 }

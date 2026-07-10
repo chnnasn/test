@@ -37,7 +37,6 @@ public class EnemyDeadState : EnemyState
     private IEnumerator DestroyAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        EventManager.Instance.SetAddExperience(1000f);
         enemy.ReleaseToPool();
     }
 

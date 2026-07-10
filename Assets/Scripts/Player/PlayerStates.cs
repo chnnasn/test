@@ -10,6 +10,7 @@ public class PlayerStates : MonoBehaviour, IDamage
     [SerializeField] private PlayerLevelExperienceAsset _levelExperienceAsset;
     [SerializeField] private PlayerBuffPoolAsset _buffPoolAsset;
 
+    private float _experience;
     private PlayerBuffAsset[] _currentLevelUpBuffs;
     private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
 
@@ -18,12 +19,13 @@ public class PlayerStates : MonoBehaviour, IDamage
     public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
 
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
-    public GenericProperty<float> Experience { get; private set; } = new GenericProperty<float>();
+    public GenericProperty<int> Level { get; private set; } = new GenericProperty<int>();
     public GenericProperty<PlayerBuffAsset[]> LevelUpBuffs { get; private set; } = new GenericProperty<PlayerBuffAsset[]>();
 
-    void Start()
+    private void Awake()
     {
         CurrentHP.Value = _maxHP;
+        Level.Value = _level;
     }
 
     private void OnEnable()
@@ -45,7 +47,7 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     private void AddExperience(float experience)
     {
-        Experience.Value += experience;
+        _experience += experience;
         CheckExper();
     }
 
@@ -55,10 +57,11 @@ public class PlayerStates : MonoBehaviour, IDamage
             return;
 
         while (_level - 1 < _levelExperienceAsset.LevelExperienceRequirements.Length &&
-               Experience.Value >= _levelExperienceAsset.LevelExperienceRequirements[_level - 1])
+               _experience >= _levelExperienceAsset.LevelExperienceRequirements[_level - 1])
         {
-            Experience.Value -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
+            _experience -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
             _level++;
+            Level.Value = _level;
             DrawLevelUpBuffs();
         }
     }

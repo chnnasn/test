@@ -21,12 +21,14 @@ public class EventManager : LazySingleton<EventManager>
     public Action<Vector2> MoveInput;
 
     public Action<float> AddExper;
+    public Action GamePause;
+    public Action GameResume;
 
     private PlayerStates _playerStates;
     private Character _character;
     private WaveManager _waveManager;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
-    private Dictionary<Delegate, Delegate> _expBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _levelBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _levelUpBuffBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _aimingBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _runningBindings = new Dictionary<Delegate, Delegate>();
@@ -90,26 +92,27 @@ public class EventManager : LazySingleton<EventManager>
         }
     }
 
-    /// <summary> 绑定经验变化回调 </summary>
-    public void BindPlayerExp(Action<float> callback)
+    /// <summary> 绑定等级变化回调 </summary>
+    public void BindPlayerLevel(Action<int> callback)
     {
         var ps = PlayerStates;
         if (ps == null) return;
 
-        _expBindings[callback] = callback;
-        ps.Experience.OnValueChanged += callback;
+        _levelBindings[callback] = callback;
+        ps.Level.OnValueChanged += callback;
+        callback(ps.Level.Value);
     }
 
-    /// <summary> 解绑经验变化回调 </summary>
-    public void UnbindPlayerExp(Action<float> callback)
+    /// <summary> 解绑等级变化回调 </summary>
+    public void UnbindPlayerLevel(Action<int> callback)
     {
         var ps = PlayerStates;
         if (ps == null) return;
 
-        if (_expBindings.ContainsKey(callback))
+        if (_levelBindings.ContainsKey(callback))
         {
-            ps.Experience.OnValueChanged -= callback;
-            _expBindings.Remove(callback);
+            ps.Level.OnValueChanged -= callback;
+            _levelBindings.Remove(callback);
         }
     }
 
@@ -318,5 +321,15 @@ public class EventManager : LazySingleton<EventManager>
     public void SetAddExperience(float value)
     {
         AddExper?.Invoke(value);
+    }
+
+    public void SetGamePause()
+    {
+        GamePause?.Invoke();
+    }
+
+    public void SetGameResume()
+    {
+        GameResume?.Invoke();
     }
 }
