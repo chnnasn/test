@@ -199,7 +199,6 @@ namespace InfimaGames.LowPolyShooterPack
         #region METHODS
 
         public override bool EquipScope(int index) => ApplyScope(index);
-        public override bool EquipMuzzle(int index) => ApplyMuzzle(index);
         public override bool EquipLaser(int index) => ApplyLaser(index);
         public override bool EquipGrip(int index) => ApplyGrip(index);
         public override bool EquipMagazine(int index) => ApplyMagazine(index);
@@ -227,12 +226,15 @@ namespace InfimaGames.LowPolyShooterPack
         }
 
         /// <summary>
-        /// 应用指定枪口索引。
+        /// 应用指定枪口索引。索引无效时回退到第一个枪口，保证武器始终有枪管。
         /// </summary>
         private bool ApplyMuzzle(int index)
         {
-            if (!muzzleArray.IsValidIndex(index))
+            if (!muzzleArray.IsValid())
                 return false;
+
+            if (!muzzleArray.IsValidIndex(index))
+                index = 0;
 
             muzzleIndex = index;
             muzzleBehaviour = muzzleArray.SelectAndSetActive(muzzleIndex);

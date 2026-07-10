@@ -72,10 +72,6 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public abstract bool EquipScope(int index);
         /// <summary>
-        /// 运行时装备指定索引的枪口。
-        /// </summary>
-        public abstract bool EquipMuzzle(int index);
-        /// <summary>
         /// 运行时装备指定索引的激光。负数表示不装备激光。
         /// </summary>
         public abstract bool EquipLaser(int index);

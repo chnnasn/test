@@ -3,7 +3,6 @@ using UnityEngine;
 public enum PlayerBuffKind
 {
     Scope,
-    Muzzle,
     Laser,
     Grip,
     Magazine

@@ -99,7 +99,6 @@ public class PlayerStates : MonoBehaviour, IDamage
         bool applied = buff.Kind switch
         {
             PlayerBuffKind.Scope => attachmentManager.EquipScope(buff.TargetIndex),
-            PlayerBuffKind.Muzzle => attachmentManager.EquipMuzzle(buff.TargetIndex),
             PlayerBuffKind.Laser => attachmentManager.EquipLaser(buff.TargetIndex),
             PlayerBuffKind.Grip => attachmentManager.EquipGrip(buff.TargetIndex),
             PlayerBuffKind.Magazine => attachmentManager.EquipMagazine(buff.TargetIndex),
