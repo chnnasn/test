@@ -125,6 +125,7 @@ public class PlayerStates : MonoBehaviour, IDamage
             PlayerBuffKind.Laser => attachmentManager.EquipLaser(buff.TargetIndex),
             PlayerBuffKind.Grip => attachmentManager.EquipGrip(buff.TargetIndex),
             PlayerBuffKind.Magazine => attachmentManager.EquipMagazine(buff.TargetIndex),
+            PlayerBuffKind.Hp => true,
             _ => false
         };
 

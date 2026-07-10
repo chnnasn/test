@@ -5,7 +5,8 @@ public enum PlayerBuffKind
     Scope,
     Laser,
     Grip,
-    Magazine
+    Magazine,
+    Hp
 }
 
 [CreateAssetMenu(fileName = "PlayerBuff", menuName = "ScriptableObjects/Player Buff", order = 4)]
