@@ -13,4 +13,6 @@ MonoBehaviour:
   m_Name: PortalWave 7
   m_EditorClassIdentifier: 
   spawnPortals:
-  - {fileID: 0}
+  - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}
+  - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}
+  - {fileID: 278875111475884485, guid: eb883fcf6fea6b144b067652d7a69b98, type: 3}

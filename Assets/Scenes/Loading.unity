@@ -682,6 +682,8 @@ MonoBehaviour:
   hpSlider: {fileID: 1871353839}
   BuffTexts: []
   HpText: {fileID: 0}
+  BuffChooseObject: {fileID: 0}
+  cross: {fileID: 0}
 --- !u!114 &909256623
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -913,5 +915,5 @@ SceneRoots:
   m_Roots:
   - {fileID: 909256621}
   - {fileID: 132981751}
-  - {fileID: 1673699977}
   - {fileID: 749404542}
+  - {fileID: 1673699977}

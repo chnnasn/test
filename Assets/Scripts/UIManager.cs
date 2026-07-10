@@ -8,6 +8,8 @@ public class UIManager : MonoBehaviour
     public Text HpText;
     public GameObject BuffChooseObject;
 
+    public Text WaveText;
+
     [Header("准星")]
     public Cross cross;
 
