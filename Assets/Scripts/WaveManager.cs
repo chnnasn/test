@@ -6,6 +6,7 @@ public class WaveManager : MonoBehaviour
 {
     [SerializeField] private PortalWave[] _portalWaves;
     [SerializeField] private SpawnPoint[] _spawnPoints;
+    [SerializeField] private int _enemyPoolMaxSize = 30;
 
     private readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
     private readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
@@ -89,7 +90,11 @@ public class WaveManager : MonoBehaviour
             pool = new Queue<Enemy>();
             _enemyPool[prefab] = pool;
         }
-        pool.Enqueue(enemy);
+
+        if (pool.Count >= _enemyPoolMaxSize)
+            Destroy(enemy.gameObject);
+        else
+            pool.Enqueue(enemy);
 
         _aliveEnemies = Mathf.Max(0, _aliveEnemies - 1);
         TrySpawnNextWave();

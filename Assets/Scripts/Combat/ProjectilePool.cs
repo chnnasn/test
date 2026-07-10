@@ -3,6 +3,8 @@ using UnityEngine;
 
 public static class ProjectilePool
 {
+    private const int MAX_POOL_SIZE = 30;
+
     private static readonly Dictionary<GameObject, Queue<GameObject>> _pools = new Dictionary<GameObject, Queue<GameObject>>();
     private static Transform _root;
 
@@ -56,7 +58,10 @@ public static class ProjectilePool
             _pools[pooledProjectile.Prefab] = pool;
         }
 
-        pool.Enqueue(projectile);
+        if (pool.Count >= MAX_POOL_SIZE)
+            Object.Destroy(projectile);
+        else
+            pool.Enqueue(projectile);
     }
 
     public static void Prewarm(GameObject prefab, int count)
