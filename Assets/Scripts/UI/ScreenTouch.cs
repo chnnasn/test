@@ -190,7 +190,7 @@ public class ScreenTouch : MonoBehaviour
 
 		// OnDisable 时 GameManager 可能已被销毁，判空保护
 		if (GameManager.Instance == null) return;
-		EventManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
+			EventManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
 	}
 
 	/// <summary>

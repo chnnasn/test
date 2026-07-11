@@ -31,7 +31,7 @@ public class JoyStick : ScrollRect
         movementType = MovementType.Clamped;
 
         rectTransform = gameObject.GetComponent<RectTransform>();
-        canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
+        canvas = transform.parent.GetComponent<Canvas>();
         Radius = (transform as RectTransform).sizeDelta.x * 0.5f;
         content = transform.GetChild(0).gameObject.GetComponent<RectTransform>();
         content.anchoredPosition = Vector2.zero;

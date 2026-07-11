@@ -56,6 +56,7 @@ public class EventManager : LazySingleton<EventManager>
     public void RegisterPlayerGetter(Func<Player> getPlayer)
     {
         _getPlayer = getPlayer;
+        BindPendingPlayerProperties();
     }
 
     public void UnregisterCharacterGetter(Func<Character> getCharacter)
@@ -79,14 +80,53 @@ public class EventManager : LazySingleton<EventManager>
         }
     }
 
-    /// <summary> 绑定 HP 变化回调，(currentHp, maxHp) </summary>
-    public void BindPlayerHp(Action<float, float> callback)
+    private void BindPendingPlayerProperties()
     {
         var ps = Player;
         if (ps == null) return;
 
-        Action<float> handler = hp => callback(hp, ps.MaxHP);
-        _hpBindings[callback] = handler;
+        foreach (var binding in _hpBindings)
+        {
+            Action<float, float> callback = (Action<float, float>)binding.Key;
+            Action<float> handler = (Action<float>)binding.Value;
+            ps.CurrentHP.OnValueChanged -= handler;
+            ps.CurrentHP.OnValueChanged += handler;
+            callback(ps.CurrentHP.Value, ps.MaxHP);
+        }
+
+        foreach (var binding in _levelBindings)
+        {
+            Action<int> callback = (Action<int>)binding.Key;
+            ps.Level.OnValueChanged -= callback;
+            ps.Level.OnValueChanged += callback;
+            callback(ps.Level.Value);
+        }
+
+        foreach (var binding in _experienceProgressBindings)
+        {
+            Action<float> callback = (Action<float>)binding.Key;
+            ps.ExperienceProgress.OnValueChanged -= callback;
+            ps.ExperienceProgress.OnValueChanged += callback;
+            callback(ps.ExperienceProgress.Value);
+        }
+    }
+
+    /// <summary> 绑定 HP 变化回调，(currentHp, maxHp) </summary>
+    public void BindPlayerHp(Action<float, float> callback)
+    {
+        if (!_hpBindings.TryGetValue(callback, out Delegate existingHandler))
+            _hpBindings[callback] = null;
+
+        var ps = Player;
+        if (ps == null) return;
+
+        Action<float> handler = existingHandler as Action<float>;
+        if (handler == null)
+        {
+            handler = hp => callback(hp, ps.MaxHP);
+            _hpBindings[callback] = handler;
+        }
+
         ps.CurrentHP.OnValueChanged += handler;
         callback(ps.CurrentHP.Value, ps.MaxHP);
     }
@@ -95,22 +135,20 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindPlayerHp(Action<float, float> callback)
     {
         var ps = Player;
-        if (ps == null) return;
-
-        if (_hpBindings.TryGetValue(callback, out Delegate handler))
-        {
+        if (ps != null && _hpBindings.TryGetValue(callback, out Delegate handler) && handler != null)
             ps.CurrentHP.OnValueChanged -= (Action<float>)handler;
-            _hpBindings.Remove(callback);
-        }
+
+        _hpBindings.Remove(callback);
     }
 
     /// <summary> 绑定等级变化回调 </summary>
     public void BindPlayerLevel(Action<int> callback)
     {
+        _levelBindings[callback] = callback;
+
         var ps = Player;
         if (ps == null) return;
 
-        _levelBindings[callback] = callback;
         ps.Level.OnValueChanged += callback;
         callback(ps.Level.Value);
     }
@@ -119,22 +157,20 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindPlayerLevel(Action<int> callback)
     {
         var ps = Player;
-        if (ps == null) return;
-
-        if (_levelBindings.ContainsKey(callback))
-        {
+        if (ps != null && _levelBindings.ContainsKey(callback))
             ps.Level.OnValueChanged -= callback;
-            _levelBindings.Remove(callback);
-        }
+
+        _levelBindings.Remove(callback);
     }
 
     /// <summary> 绑定经验进度变化回调，参数为 0-1 归一化经验比例 </summary>
     public void BindPlayerExperienceProgress(Action<float> callback)
     {
+        _experienceProgressBindings[callback] = callback;
+
         var ps = Player;
         if (ps == null) return;
 
-        _experienceProgressBindings[callback] = callback;
         ps.ExperienceProgress.OnValueChanged += callback;
         callback(ps.ExperienceProgress.Value);
     }
@@ -143,13 +179,10 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindPlayerExperienceProgress(Action<float> callback)
     {
         var ps = Player;
-        if (ps == null) return;
-
-        if (_experienceProgressBindings.ContainsKey(callback))
-        {
+        if (ps != null && _experienceProgressBindings.ContainsKey(callback))
             ps.ExperienceProgress.OnValueChanged -= callback;
-            _experienceProgressBindings.Remove(callback);
-        }
+
+        _experienceProgressBindings.Remove(callback);
     }
 
     /// <summary> 绑定升级 Buff 候选描述变化回调 </summary>
