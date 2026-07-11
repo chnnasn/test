@@ -14,6 +14,7 @@ public enum ButtonType
 {   shoot,
     anim,
     reload,
+    sprint
 }
 
 public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
@@ -100,6 +101,10 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         else if (_type == ButtonType.reload)
         {
             EventManager.Instance.TryReload();
+        }
+        else if (_type == ButtonType.sprint)
+        {
+            EventManager.Instance.TriggerExternalSprint();
         }
     }
 }

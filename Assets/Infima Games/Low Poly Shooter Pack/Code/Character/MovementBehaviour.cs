@@ -97,6 +97,12 @@ namespace InfimaGames.LowPolyShooterPack
         /// 触发角色跳跃。
         /// </summary>
         public abstract void Jump();
+
+        /// <summary>
+        /// 触发角色向后冲刺。
+        /// </summary>
+        public abstract void SprintBackward();
+
         /// <summary>
         /// 强制设置蹲伏/站立状态。
         /// </summary>

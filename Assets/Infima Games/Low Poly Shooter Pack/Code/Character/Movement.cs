@@ -114,6 +114,20 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float rigidbodyPushForce = 1.0f;
 
+        [Title(label: "后撤冲刺")]
+
+        [Tooltip("短按 sprint 时向后冲刺的距离。")]
+        [SerializeField]
+        private float sprintBackwardDistance = 4.0f;
+
+        [Tooltip("短按 sprint 时向后冲刺的持续时间。")]
+        [SerializeField]
+        private float sprintBackwardDuration = 0.18f;
+
+        [Tooltip("向后冲刺的冷却时间。")]
+        [SerializeField]
+        private float sprintBackwardCooldown = 1.0f;
+
         #endregion
 
         #region FIELDS
@@ -164,6 +178,23 @@ namespace InfimaGames.LowPolyShooterPack
         /// 记录角色最后一次跳跃时的Time.time值。
         /// </summary>
         private float lastJumpTime;
+
+        /// <summary>
+        /// 后撤冲刺是否正在进行。
+        /// </summary>
+        private bool sprintBackwardActive;
+        /// <summary>
+        /// 后撤冲刺剩余时间。
+        /// </summary>
+        private float sprintBackwardTimer;
+        /// <summary>
+        /// 后撤冲刺冷却计时。
+        /// </summary>
+        private float sprintBackwardCooldownTimer;
+        /// <summary>
+        /// 后撤冲刺速度。
+        /// </summary>
+        private Vector3 sprintBackwardVelocity;
 
         #endregion
 
@@ -300,6 +331,29 @@ namespace InfimaGames.LowPolyShooterPack
 
             //移动。
             controller.Move(applied);
+            TickSprintBackward();
+        }
+
+        /// <summary>
+        /// 更新后撤冲刺位移。
+        /// </summary>
+        private void TickSprintBackward()
+        {
+            if (sprintBackwardCooldownTimer > 0.0f)
+                sprintBackwardCooldownTimer -= Time.deltaTime;
+
+            if (!sprintBackwardActive)
+                return;
+
+            float delta = Mathf.Min(Time.deltaTime, sprintBackwardTimer);
+            controller.Move(sprintBackwardVelocity * delta);
+
+            sprintBackwardTimer -= delta;
+            if (sprintBackwardTimer > 0.0f)
+                return;
+
+            sprintBackwardActive = false;
+            sprintBackwardVelocity = Vector3.zero;
         }
 
         /// <summary>
@@ -360,6 +414,26 @@ namespace InfimaGames.LowPolyShooterPack
 
             //保存lastJumpTime。
             lastJumpTime = Time.time;
+        }
+
+        /// <summary>
+        /// 向后冲刺。
+        /// </summary>
+        public override void SprintBackward()
+        {
+            if (sprintBackwardCooldownTimer > 0.0f)
+                return;
+
+            float duration = Mathf.Max(0.01f, sprintBackwardDuration);
+            Vector3 backward = -transform.forward;
+            backward.y = 0.0f;
+            if (backward.sqrMagnitude <= 0.0001f)
+                return;
+
+            sprintBackwardActive = true;
+            sprintBackwardTimer = duration;
+            sprintBackwardCooldownTimer = sprintBackwardCooldown;
+            sprintBackwardVelocity = backward.normalized * (Mathf.Max(0.0f, sprintBackwardDistance) / duration);
         }
         /// <summary>
         /// 更改控制器胶囊体的高度。

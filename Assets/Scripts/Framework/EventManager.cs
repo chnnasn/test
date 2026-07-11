@@ -19,6 +19,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action<bool> Aim;
     public Action<bool> ExternalFire;
     public Action<bool> ExternalRun;
+    public Action ExternalSprint;
     public Action<Vector2> MoveInput;
 
     public Action<float> AddExper;
@@ -263,79 +264,81 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 绑定角色瞄准状态变化回调 </summary>
     public void BindCharacterAiming(Action<bool> callback)
     {
+        _aimingBindings[callback] = callback;
+
         var character = Character;
         if (character == null) return;
 
-        _aimingBindings[callback] = callback;
+        character.IsAimingProp.OnValueChanged -= callback;
         character.IsAimingProp.OnValueChanged += callback;
+        callback(character.IsAimingProp.Value);
     }
 
     /// <summary> 解绑角色瞄准状态变化回调 </summary>
     public void UnbindCharacterAiming(Action<bool> callback)
     {
         var character = Character;
-        if (character == null) return;
-
-        if (_aimingBindings.ContainsKey(callback))
-        {
+        if (character != null && _aimingBindings.ContainsKey(callback))
             character.IsAimingProp.OnValueChanged -= callback;
-            _aimingBindings.Remove(callback);
-        }
+
+        _aimingBindings.Remove(callback);
     }
 
     /// <summary> 绑定角色跑步状态变化回调 </summary>
     public void BindCharacterRunning(Action<bool> callback)
     {
+        _runningBindings[callback] = callback;
+
         var character = Character;
         if (character == null) return;
 
-        _runningBindings[callback] = callback;
+        character.IsRunningProp.OnValueChanged -= callback;
         character.IsRunningProp.OnValueChanged += callback;
+        callback(character.IsRunningProp.Value);
     }
 
     /// <summary> 解绑角色跑步状态变化回调 </summary>
     public void UnbindCharacterRunning(Action<bool> callback)
     {
         var character = Character;
-        if (character == null) return;
-
-        if (_runningBindings.ContainsKey(callback))
-        {
+        if (character != null && _runningBindings.ContainsKey(callback))
             character.IsRunningProp.OnValueChanged -= callback;
-            _runningBindings.Remove(callback);
-        }
+
+        _runningBindings.Remove(callback);
     }
 
     /// <summary> 绑定角色开火状态变化回调 </summary>
     public void BindCharacterFiring(Action<bool> callback)
     {
+        _firingBindings[callback] = callback;
+
         var character = Character;
         if (character == null) return;
 
-        _firingBindings[callback] = callback;
+        character.IsFiringProp.OnValueChanged -= callback;
         character.IsFiringProp.OnValueChanged += callback;
+        callback(character.IsFiringProp.Value);
     }
 
     /// <summary> 解绑角色开火状态变化回调 </summary>
     public void UnbindCharacterFiring(Action<bool> callback)
     {
         var character = Character;
-        if (character == null) return;
-
-        if (_firingBindings.ContainsKey(callback))
-        {
+        if (character != null && _firingBindings.ContainsKey(callback))
             character.IsFiringProp.OnValueChanged -= callback;
-            _firingBindings.Remove(callback);
-        }
+
+        _firingBindings.Remove(callback);
     }
 
     /// <summary> 绑定当前武器散布变化回调 </summary>
     public void BindCurrentWeaponSpread(Action<float> callback)
     {
+        _weaponSpreadBindings[callback] = callback;
+
         var character = Character;
         if (character == null) return;
 
-        _weaponSpreadBindings[callback] = callback;
+        character.CurrentWeaponSpreadProp.OnValueChanged -= callback;
         character.CurrentWeaponSpreadProp.OnValueChanged += callback;
         callback(character.GetCurrentWeaponSpread());
     }
@@ -344,13 +347,10 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindCurrentWeaponSpread(Action<float> callback)
     {
         var character = Character;
-        if (character == null) return;
-
-        if (_weaponSpreadBindings.ContainsKey(callback))
-        {
+        if (character != null && _weaponSpreadBindings.ContainsKey(callback))
             character.CurrentWeaponSpreadProp.OnValueChanged -= callback;
-            _weaponSpreadBindings.Remove(callback);
-        }
+
+        _weaponSpreadBindings.Remove(callback);
     }
 
     /// <summary> 绑定当前武器弹药数量变化回调 </summary>
@@ -507,6 +507,12 @@ public class EventManager : LazySingleton<EventManager>
     {
         ExternalRun?.Invoke(tf);
     }
+
+    public void TriggerExternalSprint()
+    {
+        ExternalSprint?.Invoke();
+    }
+
     public void SetExternalMoveInput(Vector2 input)
     {
         MoveInput?.Invoke(input);

@@ -12556,13 +12556,14 @@ GameObject:
   - component: {fileID: 1328054135}
   - component: {fileID: 1328054137}
   - component: {fileID: 1328054136}
+  - component: {fileID: 1328054138}
   m_Layer: 5
   m_Name: sprint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1328054135
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12620,6 +12621,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1328054134}
   m_CullTransparentMesh: 1
+--- !u!114 &1328054138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1328054134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29de4468a1d59d747af6a59e4bb89a3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _type: 3
+  triggerType: 0
+  pressDuration: 0.1
+  pressedColor: {r: 0.7, g: 0.7, b: 0.7, a: 1}
 --- !u!1 &1330325809
 GameObject:
   m_ObjectHideFlags: 0

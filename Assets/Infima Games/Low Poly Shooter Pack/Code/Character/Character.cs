@@ -380,6 +380,14 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		public void SetExternalRunning(bool value) => holdingButtonRun = value;
 
+		/// <summary>
+		/// 触发外部后撤冲刺。
+		/// </summary>
+		private void SprintBackward()
+		{
+			movementBehaviour?.SprintBackward();
+		}
+
 		#endregion
 
 		#region UNITY
@@ -432,6 +440,7 @@ namespace InfimaGames.LowPolyShooterPack
 			EventManager.Instance.ExternalFire += SetExternalFire;
 			EventManager.Instance.MoveInput += SetExternalMoveInput;
 			EventManager.Instance.ExternalRun += SetExternalRunning;
+			EventManager.Instance.ExternalSprint += SprintBackward;
 		}
 
 		private void OnDisable()
@@ -444,6 +453,7 @@ namespace InfimaGames.LowPolyShooterPack
 			eventManager.ExternalFire -= SetExternalFire;
 			eventManager.MoveInput -= SetExternalMoveInput;
 			eventManager.ExternalRun -= SetExternalRunning;
+			eventManager.ExternalSprint -= SprintBackward;
 		}
 
 		/// <summary>
@@ -458,9 +468,10 @@ namespace InfimaGames.LowPolyShooterPack
 			running = holdingButtonRun && CanRun();
 
 			// 更新准星系统可监听的 GenericProperty 状态
+			bool isFiring = holdingButtonFire && equippedWeapon != null && equippedWeapon.HasAmmunition() && CanPlayAnimationFire();
 			IsAimingProp.Value = aiming;
 			IsRunningProp.Value = running;
-			IsFiringProp.Value = holdingButtonFire;
+			IsFiringProp.Value = isFiring;
 
 			//检测瞄准状态变化并通知瞄准镜组件
 			switch (aiming)
