@@ -339,13 +339,12 @@ namespace InfimaGames.LowPolyShooterPack
 		if (weaponAttachmentManager == null)
 			return visible;
 
-		ScopeBehaviour scope = weaponAttachmentManager.GetEquippedScope();
-		ScopeBehaviour defaultScope = weaponAttachmentManager.GetEquippedScopeDefault();
-	PlayerStates playerStates = global::GameManager.Instance.GetPlayer()?.GetComponent<global::PlayerStates>();
-		visible[0] = playerStates != null && playerStates.Buff.HasMagazineBuff;
-		visible[1] = weaponAttachmentManager.GetEquippedLaser() != null;
-		visible[2] = scope != null && scope != defaultScope;
-		visible[3] = weaponAttachmentManager.GetEquippedGrip() != null;
+		PlayerStates playerStates = global::GameManager.Instance.GetPlayer()?.GetComponent<global::PlayerStates>();
+		PlayerBuff buff = playerStates?.Buff;
+		visible[0] = buff != null && buff.HasMagazineBuff;
+		visible[1] = buff != null && buff.HasLaserBuff;
+		visible[2] = buff != null && buff.HasScopeBuff;
+		visible[3] = buff != null && buff.HasGripBuff;
 		return visible;
 	}
 

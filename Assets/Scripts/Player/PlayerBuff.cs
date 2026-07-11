@@ -8,18 +8,34 @@ public class PlayerBuff
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
     public bool HasMagazineBuff { get; private set; }
+    public bool HasLaserBuff { get; private set; }
+    public bool HasScopeBuff { get; private set; }
+    public bool HasGripBuff { get; private set; }
+    public float AddedHp { get; private set; }
+    public bool HasHpBuff => AddedHp > 0f;
 
-    public void SetMagazineBuffUnlocked()
-    {
-        HasMagazineBuff = true;
-    }
-
-    public bool Apply(PlayerBuffAsset buff)
+    public bool TriggerBuff(PlayerBuffAsset buff)
     {
         if (buff == null) return false;
 
         switch (buff.Kind)
         {
+            case PlayerBuffKind.Scope:
+                HasScopeBuff = true;
+                return true;
+            case PlayerBuffKind.Laser:
+                HasLaserBuff = true;
+                return true;
+            case PlayerBuffKind.Grip:
+                HasGripBuff = true;
+                return true;
+            case PlayerBuffKind.Magazine:
+                HasMagazineBuff = true;
+                return true;
+            case PlayerBuffKind.Hp:
+                if (buff.Value <= 0f) return false;
+                AddedHp += buff.Value;
+                return true;
             case PlayerBuffKind.AttackMultiplier:
                 AttackMultiplier *= buff.Value;
                 return true;

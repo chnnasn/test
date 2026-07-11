@@ -9,15 +9,91 @@ public class LoadingSceneManager : MonoBehaviour
     [SerializeField] private PortalWave _firstWave;
     [SerializeField] private Slider _progressSlider;
     [SerializeField] private float _minLoadingTime;
+    [SerializeField] private GameObject _titleObject;
+    [SerializeField] private float _fadeDuration = 0.5f;
 
-    private IEnumerator Start()
+    private bool _isStarting;
+
+    private void Start()
     {
+
+        if (_titleObject != null)
+        {
+            CanvasGroup titleCanvasGroup = GetOrAddCanvasGroup(_titleObject);
+            titleCanvasGroup.alpha = 1f;
+            _titleObject.SetActive(true);
+        }
+
         if (_progressSlider != null)
         {
             _progressSlider.value = 0f;
+            CanvasGroup sliderCanvasGroup = GetOrAddCanvasGroup(_progressSlider.gameObject);
+            sliderCanvasGroup.alpha = 0f;
+            _progressSlider.gameObject.SetActive(false);
+        }
+    }
+
+    public void StartGame()
+    {
+        if (_isStarting) return;
+
+        _isStarting = true;
+        StartCoroutine(StartGameRoutine());
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit();
+    }
+
+    private IEnumerator StartGameRoutine()
+    {
+        if (_titleObject != null)
+        {
+            CanvasGroup titleCanvasGroup = GetOrAddCanvasGroup(_titleObject);
+            yield return FadeCanvasGroup(titleCanvasGroup, 1f, 0f);
+            _titleObject.SetActive(false);
+        }
+
+        if (_progressSlider != null)
+        {
+            _progressSlider.value = 0f;
+            _progressSlider.gameObject.SetActive(true);
+            CanvasGroup sliderCanvasGroup = GetOrAddCanvasGroup(_progressSlider.gameObject);
+            yield return FadeCanvasGroup(sliderCanvasGroup, 0f, 1f);
         }
 
         yield return LoadRoutine();
+    }
+
+    private IEnumerator FadeCanvasGroup(CanvasGroup canvasGroup, float from, float to)
+    {
+        if (canvasGroup == null) yield break;
+
+        if (_fadeDuration <= 0f)
+        {
+            canvasGroup.alpha = to;
+            yield break;
+        }
+
+        float timer = 0f;
+        canvasGroup.alpha = from;
+        while (timer < _fadeDuration)
+        {
+            timer += Time.unscaledDeltaTime;
+            canvasGroup.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(timer / _fadeDuration));
+            yield return null;
+        }
+
+        canvasGroup.alpha = to;
+    }
+
+    private CanvasGroup GetOrAddCanvasGroup(GameObject target)
+    {
+        CanvasGroup canvasGroup = target.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+            canvasGroup = target.AddComponent<CanvasGroup>();
+        return canvasGroup;
     }
 
     private IEnumerator LoadRoutine()

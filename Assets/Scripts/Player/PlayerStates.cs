@@ -140,32 +140,39 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (buff == null) return false;
 
-        bool refreshWeaponSetup = false;
-        bool applied = buff.Kind switch
+        if (!TryApplyBuffWorldEffect(buff, out bool refreshWeaponSetup))
+            return false;
+
+        if (!_playerBuff.TriggerBuff(buff))
+            return false;
+
+        if (refreshWeaponSetup)
+            GameManager.Instance.GetCharacter()?.RefreshCurrentWeaponSetup();
+
+        if (buff.Unique)
+            _usedUniqueBuffs.Add(buff);
+
+        Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
+        return true;
+    }
+
+    private bool TryApplyBuffWorldEffect(PlayerBuffAsset buff, out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+        if (buff == null) return false;
+
+        return buff.Kind switch
         {
             PlayerBuffKind.Scope => EquipAttachment(buff.Kind, out refreshWeaponSetup),
             PlayerBuffKind.Laser => EquipAttachment(buff.Kind, out refreshWeaponSetup),
             PlayerBuffKind.Grip => EquipAttachment(buff.Kind, out refreshWeaponSetup),
             PlayerBuffKind.Magazine => AddMagazineCapacityFromCurrentWeapon(out refreshWeaponSetup),
             PlayerBuffKind.Hp => AddHp(buff.Value),
-            PlayerBuffKind.AttackMultiplier => _playerBuff.Apply(buff),
-            PlayerBuffKind.DamageReduction => _playerBuff.Apply(buff),
-            PlayerBuffKind.SkillUnlock => _playerBuff.Apply(buff),
+            PlayerBuffKind.AttackMultiplier => true,
+            PlayerBuffKind.DamageReduction => true,
+            PlayerBuffKind.SkillUnlock => true,
             _ => false
         };
-
-        if (applied)
-        {
-            if (refreshWeaponSetup)
-                GameManager.Instance.GetCharacter()?.RefreshCurrentWeaponSetup();
-
-            if (buff.Unique)
-                _usedUniqueBuffs.Add(buff);
-
-            Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
-        }
-
-        return applied;
     }
 
     private bool EquipAttachment(PlayerBuffKind kind, out bool refreshWeaponSetup)
@@ -195,9 +202,6 @@ public class PlayerStates : MonoBehaviour, IDamage
         if (attachmentManager == null) return false;
 
         bool applied = AddMagazineCapacity(attachmentManager);
-        if (applied)
-            _playerBuff.SetMagazineBuffUnlocked();
-
         refreshWeaponSetup = applied;
         return applied;
     }
@@ -222,7 +226,7 @@ public class PlayerStates : MonoBehaviour, IDamage
         if (attachmentManager.GetEquippedMagazine() is not Magazine magazine)
             return false;
 
-        int increase = Mathf.FloorToInt(magazine.GetAmmunitionTotal() * 0.1f);
+        int increase = Mathf.FloorToInt(magazine.GetAmmunitionTotal() * 0.5f);
         if (increase <= 0)
             return false;
 
