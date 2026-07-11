@@ -30,12 +30,11 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.LevelUpBuffs += OnLevelUpBuffs;
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
-        if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
-        {
-            context.WaveManagerChanged += OnWaveManagerChanged;
-            context.InjectWaveManager(BindWaveToText);
-        }
         InitWaveCountdownPosition();
+
+        RunTimeContext context = RunTimeContext.Instance;
+        context.WaveManagerChanged += OnWaveManagerChanged;
+        context.InjectWaveManager(BindWaveToText);
 
         if (BuffChoose != null)
             BuffChoose.gameObject.SetActive(false);

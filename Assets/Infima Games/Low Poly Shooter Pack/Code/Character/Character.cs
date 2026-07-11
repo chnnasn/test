@@ -748,8 +748,8 @@ namespace InfimaGames.LowPolyShooterPack
 			if (equippedWeapon.IsBoltAction() && equippedWeapon.HasAmmunition())
 				UpdateBolt(true);
 
-			//弹药耗尽且配置了空仓自动换弹时，启动自动换弹协程
-			if (!equippedWeapon.HasAmmunition() && equippedWeapon.GetAutomaticallyReloadOnEmpty())
+			// 当前弹匣耗尽时自动换弹
+			if (!equippedWeapon.HasAmmunition())
 				StartCoroutine(nameof(TryReloadAutomatic));
 		}
 
@@ -815,8 +815,14 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private IEnumerator TryReloadAutomatic()
 		{
+			if (!CanPlayAnimationReload())
+				yield break;
+
 			//等待武器配置的自动换弹延迟
 			yield return new WaitForSeconds(equippedWeapon.GetAutomaticallyReloadOnEmptyDelay());
+
+			if (!CanPlayAnimationReload())
+				yield break;
 
 			//播放换弹动画
 			PlayReloadAnimation();
