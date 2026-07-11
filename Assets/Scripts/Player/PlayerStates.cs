@@ -26,7 +26,6 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     private void Awake()
     {
-        _playerBuff.Bind(this);
         CurrentHP.Value = _maxHP;
         Level.Value = _level;
     }
@@ -141,7 +140,7 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (buff == null) return false;
 
-        if (!_playerBuff.TriggerBuff(buff, out bool refreshWeaponSetup))
+        if (!_playerBuff.TriggerBuff(buff, AddHp, out bool refreshWeaponSetup))
             return false;
 
         if (refreshWeaponSetup)
@@ -154,6 +153,11 @@ public class PlayerStates : MonoBehaviour, IDamage
         return true;
     }
 
+
+    private void AddHp(float value)
+    {
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value + value, _maxHP);
+    }
 
     public void TakeDamage(float damage)
     {

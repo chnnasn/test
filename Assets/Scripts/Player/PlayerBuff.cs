@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
@@ -5,7 +6,6 @@ using UnityEngine;
 public class PlayerBuff
 {
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
-    private PlayerStates _playerStates;
     private WeaponAttachmentManagerBehaviour _attachmentManager;
 
     public float AttackMultiplier { get; private set; } = 1f;
@@ -17,12 +17,7 @@ public class PlayerBuff
     public float AddedHp { get; private set; }
     public bool HasHpBuff => AddedHp > 0f;
 
-    public void Bind(PlayerStates playerStates)
-    {
-        _playerStates = playerStates;
-    }
-
-    public bool TriggerBuff(PlayerBuffAsset buff, out bool refreshWeaponSetup)
+    public bool TriggerBuff(PlayerBuffAsset buff, Action<float> addHpCallback, out bool refreshWeaponSetup)
     {
         refreshWeaponSetup = false;
         if (buff == null) return false;
@@ -43,7 +38,7 @@ public class PlayerBuff
             case PlayerBuffKind.Magazine:
                 return AddMagazineCapacity(attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Hp:
-                return AddHp(buff.Value);
+                return AddHp(buff.Value, addHpCallback);
             case PlayerBuffKind.AttackMultiplier:
                 AttackMultiplier *= buff.Value;
                 return true;
@@ -135,11 +130,11 @@ public class PlayerBuff
         return true;
     }
 
-    private bool AddHp(float value)
+    private bool AddHp(float value, Action<float> addHpCallback)
     {
-        if (value <= 0f || _playerStates == null) return false;
+        if (value <= 0f || addHpCallback == null) return false;
 
-        _playerStates.CurrentHP.Value = Mathf.Min(_playerStates.CurrentHP.Value + value, _playerStates.MaxHP);
+        addHpCallback.Invoke(value);
         AddedHp += value;
         return true;
     }
