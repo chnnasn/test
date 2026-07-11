@@ -482,13 +482,13 @@ namespace InfimaGames.LowPolyShooterPack
                     damageComponent = projectile.AddComponent<global::PlayerProjectileDamage>();
 
                 float finalProjectileDamage = projectileDamage;
-                global::PlayerStates playerStates = characterBehaviour.GetComponent<global::PlayerStates>();
-                if (playerStates == null)
-                    playerStates = characterBehaviour.GetComponentInParent<global::PlayerStates>();
-                if (playerStates == null)
-                    playerStates = global::GameManager.Instance.GetPlayer()?.GetComponent<global::PlayerStates>();
-                if (playerStates != null)
-                    finalProjectileDamage = playerStates.Buff.GetAttackDamage(projectileDamage);
+                global::Player player = characterBehaviour.GetComponent<global::Player>();
+                if (player == null)
+                    player = characterBehaviour.GetComponentInParent<global::Player>();
+                if (player == null)
+                    player = global::GameManager.Instance.GetPlayer()?.GetComponent<global::Player>();
+                if (player != null)
+                    finalProjectileDamage = player.Buff.GetAttackDamage(projectileDamage);
 
                 damageComponent.Initialize(characterBehaviour.gameObject, finalProjectileDamage);
 

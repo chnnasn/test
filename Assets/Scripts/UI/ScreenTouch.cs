@@ -73,17 +73,6 @@ public class ScreenTouch : MonoBehaviour
 		EnhancedTouchSupport.Disable();
 	}
 
-	private void Start()
-	{
-		if (GameManager.Instance == null || GameManager.Instance.GetCharacter() == null)
-		{
-			Debug.LogWarning("[ScreenTouch] 未找到 Character 组件。");
-			return;
-		}
-
-		GameManager.Instance.GetCharacter().SetCursorLocked(true);
-	}
-
 	private void Update()
 	{
 		if (GameManager.Instance == null || GameManager.Instance.GetCharacter() == null) return;

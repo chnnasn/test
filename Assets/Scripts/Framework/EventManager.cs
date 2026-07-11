@@ -25,8 +25,9 @@ public class EventManager : LazySingleton<EventManager>
     public Action GamePause;
     public Action GameResume;
 
-    private PlayerStates _playerStates;
-    private Character _character;
+    private Player _player;
+    private Func<Character> _getCharacter;
+    private Func<Player> _getPlayer;
     private WaveManager _waveManager;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _levelBindings = new Dictionary<Delegate, Delegate>();
@@ -40,26 +41,31 @@ public class EventManager : LazySingleton<EventManager>
     private Dictionary<Delegate, Delegate> _waveNumberBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveTotalBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveCountdownBindings = new Dictionary<Delegate, Delegate>();
-    
 
-    private PlayerStates PlayerStates
+
+    private Player Player => _getPlayer?.Invoke();
+
+    private Character Character => _getCharacter?.Invoke();
+
+    public void RegisterCharacterGetter(Func<Character> getCharacter)
     {
-        get
-        {
-            if (_playerStates == null)
-                _playerStates = GameManager.Instance.GetPlayer()?.GetComponent<PlayerStates>();
-            return _playerStates;
-        }
+        _getCharacter = getCharacter;
+    }
+    
+    public void RegisterPlayerGetter(Func<Player> getPlayer)
+    {
+        _getPlayer = getPlayer;
     }
 
-    private Character Character
+    public void UnregisterCharacterGetter(Func<Character> getCharacter)
     {
-        get
-        {
-            if (_character == null)
-                _character = GameManager.Instance.GetCharacter();
-            return _character;
-        }
+        if (_getCharacter == getCharacter)
+            _getCharacter = null;
+    }
+    public void UnregisterPlayerGetter(Func<Player> getPlayer)
+    {
+        if (_getPlayer == getPlayer)
+            _getPlayer = null;
     }
 
     private WaveManager WaveManager
@@ -75,7 +81,7 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 绑定 HP 变化回调，(currentHp, maxHp) </summary>
     public void BindPlayerHp(Action<float, float> callback)
     {
-        var ps = PlayerStates;
+        var ps = Player;
         if (ps == null) return;
 
         Action<float> handler = hp => callback(hp, ps.MaxHP);
@@ -87,7 +93,7 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 解绑 HP 变化回调 </summary>
     public void UnbindPlayerHp(Action<float, float> callback)
     {
-        var ps = PlayerStates;
+        var ps = Player;
         if (ps == null) return;
 
         if (_hpBindings.TryGetValue(callback, out Delegate handler))
@@ -100,7 +106,7 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 绑定等级变化回调 </summary>
     public void BindPlayerLevel(Action<int> callback)
     {
-        var ps = PlayerStates;
+        var ps = Player;
         if (ps == null) return;
 
         _levelBindings[callback] = callback;
@@ -111,7 +117,7 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 解绑等级变化回调 </summary>
     public void UnbindPlayerLevel(Action<int> callback)
     {
-        var ps = PlayerStates;
+        var ps = Player;
         if (ps == null) return;
 
         if (_levelBindings.ContainsKey(callback))

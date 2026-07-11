@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 
-public class PlayerStates : MonoBehaviour, IDamage
+public class Player : MonoBehaviour, IDamage
 {
     [SerializeField] private float _maxHP = 100f;
     [SerializeField] private int _level = 1;
@@ -24,10 +24,18 @@ public class PlayerStates : MonoBehaviour, IDamage
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<int> Level { get; private set; } = new GenericProperty<int>();
 
+    private Character character;
+    
     private void Awake()
     {
         CurrentHP.Value = _maxHP;
         Level.Value = _level;
+        
+        character = GetComponent<Character>();
+        EventManager.Instance.RegisterCharacterGetter(GetCharacter);
+        EventManager.Instance.RegisterCharacterGetter(GetCharacter);
+
+        character.SetCursorLocked(true);
     }
 
     private void OnEnable()
@@ -44,7 +52,13 @@ public class PlayerStates : MonoBehaviour, IDamage
             eventManager.OnAttackedAction -= TakeDamage;
             eventManager.AddExper -= AddExperience;
             eventManager.TriggerBuff -= ApplySelectedBuff;
+            eventManager.UnregisterCharacterGetter(GetCharacter);
         }
+    }
+
+    private Character GetCharacter()
+    {
+        return character;
     }
 
     private void AddExperience(float experience)
@@ -145,7 +159,7 @@ public class PlayerStates : MonoBehaviour, IDamage
             return false;
 
         if (refreshWeaponSetup)
-            GameManager.Instance.GetCharacter()?.RefreshCurrentWeaponSetup();
+           character.RefreshCurrentWeaponSetup();
 
         if (buff.Unique)
             _usedUniqueBuffs.Add(buff);
@@ -157,7 +171,6 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
     {
-        Character character = GameManager.Instance.GetCharacter();
         WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
         return weapon?.GetAttachmentManager();
     }
