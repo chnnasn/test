@@ -2323,8 +2323,8 @@ RectTransform:
   m_Children:
   - {fileID: 611520308}
   - {fileID: 1963603819}
-  - {fileID: 1623881881}
   - {fileID: 6261593}
+  - {fileID: 1623881881}
   - {fileID: 727544579}
   - {fileID: 559742177}
   - {fileID: 771667293}
@@ -2344,9 +2344,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 607367687}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a2c65a3ba97219439d9b4f65f763a1d, type: 3}
+  m_Script: {fileID: 11500000, guid: 6f45dd8201666fe48a1c3542e715d7b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  BulleteNumText: {fileID: 771667294}
+  GunAccessory:
+  - {fileID: 6261594}
+  - {fileID: 1623881882}
+  - {fileID: 727544580}
+  - {fileID: 559742178}
 --- !u!1 &611520307
 GameObject:
   m_ObjectHideFlags: 0
@@ -10013,6 +10019,7 @@ MonoBehaviour:
   WaveCountDown: {fileID: 612035049}
   WaveText: {fileID: 6553848}
   LVText: {fileID: 1674084695}
+  GunDisplay: {fileID: 607367689}
   cross: {fileID: 2077569606}
 --- !u!1001 &921227753
 PrefabInstance:
@@ -13577,7 +13584,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

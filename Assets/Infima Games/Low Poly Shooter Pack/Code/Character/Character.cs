@@ -311,6 +311,14 @@ namespace InfimaGames.LowPolyShooterPack
 	/// 当前武器散布值变化通知。武器切换时自动更新。
 	/// </summary>
 	public GenericProperty<float> CurrentWeaponSpreadProp { get; private set; } = new GenericProperty<float>();
+	/// <summary>
+	/// 当前武器弹药数量变化通知。
+	/// </summary>
+	public GenericProperty<int> CurrentAmmoProp { get; private set; } = new GenericProperty<int>();
+	/// <summary>
+	/// 当前武器配件显示状态变化通知，顺序：弹夹、激光、倍镜、握把。
+	/// </summary>
+	public GenericProperty<bool[]> GunAccessoryVisibleProp { get; private set; } = new GenericProperty<bool[]>();
 
 	/// <summary>
 	/// 获取当前装备武器的散布值。若未装备武器则返回默认值。
@@ -318,6 +326,32 @@ namespace InfimaGames.LowPolyShooterPack
 	public float GetCurrentWeaponSpread()
 	{
 		return equippedWeapon != null ? equippedWeapon.GetSpread() : 0.25f;
+	}
+
+	public int GetCurrentAmmo()
+	{
+		return equippedWeapon != null ? equippedWeapon.GetAmmunitionCurrent() : 0;
+	}
+
+	public bool[] GetGunAccessoryVisible()
+	{
+		bool[] visible = new bool[4];
+		if (weaponAttachmentManager == null)
+			return visible;
+
+		ScopeBehaviour scope = weaponAttachmentManager.GetEquippedScope();
+		ScopeBehaviour defaultScope = weaponAttachmentManager.GetEquippedScopeDefault();
+		visible[0] = weaponAttachmentManager.GetEquippedMagazine() != null;
+		visible[1] = weaponAttachmentManager.GetEquippedLaser() != null;
+		visible[2] = scope != null && scope != defaultScope;
+		visible[3] = weaponAttachmentManager.GetEquippedGrip() != null;
+		return visible;
+	}
+
+	private void NotifyGunDisplayStateChanged()
+	{
+		CurrentAmmoProp.Value = GetCurrentAmmo();
+		GunAccessoryVisibleProp.Value = GetGunAccessoryVisible();
 	}
 
 		/// <summary>
@@ -693,6 +727,7 @@ namespace InfimaGames.LowPolyShooterPack
 			lastShotTime = Time.time;
 			//调用武器开火。如果正在瞄准则传入瞄准镜的扩散倍率。
 			equippedWeapon.Fire(aiming ? equippedWeaponScope.GetMultiplierSpread() : 1.0f);
+			CurrentAmmoProp.Value = GetCurrentAmmo();
 
 			//在 Overlay 层播放开火动画
 			const string stateName = "Fire";
@@ -833,6 +868,7 @@ namespace InfimaGames.LowPolyShooterPack
 
 			// 通知订阅者武器散布已更新（UI 系统可据此刷新准星）
 			CurrentWeaponSpreadProp.Value = GetCurrentWeaponSpread();
+			NotifyGunDisplayStateChanged();
 		}
 
 		/// <summary>
@@ -1617,7 +1653,10 @@ namespace InfimaGames.LowPolyShooterPack
 		{
 			//通知当前装备的武器填充指定数量的弹药
 			if (equippedWeapon != null)
+			{
 				equippedWeapon.FillAmmunition(amount);
+				CurrentAmmoProp.Value = GetCurrentAmmo();
+			}
 		}
 		/// <summary>
 		/// 生成手雷（由动画事件触发）。在摄像机前方位置实例化手雷预制体。

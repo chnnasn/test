@@ -5,11 +5,14 @@ public class UIManager : MonoBehaviour
 {
     public Slider hpSlider;
     public Text HpText;
+    [Header("BUFF")]
     public BuffChoose BuffChoose;
 
     public Text WaveCountDown;
     public Text WaveText;
     public Text LVText;
+    [Header("枪械")]
+    public GunDisplay GunDisplay;
 
     [Header("准星")]
     public Cross cross;
@@ -26,6 +29,7 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
         BindCharacterToCross();
+        BindGunDisplay();
 
         BindWaveToText();
 
@@ -44,6 +48,7 @@ public class UIManager : MonoBehaviour
         }
 
         UnbindCharacterFromCross();
+        UnbindGunDisplay();
         UnbindWaveFromText();
     }
 
@@ -97,6 +102,38 @@ public class UIManager : MonoBehaviour
     {
         if (cross != null)
             cross.SetWeaponSpread(weaponSpread);
+    }
+
+    #endregion
+
+    #region GunDisplay 绑定
+
+    private void BindGunDisplay()
+    {
+        if (GunDisplay == null) return;
+
+        EventManager.Instance.BindCurrentAmmo(OnCurrentAmmoChanged);
+        EventManager.Instance.BindGunAccessoryVisible(OnGunAccessoryVisibleChanged);
+    }
+
+    private void UnbindGunDisplay()
+    {
+        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+
+        eventManager.UnbindCurrentAmmo(OnCurrentAmmoChanged);
+        eventManager.UnbindGunAccessoryVisible(OnGunAccessoryVisibleChanged);
+    }
+
+    private void OnCurrentAmmoChanged(int currentAmmo)
+    {
+        if (GunDisplay != null)
+            GunDisplay.SetBulletCount(currentAmmo);
+    }
+
+    private void OnGunAccessoryVisibleChanged(bool[] visible)
+    {
+        if (GunDisplay != null)
+            GunDisplay.SetGunAccessoryVisible(visible);
     }
 
     #endregion

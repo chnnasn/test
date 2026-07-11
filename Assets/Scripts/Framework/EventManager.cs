@@ -35,6 +35,8 @@ public class EventManager : LazySingleton<EventManager>
     private Dictionary<Delegate, Delegate> _runningBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _firingBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _weaponSpreadBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _currentAmmoBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _gunAccessoryVisibleBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveNumberBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveTotalBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _waveCountdownBindings = new Dictionary<Delegate, Delegate>();
@@ -226,6 +228,54 @@ public class EventManager : LazySingleton<EventManager>
         {
             character.CurrentWeaponSpreadProp.OnValueChanged -= callback;
             _weaponSpreadBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定当前武器弹药数量变化回调 </summary>
+    public void BindCurrentAmmo(Action<int> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        _currentAmmoBindings[callback] = callback;
+        character.CurrentAmmoProp.OnValueChanged += callback;
+        callback(character.GetCurrentAmmo());
+    }
+
+    /// <summary> 解绑当前武器弹药数量变化回调 </summary>
+    public void UnbindCurrentAmmo(Action<int> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        if (_currentAmmoBindings.ContainsKey(callback))
+        {
+            character.CurrentAmmoProp.OnValueChanged -= callback;
+            _currentAmmoBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定当前武器配件显示状态变化回调 </summary>
+    public void BindGunAccessoryVisible(Action<bool[]> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        _gunAccessoryVisibleBindings[callback] = callback;
+        character.GunAccessoryVisibleProp.OnValueChanged += callback;
+        callback(character.GetGunAccessoryVisible());
+    }
+
+    /// <summary> 解绑当前武器配件显示状态变化回调 </summary>
+    public void UnbindGunAccessoryVisible(Action<bool[]> callback)
+    {
+        var character = Character;
+        if (character == null) return;
+
+        if (_gunAccessoryVisibleBindings.ContainsKey(callback))
+        {
+            character.GunAccessoryVisibleProp.OnValueChanged -= callback;
+            _gunAccessoryVisibleBindings.Remove(callback);
         }
     }
 
