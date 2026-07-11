@@ -6,7 +6,6 @@ using UnityEngine;
 public class PlayerBuff
 {
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
-    private WeaponAttachmentManagerBehaviour _attachmentManager;
 
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
@@ -17,17 +16,11 @@ public class PlayerBuff
     public float AddedHp { get; private set; }
     public bool HasHpBuff => AddedHp > 0f;
 
-    public bool TriggerBuff(PlayerBuffAsset buff, Action<float> addHpCallback, out bool refreshWeaponSetup)
+    public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out bool refreshWeaponSetup)
     {
         refreshWeaponSetup = false;
         if (buff == null) return false;
-
-        WeaponAttachmentManagerBehaviour attachmentManager = null;
-        if (NeedsAttachmentManager(buff.Kind))
-        {
-            attachmentManager = GetCurrentAttachmentManager();
-            if (attachmentManager == null) return false;
-        }
+        if (NeedsAttachmentManager(buff.Kind) && attachmentManager == null) return false;
 
         switch (buff.Kind)
         {
@@ -73,14 +66,6 @@ public class PlayerBuff
                kind == PlayerBuffKind.Laser ||
                kind == PlayerBuffKind.Grip ||
                kind == PlayerBuffKind.Magazine;
-    }
-
-    private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
-    {
-        Character character = GameManager.Instance.GetCharacter();
-        WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
-        _attachmentManager = weapon?.GetAttachmentManager();
-        return _attachmentManager;
     }
 
     private bool EquipAttachment(PlayerBuffKind kind, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)

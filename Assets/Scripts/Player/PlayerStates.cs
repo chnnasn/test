@@ -140,7 +140,8 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (buff == null) return false;
 
-        if (!_playerBuff.TriggerBuff(buff, AddHp, out bool refreshWeaponSetup))
+        WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
+        if (!_playerBuff.TriggerBuff(buff, attachmentManager, AddHp, out bool refreshWeaponSetup))
             return false;
 
         if (refreshWeaponSetup)
@@ -153,6 +154,13 @@ public class PlayerStates : MonoBehaviour, IDamage
         return true;
     }
 
+
+    private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
+    {
+        Character character = GameManager.Instance.GetCharacter();
+        WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
+        return weapon?.GetAttachmentManager();
+    }
 
     private void AddHp(float value)
     {
