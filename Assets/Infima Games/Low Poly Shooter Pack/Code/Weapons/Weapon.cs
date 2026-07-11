@@ -477,7 +477,17 @@ namespace InfimaGames.LowPolyShooterPack
                 global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
                 if (damageComponent == null)
                     damageComponent = projectile.AddComponent<global::PlayerProjectileDamage>();
-                damageComponent.Initialize(characterBehaviour.gameObject, projectileDamage);
+
+                float finalProjectileDamage = projectileDamage;
+                global::PlayerStates playerStates = characterBehaviour.GetComponent<global::PlayerStates>();
+                if (playerStates == null)
+                    playerStates = characterBehaviour.GetComponentInParent<global::PlayerStates>();
+                if (playerStates == null)
+                    playerStates = global::GameManager.Instance.GetPlayer()?.GetComponent<global::PlayerStates>();
+                if (playerStates != null)
+                    finalProjectileDamage = playerStates.Buff.GetAttackDamage(projectileDamage);
+
+                damageComponent.Initialize(characterBehaviour.gameObject, finalProjectileDamage);
 
                 //为弹丸添加速度。velocity = 弹丸自身前方 * 弹丸冲量。
                 Rigidbody projectileRigidbody = projectile.GetComponent<Rigidbody>();

@@ -1,8 +1,52 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerBuff
 {
-    
+    private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
+
+    public float AttackMultiplier { get; private set; } = 1f;
+    public float IncomingDamageMultiplier { get; private set; } = 1f;
+
+    public bool Apply(PlayerBuffAsset buff)
+    {
+        if (buff == null) return false;
+
+        switch (buff.Kind)
+        {
+            case PlayerBuffKind.AttackMultiplier:
+                AttackMultiplier *= buff.Value;
+                return true;
+            case PlayerBuffKind.DamageReduction:
+                IncomingDamageMultiplier *= buff.Value;
+                return true;
+            case PlayerBuffKind.SkillUnlock:
+                return UnlockSkill(buff.SkillKind);
+            default:
+                return false;
+        }
+    }
+
+    public float GetAttackDamage(float baseDamage)
+    {
+        return Mathf.Max(0f, baseDamage * AttackMultiplier);
+    }
+
+    public float GetReceivedDamage(float rawDamage)
+    {
+        return Mathf.Max(0f, rawDamage * IncomingDamageMultiplier);
+    }
+
+    public bool IsSkillUnlocked(PlayerSkillKind skill)
+    {
+        return skill != PlayerSkillKind.None && _unlockedSkills.Contains(skill);
+    }
+
+    private bool UnlockSkill(PlayerSkillKind skill)
+    {
+        if (skill == PlayerSkillKind.None) return false;
+
+        _unlockedSkills.Add(skill);
+        return true;
+    }
 }

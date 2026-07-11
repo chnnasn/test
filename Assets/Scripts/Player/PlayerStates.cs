@@ -14,10 +14,12 @@ public class PlayerStates : MonoBehaviour, IDamage
     private int _pendingBuffChooseCount;
     private PlayerBuffAsset[] _currentLevelUpBuffs;
     private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
+    private readonly PlayerBuff _playerBuff = new PlayerBuff();
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _maxHP;
     public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
+    public PlayerBuff Buff => _playerBuff;
 
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<int> Level { get; private set; } = new GenericProperty<int>();
@@ -136,33 +138,80 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     private bool ApplyBuff(PlayerBuffAsset buff)
     {
-        Character character = GameManager.Instance.GetCharacter();
-        if (character == null) return false;
+        if (buff == null) return false;
 
-        WeaponBehaviour weapon = character.GetInventory()?.GetEquipped();
-        WeaponAttachmentManagerBehaviour attachmentManager = weapon?.GetAttachmentManager();
-        if (attachmentManager == null) return false;
-
+        bool refreshWeaponSetup = false;
         bool applied = buff.Kind switch
         {
-            PlayerBuffKind.Scope => attachmentManager.EquipScope(0),
-            PlayerBuffKind.Laser => attachmentManager.EquipLaser(0),
-            PlayerBuffKind.Grip => attachmentManager.EquipGrip(0),
-            PlayerBuffKind.Magazine => AddMagazineCapacity(attachmentManager),
-            PlayerBuffKind.Hp => true,
+            PlayerBuffKind.Scope => EquipAttachment(buff.Kind, out refreshWeaponSetup),
+            PlayerBuffKind.Laser => EquipAttachment(buff.Kind, out refreshWeaponSetup),
+            PlayerBuffKind.Grip => EquipAttachment(buff.Kind, out refreshWeaponSetup),
+            PlayerBuffKind.Magazine => AddMagazineCapacityFromCurrentWeapon(out refreshWeaponSetup),
+            PlayerBuffKind.Hp => AddHp(buff.Value),
+            PlayerBuffKind.AttackMultiplier => _playerBuff.Apply(buff),
+            PlayerBuffKind.DamageReduction => _playerBuff.Apply(buff),
+            PlayerBuffKind.SkillUnlock => _playerBuff.Apply(buff),
             _ => false
         };
 
         if (applied)
         {
-            character.RefreshCurrentWeaponSetup();
-            if (buff != null && buff.Unique)
+            if (refreshWeaponSetup)
+                GameManager.Instance.GetCharacter()?.RefreshCurrentWeaponSetup();
+
+            if (buff.Unique)
                 _usedUniqueBuffs.Add(buff);
-            
+
             Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
         }
 
         return applied;
+    }
+
+    private bool EquipAttachment(PlayerBuffKind kind, out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+
+        WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
+        if (attachmentManager == null) return false;
+
+        bool applied = kind switch
+        {
+            PlayerBuffKind.Scope => attachmentManager.EquipScope(0),
+            PlayerBuffKind.Laser => attachmentManager.EquipLaser(0),
+            PlayerBuffKind.Grip => attachmentManager.EquipGrip(0),
+            _ => false
+        };
+
+        refreshWeaponSetup = applied;
+        return applied;
+    }
+
+    private bool AddMagazineCapacityFromCurrentWeapon(out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+
+        WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
+        if (attachmentManager == null) return false;
+
+        bool applied = AddMagazineCapacity(attachmentManager);
+        refreshWeaponSetup = applied;
+        return applied;
+    }
+
+    private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
+    {
+        Character character = GameManager.Instance.GetCharacter();
+        WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
+        return weapon?.GetAttachmentManager();
+    }
+
+    private bool AddHp(float value)
+    {
+        if (value <= 0f) return false;
+
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value + value, _maxHP);
+        return true;
     }
 
     private bool AddMagazineCapacity(WeaponAttachmentManagerBehaviour attachmentManager)
@@ -183,10 +232,11 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (!IsAlive) return;
 
-        CurrentHP.Value = Mathf.Max(CurrentHP.Value - damage, 0f);
+        float finalDamage = _playerBuff.GetReceivedDamage(damage);
+        CurrentHP.Value = Mathf.Max(CurrentHP.Value - finalDamage, 0f);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"Player 受到 {damage} 点伤害，剩余血量：{CurrentHP.Value}");
+        Debug.Log($"Player 受到 {finalDamage} 点伤害，原始伤害：{damage}，剩余血量：{CurrentHP.Value}");
 #endif
     }
 }
