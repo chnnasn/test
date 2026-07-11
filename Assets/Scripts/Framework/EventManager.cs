@@ -414,4 +414,10 @@ public class EventManager : LazySingleton<EventManager>
     {
         GameResume?.Invoke();
     }
+    
+    public Character  GetCharacter()
+    {
+        return Character;
+    }
+    
 }

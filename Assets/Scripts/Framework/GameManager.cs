@@ -117,19 +117,7 @@ public class GameManager : LazySingleton<GameManager>
         InitFlowField();
         return _flowFieldInitialized;
     }
-
-    public GameObject GetPlayer()
-    {
-        InitCharacter();
-        return _character != null ? _character.gameObject : null;
-    }
-
-    public Character GetCharacter()
-    {
-        InitCharacter();
-        return _character;
-    }
-
+    
     private void OnGamePause()
     {
         Time.timeScale = 0f;

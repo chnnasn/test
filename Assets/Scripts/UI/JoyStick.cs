@@ -59,11 +59,8 @@ public class JoyStick : ScrollRect
             eventManager.SetExternalMoveInput(input);
         }
 
-        Character character = GameManager.Instance.GetCharacter();
-        if (character == null) return;
-
-        character.SetExternalRunning(isRunning);
-        character.SetExternalMoveInput(input);
+        EventManager.Instance.GetCharacter().SetExternalRunning(isRunning);
+        EventManager.Instance.GetCharacter().SetExternalMoveInput(input);
     }
 
     public override void OnBeginDrag(PointerEventData eventData)
