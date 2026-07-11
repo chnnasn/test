@@ -7,6 +7,12 @@ public class PlayerBuff
 
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
+    public bool HasMagazineBuff { get; private set; }
+
+    public void SetMagazineBuffUnlocked()
+    {
+        HasMagazineBuff = true;
+    }
 
     public bool Apply(PlayerBuffAsset buff)
     {

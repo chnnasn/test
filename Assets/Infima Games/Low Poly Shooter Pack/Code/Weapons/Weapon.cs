@@ -242,6 +242,9 @@ namespace InfimaGames.LowPolyShooterPack
             if (magazineBehaviour != null)
                 ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
 
+            if (characterBehaviour is Character character)
+                character.RefreshCurrentWeaponSetup(false);
+
             if (prefabProjectile != null && projectilePoolPrewarm > 0)
                 global::ProjectilePool.Prewarm(prefabProjectile, projectilePoolPrewarm);
             if (prefabCasing != null && casingPoolPrewarm > 0)

@@ -195,6 +195,9 @@ public class PlayerStates : MonoBehaviour, IDamage
         if (attachmentManager == null) return false;
 
         bool applied = AddMagazineCapacity(attachmentManager);
+        if (applied)
+            _playerBuff.SetMagazineBuffUnlocked();
+
         refreshWeaponSetup = applied;
         return applied;
     }
