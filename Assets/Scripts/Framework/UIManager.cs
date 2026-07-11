@@ -4,16 +4,11 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    public PlayerUI PlayerUI;
-
     [Header("BUFF")]
     public BuffChoose BuffChoose;
 
     public Text WaveCountDown;
     public Text WaveText;
-
-    [Header("准星")]
-    public Cross cross;
 
     private int _currentWaveNumber;
     private int _totalWaveNumber;
@@ -32,14 +27,8 @@ public class UIManager : MonoBehaviour
 
     private void OnEnable()
     {
-        EventManager.Instance.BindPlayerHp(OnHpChanged);
-        EventManager.Instance.BindPlayerLevel(OnLevelChanged);
-        EventManager.Instance.BindPlayerExperienceProgress(OnExperienceProgressChanged);
         EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
-
-        BindCharacterToCross();
-        BindGunDisplay();
 
         BindWaveToText();
         InitWaveCountdownPosition();
@@ -52,104 +41,13 @@ public class UIManager : MonoBehaviour
     {
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
         {
-            eventManager.UnbindPlayerHp(OnHpChanged);
-            eventManager.UnbindPlayerLevel(OnLevelChanged);
-            eventManager.UnbindPlayerExperienceProgress(OnExperienceProgressChanged);
             eventManager.UnbindLevelUpBuffs(OnLevelUpBuffs);
             eventManager.LevelUpBuffsFinished -= OnLevelUpBuffsFinished;
         }
 
-        UnbindCharacterFromCross();
-        UnbindGunDisplay();
         UnbindWaveFromText();
         KillWaveCountdownTween();
     }
-
-    #region Character → Cross 绑定
-
-    /// <summary>
-    /// 通过 EventManager 订阅角色状态变化，建立与 cross 的绑定。
-    /// </summary>
-    private void BindCharacterToCross()
-    {
-        if (cross == null) return;
-
-        EventManager.Instance.BindCharacterAiming(OnAimingChanged);
-        EventManager.Instance.BindCharacterRunning(OnRunningChanged);
-        EventManager.Instance.BindCharacterFiring(OnFiringChanged);
-        EventManager.Instance.BindCurrentWeaponSpread(OnWeaponSpreadChanged);
-    }
-
-    /// <summary>
-    /// 通过 EventManager 解绑角色状态变化回调。
-    /// </summary>
-    private void UnbindCharacterFromCross()
-    {
-        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
-
-        eventManager.UnbindCharacterAiming(OnAimingChanged);
-        eventManager.UnbindCharacterRunning(OnRunningChanged);
-        eventManager.UnbindCharacterFiring(OnFiringChanged);
-        eventManager.UnbindCurrentWeaponSpread(OnWeaponSpreadChanged);
-    }
-
-    private void OnAimingChanged(bool isAiming)
-    {
-        if (cross != null)
-            cross.SetAiming(isAiming);
-    }
-
-    private void OnRunningChanged(bool isRunning)
-    {
-        if (cross != null)
-            cross.SetRunning(isRunning);
-    }
-
-    private void OnFiringChanged(bool isFiring)
-    {
-        if (cross != null)
-            cross.SetFiring(isFiring);
-    }
-
-    private void OnWeaponSpreadChanged(float weaponSpread)
-    {
-        if (cross != null)
-            cross.SetWeaponSpread(weaponSpread);
-    }
-
-    #endregion
-
-    #region GunDisplay 绑定
-
-    private void BindGunDisplay()
-    {
-        if (PlayerUI == null) return;
-
-        EventManager.Instance.BindCurrentAmmo(OnCurrentAmmoChanged);
-        EventManager.Instance.BindGunAccessoryVisible(OnGunAccessoryVisibleChanged);
-    }
-
-    private void UnbindGunDisplay()
-    {
-        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
-
-        eventManager.UnbindCurrentAmmo(OnCurrentAmmoChanged);
-        eventManager.UnbindGunAccessoryVisible(OnGunAccessoryVisibleChanged);
-    }
-
-    private void OnCurrentAmmoChanged(int currentAmmo)
-    {
-        if (PlayerUI != null)
-            PlayerUI.SetBulletCount(currentAmmo);
-    }
-
-    private void OnGunAccessoryVisibleChanged(bool[] visible)
-    {
-        if (PlayerUI != null)
-            PlayerUI.SetGunAccessoryVisible(visible);
-    }
-
-    #endregion
 
     #region WaveText 绑定
 
@@ -337,28 +235,6 @@ public class UIManager : MonoBehaviour
             BuffChoose.gameObject.SetActive(false);
 
         EventManager.Instance.SetGameResume();
-    }
-
-    #endregion
-
-    #region HP / Buff 回调
-
-    private void OnHpChanged(float currentHp, float maxHp)
-    {
-        if (PlayerUI != null)
-            PlayerUI.SetHp(currentHp, maxHp);
-    }
-
-    private void OnLevelChanged(int level)
-    {
-        if (PlayerUI != null)
-            PlayerUI.SetLevel(level);
-    }
-
-    private void OnExperienceProgressChanged(float progress)
-    {
-        if (PlayerUI != null)
-            PlayerUI.SetExperienceProgress(progress);
     }
 
     private void OnLevelUpBuffs(string[] levelUpBuffs)

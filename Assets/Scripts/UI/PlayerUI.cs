@@ -11,6 +11,26 @@ public class PlayerUI : MonoBehaviour
     public Text LVText;
     public GunDisplay GunDisplay;
 
+    private void OnEnable()
+    {
+        EventManager.Instance.BindPlayerHp(SetHp);
+        EventManager.Instance.BindPlayerLevel(SetLevel);
+        EventManager.Instance.BindPlayerExperienceProgress(SetExperienceProgress);
+        EventManager.Instance.BindCurrentAmmo(SetBulletCount);
+        EventManager.Instance.BindGunAccessoryVisible(SetGunAccessoryVisible);
+    }
+
+    private void OnDisable()
+    {
+        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+
+        eventManager.UnbindPlayerHp(SetHp);
+        eventManager.UnbindPlayerLevel(SetLevel);
+        eventManager.UnbindPlayerExperienceProgress(SetExperienceProgress);
+        eventManager.UnbindCurrentAmmo(SetBulletCount);
+        eventManager.UnbindGunAccessoryVisible(SetGunAccessoryVisible);
+    }
+
     public void SetHp(float currentHp, float maxHp)
     {
         if (hpSlider != null)

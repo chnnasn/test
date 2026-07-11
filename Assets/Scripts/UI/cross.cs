@@ -91,6 +91,24 @@ public class Cross : MonoBehaviour
 
 	#region Unity 生命周期
 
+	private void OnEnable()
+	{
+		EventManager.Instance.BindCharacterAiming(SetAiming);
+		EventManager.Instance.BindCharacterRunning(SetRunning);
+		EventManager.Instance.BindCharacterFiring(SetFiring);
+		EventManager.Instance.BindCurrentWeaponSpread(SetWeaponSpread);
+	}
+
+	private void OnDisable()
+	{
+		if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+
+		eventManager.UnbindCharacterAiming(SetAiming);
+		eventManager.UnbindCharacterRunning(SetRunning);
+		eventManager.UnbindCharacterFiring(SetFiring);
+		eventManager.UnbindCurrentWeaponSpread(SetWeaponSpread);
+	}
+
 	private void Start()
 	{
 		CacheDefaultPositions();
