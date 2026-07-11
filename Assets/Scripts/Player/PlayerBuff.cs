@@ -5,6 +5,8 @@ using UnityEngine;
 public class PlayerBuff
 {
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
+    private PlayerStates _playerStates;
+    private WeaponAttachmentManagerBehaviour _attachmentManager;
 
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
@@ -15,10 +17,22 @@ public class PlayerBuff
     public float AddedHp { get; private set; }
     public bool HasHpBuff => AddedHp > 0f;
 
-    public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, GenericProperty<float> currentHp, float maxHp, out bool refreshWeaponSetup)
+    public void Bind(PlayerStates playerStates)
+    {
+        _playerStates = playerStates;
+    }
+
+    public bool TriggerBuff(PlayerBuffAsset buff, out bool refreshWeaponSetup)
     {
         refreshWeaponSetup = false;
         if (buff == null) return false;
+
+        WeaponAttachmentManagerBehaviour attachmentManager = null;
+        if (NeedsAttachmentManager(buff.Kind))
+        {
+            attachmentManager = GetCurrentAttachmentManager();
+            if (attachmentManager == null) return false;
+        }
 
         switch (buff.Kind)
         {
@@ -29,7 +43,7 @@ public class PlayerBuff
             case PlayerBuffKind.Magazine:
                 return AddMagazineCapacity(attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Hp:
-                return AddHp(buff.Value, currentHp, maxHp);
+                return AddHp(buff.Value);
             case PlayerBuffKind.AttackMultiplier:
                 AttackMultiplier *= buff.Value;
                 return true;
@@ -56,6 +70,22 @@ public class PlayerBuff
     public bool IsSkillUnlocked(PlayerSkillKind skill)
     {
         return skill != PlayerSkillKind.None && _unlockedSkills.Contains(skill);
+    }
+
+    private bool NeedsAttachmentManager(PlayerBuffKind kind)
+    {
+        return kind == PlayerBuffKind.Scope ||
+               kind == PlayerBuffKind.Laser ||
+               kind == PlayerBuffKind.Grip ||
+               kind == PlayerBuffKind.Magazine;
+    }
+
+    private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
+    {
+        Character character = GameManager.Instance.GetCharacter();
+        WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
+        _attachmentManager = weapon?.GetAttachmentManager();
+        return _attachmentManager;
     }
 
     private bool EquipAttachment(PlayerBuffKind kind, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
@@ -105,11 +135,11 @@ public class PlayerBuff
         return true;
     }
 
-    private bool AddHp(float value, GenericProperty<float> currentHp, float maxHp)
+    private bool AddHp(float value)
     {
-        if (value <= 0f || currentHp == null) return false;
+        if (value <= 0f || _playerStates == null) return false;
 
-        currentHp.Value = Mathf.Min(currentHp.Value + value, maxHp);
+        _playerStates.CurrentHP.Value = Mathf.Min(_playerStates.CurrentHP.Value + value, _playerStates.MaxHP);
         AddedHp += value;
         return true;
     }

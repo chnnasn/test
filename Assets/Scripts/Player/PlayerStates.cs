@@ -26,6 +26,7 @@ public class PlayerStates : MonoBehaviour, IDamage
 
     private void Awake()
     {
+        _playerBuff.Bind(this);
         CurrentHP.Value = _maxHP;
         Level.Value = _level;
     }
@@ -140,13 +141,7 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (buff == null) return false;
 
-        WeaponAttachmentManagerBehaviour attachmentManager = NeedsAttachmentManager(buff.Kind) ? GetCurrentAttachmentManager() : null;
-        if (NeedsAttachmentManager(buff.Kind) && attachmentManager == null)
-            return false;
-        if (buff.Kind == PlayerBuffKind.Hp && buff.Value <= 0f)
-            return false;
-
-        if (!_playerBuff.TriggerBuff(buff, attachmentManager, CurrentHP, _maxHP, out bool refreshWeaponSetup))
+        if (!_playerBuff.TriggerBuff(buff, out bool refreshWeaponSetup))
             return false;
 
         if (refreshWeaponSetup)
@@ -157,21 +152,6 @@ public class PlayerStates : MonoBehaviour, IDamage
 
         Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
         return true;
-    }
-
-    private bool NeedsAttachmentManager(PlayerBuffKind kind)
-    {
-        return kind == PlayerBuffKind.Scope ||
-               kind == PlayerBuffKind.Laser ||
-               kind == PlayerBuffKind.Grip ||
-               kind == PlayerBuffKind.Magazine;
-    }
-
-    private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
-    {
-        Character character = GameManager.Instance.GetCharacter();
-        WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
-        return weapon?.GetAttachmentManager();
     }
 
 
