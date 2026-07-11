@@ -15,6 +15,10 @@ public class PlayerBuff
     public bool HasGripBuff { get; private set; }
     public float AddedHp { get; private set; }
     public bool HasHpBuff => AddedHp > 0f;
+    public float SwayMultiplier { get; private set; } = 1f;
+    public float RecoilMultiplier { get; private set; } = 1f;
+    public float FireRateMultiplier { get; private set; } = 1f;
+    public GenericProperty<bool> SprintUnlocked { get; private set; } = new GenericProperty<bool>();
 
     public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out bool refreshWeaponSetup)
     {
@@ -25,11 +29,13 @@ public class PlayerBuff
         switch (buff.Kind)
         {
             case PlayerBuffKind.Scope:
+                return ApplyScopeBuff(buff, attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Laser:
+                return ApplyLaserBuff(buff, attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Grip:
-                return EquipAttachment(buff.Kind, attachmentManager, out refreshWeaponSetup);
+                return ApplyGripBuff(buff, attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Magazine:
-                return AddMagazineCapacity(attachmentManager, out refreshWeaponSetup);
+                return AddMagazineCapacity(buff, attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Hp:
                 return AddHp(buff.Value, addHpCallback);
             case PlayerBuffKind.AttackMultiplier:
@@ -100,13 +106,37 @@ public class PlayerBuff
         return true;
     }
 
-    private bool AddMagazineCapacity(WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
+    private bool ApplyScopeBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
+    {
+        if (!EquipAttachment(PlayerBuffKind.Scope, attachmentManager, out refreshWeaponSetup)) return false;
+
+        SwayMultiplier = ApplyBuffToMultiplier(SwayMultiplier, buff);
+        return true;
+    }
+
+    private bool ApplyLaserBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
+    {
+        if (!EquipAttachment(PlayerBuffKind.Laser, attachmentManager, out refreshWeaponSetup)) return false;
+
+        FireRateMultiplier = ApplyBuffToMultiplier(FireRateMultiplier, buff);
+        return true;
+    }
+
+    private bool ApplyGripBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
+    {
+        if (!EquipAttachment(PlayerBuffKind.Grip, attachmentManager, out refreshWeaponSetup)) return false;
+
+        RecoilMultiplier = ApplyBuffToMultiplier(RecoilMultiplier, buff);
+        return true;
+    }
+
+    private bool AddMagazineCapacity(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
     {
         refreshWeaponSetup = false;
-        if (attachmentManager == null) return false;
+        if (buff == null || attachmentManager == null) return false;
         if (attachmentManager.GetEquippedMagazine() is not Magazine magazine) return false;
 
-        int increase = Mathf.FloorToInt(magazine.GetAmmunitionTotal() * 0.5f);
+        int increase = GetBuffAmountFromValue(magazine.GetAmmunitionTotal(), buff);
         if (increase <= 0) return false;
 
         magazine.AddAmmunitionTotal(increase);
@@ -124,11 +154,54 @@ public class PlayerBuff
         return true;
     }
 
+    private float GetNormalizedBuffValue(PlayerBuffAsset buff)
+    {
+        if (buff == null) return 0f;
+
+        float value = Mathf.Max(0f, buff.Value);
+        if (buff.ValueMode == PlayerBuffValueMode.Percent)
+            value *= 0.01f;
+
+        return value;
+    }
+
+    private float GetSignedBuffValue(PlayerBuffAsset buff)
+    {
+        float value = GetNormalizedBuffValue(buff);
+        return buff != null && buff.Operation == PlayerBuffOperation.Decrease ? -value : value;
+    }
+
+    private float ApplyBuffToMultiplier(float currentMultiplier, PlayerBuffAsset buff)
+    {
+        float signedValue = GetSignedBuffValue(buff);
+
+        if (buff != null && buff.ValueMode == PlayerBuffValueMode.Percent)
+            return Mathf.Max(0f, currentMultiplier * (1f + signedValue));
+
+        return Mathf.Max(0f, currentMultiplier + signedValue);
+    }
+
+    private int GetBuffAmountFromValue(int baseAmount, PlayerBuffAsset buff)
+    {
+        if (buff == null) return 0;
+
+        float value = GetNormalizedBuffValue(buff);
+        float amount = buff.ValueMode == PlayerBuffValueMode.Percent
+            ? baseAmount * value
+            : value;
+
+        int signedAmount = Mathf.FloorToInt(amount);
+        return buff.Operation == PlayerBuffOperation.Decrease ? -signedAmount : signedAmount;
+    }
+
     private bool UnlockSkill(PlayerSkillKind skill)
     {
         if (skill == PlayerSkillKind.None) return false;
 
         _unlockedSkills.Add(skill);
+        if (skill == PlayerSkillKind.sprint)
+            SprintUnlocked.Value = true;
+
         return true;
     }
 }

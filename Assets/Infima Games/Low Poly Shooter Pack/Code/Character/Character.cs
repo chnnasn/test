@@ -359,7 +359,17 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		public float GetCurrentWeaponRateOfFire()
 		{
-			return equippedWeapon != null ? equippedWeapon.GetRateOfFire() : 200f;
+			return GetCurrentFireRate();
+		}
+
+		private float GetCurrentFireRate()
+		{
+			float rateOfFire = equippedWeapon != null ? equippedWeapon.GetRateOfFire() : 200f;
+
+			if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context) && context.Player != null)
+				rateOfFire *= context.Player.Buff.FireRateMultiplier;
+
+			return Mathf.Max(1f, rateOfFire);
 		}
 
 		/// <summary>
@@ -385,6 +395,13 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private void SprintBackward()
 		{
+			if (!RunTimeContext.TryGetExistingInstance(out RunTimeContext context) ||
+			    context.Player == null ||
+			    !context.Player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint))
+			{
+				return;
+			}
+
 			movementBehaviour?.SprintBackward();
 		}
 
@@ -492,7 +509,7 @@ namespace InfimaGames.LowPolyShooterPack
 				//自动武器连发：按武器射速持续射击
 				if (CanPlayAnimationFire() && equippedWeapon.HasAmmunition() && equippedWeapon.IsAutomatic())
 				{
-					if (Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+					if (Time.time - lastShotTime > 60.0f / GetCurrentFireRate())
 						Fire();
 				}
 				//弹药耗尽时重置连射计数，避免后坐力/扩散保持最大值
@@ -773,7 +790,7 @@ namespace InfimaGames.LowPolyShooterPack
 			// 非自动武器：按下时单发射击
 			if (active && equippedWeapon != null && !equippedWeapon.IsAutomatic()
 			    && CanPlayAnimationFire() && equippedWeapon.HasAmmunition()
-			    && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+			    && Time.time - lastShotTime > 60.0f / GetCurrentFireRate())
 			{
 				Fire();
 			}
@@ -1301,7 +1318,7 @@ namespace InfimaGames.LowPolyShooterPack
 						}
 
 						//非自动武器：检查射速间隔后单发射击
-						if (Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+						if (Time.time - lastShotTime > 60.0f / GetCurrentFireRate())
 							Fire();
 					}
 					//无弹药时空仓射击

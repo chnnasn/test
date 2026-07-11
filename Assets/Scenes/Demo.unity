@@ -12691,6 +12691,7 @@ MonoBehaviour:
   HpText: {fileID: 505160709}
   LVText: {fileID: 1674084695}
   GunDisplay: {fileID: 607367689}
+  sprint: {fileID: 1328054136}
 --- !u!1 &1364596296
 GameObject:
   m_ObjectHideFlags: 0

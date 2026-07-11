@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: Grip
   m_EditorClassIdentifier: 
   _buffName: "\u63E1\u628A"
-  _description: "\u589E\u52A0\u63E1\u628A"
+  _description: "\u88C5\u5907\u63E1\u628A\uFF0C\u964D\u4F4E25%\u540E\u5750\u529B"
   _kind: 2
   _unique: 1
+  _value: 25
+  _valueMode: 1
+  _operation: 1
+  _skillKind: 0

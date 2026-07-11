@@ -9,6 +9,7 @@ public class PlayerUI : MonoBehaviour
     public Text HpText;
     public Text LVText;
     public GunDisplay GunDisplay;
+    public Image sprint;
 
     private void OnEnable()
     {
@@ -53,10 +54,13 @@ public class PlayerUI : MonoBehaviour
         player.Level.OnValueChanged += SetLevel;
         player.ExperienceProgress.OnValueChanged -= SetExperienceProgress;
         player.ExperienceProgress.OnValueChanged += SetExperienceProgress;
+        player.Buff.SprintUnlocked.OnValueChanged -= SetSprintVisible;
+        player.Buff.SprintUnlocked.OnValueChanged += SetSprintVisible;
 
         SetHp(player.CurrentHP.Value, player.MaxHP);
         SetLevel(player.Level.Value);
         SetExperienceProgress(player.ExperienceProgress.Value);
+        SetSprintVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint));
     }
 
     private void UnbindPlayer(Player player)
@@ -66,6 +70,7 @@ public class PlayerUI : MonoBehaviour
         player.CurrentHP.OnValueChanged -= OnPlayerHpChanged;
         player.Level.OnValueChanged -= SetLevel;
         player.ExperienceProgress.OnValueChanged -= SetExperienceProgress;
+        player.Buff.SprintUnlocked.OnValueChanged -= SetSprintVisible;
     }
 
     private void BindCharacter(Character character)
@@ -120,6 +125,12 @@ public class PlayerUI : MonoBehaviour
         EXPSlider.minValue = 0f;
         EXPSlider.maxValue = 1f;
         EXPSlider.value = Mathf.Clamp01(progress);
+    }
+
+    private void SetSprintVisible(bool visible)
+    {
+        if (sprint != null)
+            sprint.gameObject.SetActive(visible);
     }
 
     public void SetBulletCount(int currentAmmo)

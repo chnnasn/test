@@ -158,10 +158,14 @@ namespace InfimaGames.LowPolyShooterPack
                     recoilRotation.z = recoilCurves.RotationCurves[2].Evaluate(shotsFired);
                 }
 
-                //乘以位置倍率和状态倍率。
-                recoilLocation *= recoilCurves.LocationMultiplier * recoilDataMultiplier;
-                //乘以旋转倍率和状态倍率。
-                recoilRotation *= recoilCurves.RotationMultiplier * recoilDataMultiplier;
+                float playerRecoilMultiplier = 1f;
+                if (global::RunTimeContext.TryGetExistingInstance(out global::RunTimeContext context) && context.Player != null)
+                    playerRecoilMultiplier = context.Player.Buff.RecoilMultiplier;
+
+                //乘以位置倍率、状态倍率和玩家Buff后坐力倍率。
+                recoilLocation *= recoilCurves.LocationMultiplier * recoilDataMultiplier * playerRecoilMultiplier;
+                //乘以旋转倍率、状态倍率和玩家Buff后坐力倍率。
+                recoilRotation *= recoilCurves.RotationMultiplier * recoilDataMultiplier * playerRecoilMultiplier;
             }
 
             //更新后坐力位置弹簧的目标值。

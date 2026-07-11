@@ -14,7 +14,20 @@ public enum PlayerBuffKind
 
 public enum PlayerSkillKind
 {
-    None
+    None,
+    sprint
+}
+
+public enum PlayerBuffValueMode
+{
+    Flat,
+    Percent
+}
+
+public enum PlayerBuffOperation
+{
+    Increase,
+    Decrease
 }
 
 [CreateAssetMenu(fileName = "PlayerBuff", menuName = "ScriptableObjects/Player Buff", order = 4)]
@@ -26,6 +39,8 @@ public class PlayerBuffAsset : ScriptableObject
     [SerializeField] private PlayerBuffKind _kind;
     [SerializeField] private bool _unique;
     [SerializeField] private float _value = 1f;
+    [SerializeField] private PlayerBuffValueMode _valueMode = PlayerBuffValueMode.Flat;
+    [SerializeField] private PlayerBuffOperation _operation = PlayerBuffOperation.Increase;
     [SerializeField] private PlayerSkillKind _skillKind;
 
     public string BuffName => _buffName;
@@ -33,5 +48,7 @@ public class PlayerBuffAsset : ScriptableObject
     public PlayerBuffKind Kind => _kind;
     public bool Unique => _unique;
     public float Value => _value;
+    public PlayerBuffValueMode ValueMode => _valueMode;
+    public PlayerBuffOperation Operation => _operation;
     public PlayerSkillKind SkillKind => _skillKind;
 }

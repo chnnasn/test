@@ -10,13 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
-  m_Name: Laser
+  m_Name: Sprint
   m_EditorClassIdentifier: 
-  _buffName: "\u5C04\u7EBF"
-  _description: "\u88C5\u5907\u5C04\u7EBF\uFF0C\u63D0\u9AD830%\u5C04\u51FB\u901F\u5EA6"
-  _kind: 1
+  _buffName: "\u540E\u64A4"
+  _description: "\u4F7F\u7528\u6280\u80FD\u6765\u5B9E\u73B0\u540E\u64A4\uFF0C\u4ECE\u800C\u63D0\u9AD8\u673A\u52A8\u6027"
+  _kind: 7
   _unique: 1
-  _value: 30
-  _valueMode: 1
-  _operation: 0
-  _skillKind: 0
+  _value: 1
+  _skillKind: 1

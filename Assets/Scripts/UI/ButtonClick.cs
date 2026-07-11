@@ -104,7 +104,12 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         }
         else if (_type == ButtonType.sprint)
         {
-            EventManager.Instance.TriggerExternalSprint();
+            if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context) &&
+                context.Player != null &&
+                context.Player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint))
+            {
+                EventManager.Instance.TriggerExternalSprint();
+            }
         }
     }
 }
