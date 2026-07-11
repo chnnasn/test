@@ -75,7 +75,7 @@ public class ScreenTouch : MonoBehaviour
 
 	private void Update()
 	{
-		if (RunTimeContext.Instance.Character == null) return;
+		if (!RunTimeContext.TryGetExistingInstance(out RunTimeContext context) || context.Character == null) return;
 		HandleTouchLook();
 	}
 
@@ -180,7 +180,8 @@ public class ScreenTouch : MonoBehaviour
 
 		float x = delta.x * sensitivityX;
 		float y = delta.y * sensitivityY * (invertY ? -1.0f : 1.0f);
-		RunTimeContext.Instance.Character?.OnLook(new Vector2(x, y));
+		if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
+			context.Character?.OnLook(new Vector2(x, y));
 	}
 
 	private void ResetLookFinger()
@@ -190,7 +191,8 @@ public class ScreenTouch : MonoBehaviour
 
 		// OnDisable 时单例可能已被销毁，判空保护
 		if (GameManager.Instance == null) return;
-		RunTimeContext.Instance.Character?.OnLook(Vector2.zero);
+		if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
+			context.Character?.OnLook(Vector2.zero);
 	}
 
 	/// <summary>
