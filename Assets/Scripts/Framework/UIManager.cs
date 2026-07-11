@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,6 +18,13 @@ public class UIManager : MonoBehaviour
     private int _currentWaveNumber;
     private int _totalWaveNumber;
     private float _currentWaveCountdown;
+    private RectTransform _waveCountdownRect;
+    private Tween _waveCountdownTween;
+    private bool _isWaveCountdownShowing;
+
+    private const float WaveCountdownHiddenX = -560f;
+    private const float WaveCountdownShownX = -350f;
+    private const float WaveCountdownMoveDuration = 0.35f;
 
     private void OnEnable()
     {
@@ -30,6 +38,7 @@ public class UIManager : MonoBehaviour
         BindGunDisplay();
 
         BindWaveToText();
+        InitWaveCountdownPosition();
 
         if (BuffChoose != null)
             BuffChoose.gameObject.SetActive(false);
@@ -49,6 +58,7 @@ public class UIManager : MonoBehaviour
         UnbindCharacterFromCross();
         UnbindGunDisplay();
         UnbindWaveFromText();
+        KillWaveCountdownTween();
     }
 
     #region Character → Cross 绑定
@@ -187,13 +197,92 @@ public class UIManager : MonoBehaviour
         if (_currentWaveCountdown > 0f)
         {
             WaveCountDown.text = $"第 {_currentWaveNumber} 波倒计时: {_currentWaveCountdown:F0}s";
-            WaveCountDown.gameObject.SetActive(true);
+            ShowWaveCountdown();
         }
         else
         {
             WaveCountDown.text = string.Empty;
-            WaveCountDown.gameObject.SetActive(false);
+            HideWaveCountdown();
         }
+    }
+
+    private void InitWaveCountdownPosition()
+    {
+        if (WaveCountDown == null) return;
+
+        _waveCountdownRect = WaveCountDown.GetComponent<RectTransform>();
+        if (_waveCountdownRect == null) return;
+
+        Vector2 position = _waveCountdownRect.anchoredPosition;
+        position.x = WaveCountdownHiddenX;
+        _waveCountdownRect.anchoredPosition = position;
+        WaveCountDown.gameObject.SetActive(false);
+        _isWaveCountdownShowing = false;
+    }
+
+    private void ShowWaveCountdown()
+    {
+        if (WaveCountDown == null) return;
+        if (_waveCountdownRect == null)
+            _waveCountdownRect = WaveCountDown.GetComponent<RectTransform>();
+        if (_waveCountdownRect == null) return;
+
+        if (_isWaveCountdownShowing)
+        {
+            if (!WaveCountDown.gameObject.activeSelf)
+                WaveCountDown.gameObject.SetActive(true);
+            return;
+        }
+
+        _isWaveCountdownShowing = true;
+        WaveCountDown.gameObject.SetActive(true);
+        MoveWaveCountdown(WaveCountdownShownX);
+    }
+
+    private void HideWaveCountdown()
+    {
+        if (WaveCountDown == null) return;
+        if (_waveCountdownRect == null)
+            _waveCountdownRect = WaveCountDown.GetComponent<RectTransform>();
+        if (_waveCountdownRect == null)
+        {
+            WaveCountDown.gameObject.SetActive(false);
+            _isWaveCountdownShowing = false;
+            return;
+        }
+
+        if (!_isWaveCountdownShowing)
+        {
+            WaveCountDown.gameObject.SetActive(false);
+            return;
+        }
+
+        _isWaveCountdownShowing = false;
+        MoveWaveCountdown(WaveCountdownHiddenX, () =>
+        {
+            if (!_isWaveCountdownShowing && WaveCountDown != null)
+                WaveCountDown.gameObject.SetActive(false);
+        });
+    }
+
+    private void MoveWaveCountdown(float x, TweenCallback onComplete = null)
+    {
+        KillWaveCountdownTween();
+
+        Vector2 position = _waveCountdownRect.anchoredPosition;
+        position.x = x;
+        _waveCountdownTween = _waveCountdownRect
+            .DOAnchorPos(position, WaveCountdownMoveDuration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(onComplete);
+    }
+
+    private void KillWaveCountdownTween()
+    {
+        if (_waveCountdownTween == null) return;
+
+        _waveCountdownTween.Kill();
+        _waveCountdownTween = null;
     }
 
     #endregion

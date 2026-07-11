@@ -51,6 +51,7 @@ public class EventManager : LazySingleton<EventManager>
     public void RegisterCharacterGetter(Func<Character> getCharacter)
     {
         _getCharacter = getCharacter;
+        BindPendingCharacterProperties();
     }
     
     public void RegisterPlayerGetter(Func<Player> getPlayer)
@@ -85,16 +86,22 @@ public class EventManager : LazySingleton<EventManager>
         var ps = Player;
         if (ps == null) return;
 
-        foreach (var binding in _hpBindings)
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_hpBindings))
         {
             Action<float, float> callback = (Action<float, float>)binding.Key;
-            Action<float> handler = (Action<float>)binding.Value;
+            Action<float> handler = binding.Value as Action<float>;
+            if (handler == null)
+            {
+                handler = hp => callback(hp, ps.MaxHP);
+                _hpBindings[callback] = handler;
+            }
+
             ps.CurrentHP.OnValueChanged -= handler;
             ps.CurrentHP.OnValueChanged += handler;
             callback(ps.CurrentHP.Value, ps.MaxHP);
         }
 
-        foreach (var binding in _levelBindings)
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_levelBindings))
         {
             Action<int> callback = (Action<int>)binding.Key;
             ps.Level.OnValueChanged -= callback;
@@ -102,12 +109,63 @@ public class EventManager : LazySingleton<EventManager>
             callback(ps.Level.Value);
         }
 
-        foreach (var binding in _experienceProgressBindings)
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_experienceProgressBindings))
         {
             Action<float> callback = (Action<float>)binding.Key;
             ps.ExperienceProgress.OnValueChanged -= callback;
             ps.ExperienceProgress.OnValueChanged += callback;
             callback(ps.ExperienceProgress.Value);
+        }
+    }
+
+    private void BindPendingCharacterProperties()
+    {
+        var character = Character;
+        if (character == null) return;
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_aimingBindings))
+        {
+            Action<bool> callback = (Action<bool>)binding.Key;
+            character.IsAimingProp.OnValueChanged -= callback;
+            character.IsAimingProp.OnValueChanged += callback;
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_runningBindings))
+        {
+            Action<bool> callback = (Action<bool>)binding.Key;
+            character.IsRunningProp.OnValueChanged -= callback;
+            character.IsRunningProp.OnValueChanged += callback;
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_firingBindings))
+        {
+            Action<bool> callback = (Action<bool>)binding.Key;
+            character.IsFiringProp.OnValueChanged -= callback;
+            character.IsFiringProp.OnValueChanged += callback;
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_weaponSpreadBindings))
+        {
+            Action<float> callback = (Action<float>)binding.Key;
+            character.CurrentWeaponSpreadProp.OnValueChanged -= callback;
+            character.CurrentWeaponSpreadProp.OnValueChanged += callback;
+            callback(character.GetCurrentWeaponSpread());
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_currentAmmoBindings))
+        {
+            Action<int> callback = (Action<int>)binding.Key;
+            character.CurrentAmmoProp.OnValueChanged -= callback;
+            character.CurrentAmmoProp.OnValueChanged += callback;
+            callback(character.GetCurrentAmmo());
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_gunAccessoryVisibleBindings))
+        {
+            Action<bool[]> callback = (Action<bool[]>)binding.Key;
+            character.GunAccessoryVisibleProp.OnValueChanged -= callback;
+            character.GunAccessoryVisibleProp.OnValueChanged += callback;
+            callback(character.GetGunAccessoryVisible());
         }
     }
 
@@ -298,10 +356,11 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 绑定当前武器弹药数量变化回调 </summary>
     public void BindCurrentAmmo(Action<int> callback)
     {
+        _currentAmmoBindings[callback] = callback;
+
         var character = Character;
         if (character == null) return;
 
-        _currentAmmoBindings[callback] = callback;
         character.CurrentAmmoProp.OnValueChanged += callback;
         callback(character.GetCurrentAmmo());
     }
@@ -310,22 +369,20 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindCurrentAmmo(Action<int> callback)
     {
         var character = Character;
-        if (character == null) return;
-
-        if (_currentAmmoBindings.ContainsKey(callback))
-        {
+        if (character != null && _currentAmmoBindings.ContainsKey(callback))
             character.CurrentAmmoProp.OnValueChanged -= callback;
-            _currentAmmoBindings.Remove(callback);
-        }
+
+        _currentAmmoBindings.Remove(callback);
     }
 
     /// <summary> 绑定当前武器配件显示状态变化回调 </summary>
     public void BindGunAccessoryVisible(Action<bool[]> callback)
     {
+        _gunAccessoryVisibleBindings[callback] = callback;
+
         var character = Character;
         if (character == null) return;
 
-        _gunAccessoryVisibleBindings[callback] = callback;
         character.GunAccessoryVisibleProp.OnValueChanged += callback;
         callback(character.GetGunAccessoryVisible());
     }
@@ -334,13 +391,10 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindGunAccessoryVisible(Action<bool[]> callback)
     {
         var character = Character;
-        if (character == null) return;
-
-        if (_gunAccessoryVisibleBindings.ContainsKey(callback))
-        {
+        if (character != null && _gunAccessoryVisibleBindings.ContainsKey(callback))
             character.GunAccessoryVisibleProp.OnValueChanged -= callback;
-            _gunAccessoryVisibleBindings.Remove(callback);
-        }
+
+        _gunAccessoryVisibleBindings.Remove(callback);
     }
 
     /// <summary> 绑定波次变化回调 </summary>
@@ -480,6 +534,6 @@ public class EventManager : LazySingleton<EventManager>
     
     public GameObject GetPlayerObject()
     {
-        return Character.gameObject;
+        return Character != null ? Character.gameObject : null;
     }
 }

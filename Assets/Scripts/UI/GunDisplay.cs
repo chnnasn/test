@@ -7,6 +7,11 @@ public class GunDisplay : MonoBehaviour
 
     public Image[] GunAccessory;//0为弹夹，1为射线，2为倍镜，3为握把
 
+    private void Awake()
+    {
+        SetGunAccessoryVisible(new bool[4]);
+    }
+
     public void SetBulletCount(int currentAmmo)
     {
         if (BulleteNumText != null)
