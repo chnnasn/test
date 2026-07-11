@@ -19,12 +19,16 @@ public class UIManager : MonoBehaviour
     private int _totalWaveNumber;
     private float _currentWaveCountdown;
     private RectTransform _waveCountdownRect;
+    private CanvasGroup _waveCountdownCanvasGroup;
     private Tween _waveCountdownTween;
     private bool _isWaveCountdownShowing;
 
     private const float WaveCountdownHiddenX = -560f;
     private const float WaveCountdownShownX = -350f;
-    private const float WaveCountdownMoveDuration = 0.35f;
+    private const float WaveCountdownShowDuration = 0.45f;
+    private const float WaveCountdownHideDuration = 0.55f;
+    private const float WaveCountdownFinalScale = 1.5f;
+    private const float WaveCountdownPunchScale = 0.08f;
 
     private void OnEnable()
     {
@@ -212,9 +216,15 @@ public class UIManager : MonoBehaviour
         _waveCountdownRect = WaveCountDown.GetComponent<RectTransform>();
         if (_waveCountdownRect == null) return;
 
+        _waveCountdownCanvasGroup = WaveCountDown.GetComponent<CanvasGroup>();
+        if (_waveCountdownCanvasGroup == null)
+            _waveCountdownCanvasGroup = WaveCountDown.gameObject.AddComponent<CanvasGroup>();
+
         Vector2 position = _waveCountdownRect.anchoredPosition;
         position.x = WaveCountdownHiddenX;
         _waveCountdownRect.anchoredPosition = position;
+        _waveCountdownRect.localScale = Vector3.one * 0.92f;
+        _waveCountdownCanvasGroup.alpha = 0f;
         WaveCountDown.gameObject.SetActive(false);
         _isWaveCountdownShowing = false;
     }
@@ -225,6 +235,7 @@ public class UIManager : MonoBehaviour
         if (_waveCountdownRect == null)
             _waveCountdownRect = WaveCountDown.GetComponent<RectTransform>();
         if (_waveCountdownRect == null) return;
+        EnsureWaveCountdownCanvasGroup();
 
         if (_isWaveCountdownShowing)
         {
@@ -235,7 +246,7 @@ public class UIManager : MonoBehaviour
 
         _isWaveCountdownShowing = true;
         WaveCountDown.gameObject.SetActive(true);
-        MoveWaveCountdown(WaveCountdownShownX);
+        PlayWaveCountdownShowAnimation();
     }
 
     private void HideWaveCountdown()
@@ -249,6 +260,7 @@ public class UIManager : MonoBehaviour
             _isWaveCountdownShowing = false;
             return;
         }
+        EnsureWaveCountdownCanvasGroup();
 
         if (!_isWaveCountdownShowing)
         {
@@ -257,7 +269,7 @@ public class UIManager : MonoBehaviour
         }
 
         _isWaveCountdownShowing = false;
-        MoveWaveCountdown(WaveCountdownHiddenX, () =>
+        PlayWaveCountdownHideAnimation(() =>
         {
             if (!_isWaveCountdownShowing && WaveCountDown != null)
             {
@@ -267,15 +279,43 @@ public class UIManager : MonoBehaviour
         });
     }
 
-    private void MoveWaveCountdown(float x, TweenCallback onComplete = null)
+    private void EnsureWaveCountdownCanvasGroup()
+    {
+        if (WaveCountDown == null || _waveCountdownCanvasGroup != null) return;
+
+        _waveCountdownCanvasGroup = WaveCountDown.GetComponent<CanvasGroup>();
+        if (_waveCountdownCanvasGroup == null)
+            _waveCountdownCanvasGroup = WaveCountDown.gameObject.AddComponent<CanvasGroup>();
+    }
+
+    private void PlayWaveCountdownShowAnimation()
     {
         KillWaveCountdownTween();
 
         Vector2 position = _waveCountdownRect.anchoredPosition;
-        position.x = x;
-        _waveCountdownTween = _waveCountdownRect
-            .DOAnchorPos(position, WaveCountdownMoveDuration)
-            .SetEase(Ease.OutQuad)
+        position.x = WaveCountdownHiddenX;
+        _waveCountdownRect.anchoredPosition = position;
+        _waveCountdownRect.localScale = Vector3.one * 0.92f;
+        _waveCountdownCanvasGroup.alpha = 0f;
+
+        _waveCountdownTween = DOTween.Sequence()
+            .Join(_waveCountdownRect.DOAnchorPosX(WaveCountdownShownX, WaveCountdownShowDuration).SetEase(Ease.OutBack))
+            .Join(_waveCountdownCanvasGroup.DOFade(1f, WaveCountdownShowDuration * 0.65f).SetEase(Ease.OutQuad))
+            .Join(_waveCountdownRect.DOScale(WaveCountdownFinalScale, WaveCountdownShowDuration).SetEase(Ease.OutBack))
+            .Append(_waveCountdownRect.DOPunchScale(Vector3.one * WaveCountdownPunchScale, 0.18f, 6, 0.6f));
+    }
+
+    private void PlayWaveCountdownHideAnimation(TweenCallback onComplete = null)
+    {
+        KillWaveCountdownTween();
+
+        _waveCountdownRect.localScale = Vector3.one * WaveCountdownFinalScale;
+        _waveCountdownCanvasGroup.alpha = 1f;
+
+        _waveCountdownTween = DOTween.Sequence()
+            .Join(_waveCountdownRect.DOAnchorPosX(WaveCountdownHiddenX, WaveCountdownHideDuration).SetEase(Ease.InBack))
+            .Join(_waveCountdownCanvasGroup.DOFade(0f, WaveCountdownHideDuration * 0.75f).SetEase(Ease.InQuad))
+            .Join(_waveCountdownRect.DOScale(0.92f, WaveCountdownHideDuration).SetEase(Ease.InBack))
             .OnComplete(onComplete);
     }
 
