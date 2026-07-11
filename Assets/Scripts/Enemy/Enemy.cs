@@ -31,6 +31,8 @@ public class Enemy : MonoBehaviour,IDamage
     public EnemyMovement Movement { get; private set; }
     public EnemyAnimator AnimatorController { get; private set; }
 
+    public ParticleSystem BloodParticle;
+
     public Transform Target => _target;
     public float BirthDuration => _birthDuration;
     public bool IsAlive => _currentHP > 0;
@@ -119,6 +121,8 @@ public class Enemy : MonoBehaviour,IDamage
         _currentHP = _maxHP;
         _isDying = false;
         _target = null;
+        if (BloodParticle != null)
+            BloodParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         Movement?.DisableCollision();
         stateMachine.ResetStates();
         stateMachine.ChangeState(stateMachine.BirthState);
@@ -155,8 +159,14 @@ public class Enemy : MonoBehaviour,IDamage
     /// </summary>
     public void TakeDamage(float damage)
     {
+        TakeDamage(damage, transform.position);
+    }
+
+    public void TakeDamage(float damage, Vector3 hitPoint)
+    {
         if (!IsAlive || _isDying) return;
 
+        PlayBloodParticle(hitPoint);
         _currentHP -= damage;
 
         if (_currentHP <= 0)
@@ -168,6 +178,27 @@ public class Enemy : MonoBehaviour,IDamage
 
         Movement.Stop();
         AnimatorController?.PlayGetHit();
+    }
+
+    private void PlayBloodParticle(Vector3 hitPoint)
+    {
+        if (BloodParticle == null) return;
+
+        Transform bloodTransform = BloodParticle.transform;
+        Vector3 localHitPoint = transform.InverseTransformPoint(hitPoint);
+        Vector3 localPosition = bloodTransform.localPosition;
+        localPosition.x = localHitPoint.x;
+        localPosition.z = localHitPoint.z;
+        bloodTransform.localPosition = localPosition;
+
+        Vector3 horizontalDirection = hitPoint - transform.position;
+        horizontalDirection.y = 0f;
+        if (horizontalDirection.sqrMagnitude <= 0.0001f)
+            horizontalDirection = transform.forward;
+
+        bloodTransform.rotation = Quaternion.LookRotation(horizontalDirection.normalized, Vector3.up);
+        BloodParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        BloodParticle.Play(true);
     }
 
     /// <summary>

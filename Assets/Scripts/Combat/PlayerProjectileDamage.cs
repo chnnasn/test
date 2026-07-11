@@ -61,15 +61,23 @@ public class PlayerProjectileDamage : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        HandleHit(collision.collider);
+        if (collision == null || collision.collider == null) return;
+
+        Vector3 hitPoint = collision.contactCount > 0
+            ? collision.GetContact(0).point
+            : collision.collider.ClosestPoint(transform.position);
+        HandleHit(collision.collider, hitPoint);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        HandleHit(other);
+        if (other == null) return;
+
+        Vector3 hitPoint = other.ClosestPoint(transform.position);
+        HandleHit(other, hitPoint);
     }
 
-    private void HandleHit(Collider hitCollider)
+    private void HandleHit(Collider hitCollider, Vector3 hitPoint)
     {
         if (_hasHit || hitCollider == null) return;
 
@@ -79,7 +87,7 @@ public class PlayerProjectileDamage : MonoBehaviour
         Enemy enemy = hitCollider.GetComponentInParent<Enemy>();
         if (enemy != null)
         {
-            enemy.TakeDamage(_damage);
+            enemy.TakeDamage(_damage, hitPoint);
         }
 
         if (destroyOnImpact)
