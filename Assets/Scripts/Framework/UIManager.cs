@@ -3,16 +3,13 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    public Slider hpSlider;
-    public Text HpText;
+    public PlayerUI PlayerUI;
+
     [Header("BUFF")]
     public BuffChoose BuffChoose;
 
     public Text WaveCountDown;
     public Text WaveText;
-    public Text LVText;
-    [Header("枪械")]
-    public GunDisplay GunDisplay;
 
     [Header("准星")]
     public Cross cross;
@@ -25,6 +22,7 @@ public class UIManager : MonoBehaviour
     {
         EventManager.Instance.BindPlayerHp(OnHpChanged);
         EventManager.Instance.BindPlayerLevel(OnLevelChanged);
+        EventManager.Instance.BindPlayerExperienceProgress(OnExperienceProgressChanged);
         EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
@@ -43,6 +41,7 @@ public class UIManager : MonoBehaviour
         {
             eventManager.UnbindPlayerHp(OnHpChanged);
             eventManager.UnbindPlayerLevel(OnLevelChanged);
+            eventManager.UnbindPlayerExperienceProgress(OnExperienceProgressChanged);
             eventManager.UnbindLevelUpBuffs(OnLevelUpBuffs);
             eventManager.LevelUpBuffsFinished -= OnLevelUpBuffsFinished;
         }
@@ -110,7 +109,7 @@ public class UIManager : MonoBehaviour
 
     private void BindGunDisplay()
     {
-        if (GunDisplay == null) return;
+        if (PlayerUI == null) return;
 
         EventManager.Instance.BindCurrentAmmo(OnCurrentAmmoChanged);
         EventManager.Instance.BindGunAccessoryVisible(OnGunAccessoryVisibleChanged);
@@ -126,14 +125,14 @@ public class UIManager : MonoBehaviour
 
     private void OnCurrentAmmoChanged(int currentAmmo)
     {
-        if (GunDisplay != null)
-            GunDisplay.SetBulletCount(currentAmmo);
+        if (PlayerUI != null)
+            PlayerUI.SetBulletCount(currentAmmo);
     }
 
     private void OnGunAccessoryVisibleChanged(bool[] visible)
     {
-        if (GunDisplay != null)
-            GunDisplay.SetGunAccessoryVisible(visible);
+        if (PlayerUI != null)
+            PlayerUI.SetGunAccessoryVisible(visible);
     }
 
     #endregion
@@ -201,12 +200,6 @@ public class UIManager : MonoBehaviour
 
     #region BuffChoose 绑定
 
-    private void OnBuffChosen(int index)
-    {
-        if (BuffChoose != null)
-            BuffChoose.SetCanChoose(false);
-    }
-
     private void OnLevelUpBuffsFinished()
     {
         if (BuffChoose != null)
@@ -221,20 +214,20 @@ public class UIManager : MonoBehaviour
 
     private void OnHpChanged(float currentHp, float maxHp)
     {
-        if (hpSlider != null)
-        {
-            hpSlider.maxValue = maxHp;
-            hpSlider.value = currentHp;
-        }
-
-        if (HpText != null)
-            HpText.text = $"HP: {currentHp:F0} / {maxHp}";
+        if (PlayerUI != null)
+            PlayerUI.SetHp(currentHp, maxHp);
     }
 
     private void OnLevelChanged(int level)
     {
-        if (LVText != null)
-            LVText.text = $"LV: {level}";
+        if (PlayerUI != null)
+            PlayerUI.SetLevel(level);
+    }
+
+    private void OnExperienceProgressChanged(float progress)
+    {
+        if (PlayerUI != null)
+            PlayerUI.SetExperienceProgress(progress);
     }
 
     private void OnLevelUpBuffs(string[] levelUpBuffs)

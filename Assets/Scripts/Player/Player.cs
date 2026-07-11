@@ -23,6 +23,7 @@ public class Player : MonoBehaviour, IDamage
 
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<int> Level { get; private set; } = new GenericProperty<int>();
+    public GenericProperty<float> ExperienceProgress { get; private set; } = new GenericProperty<float>();
 
     private Character character;
     
@@ -30,10 +31,11 @@ public class Player : MonoBehaviour, IDamage
     {
         CurrentHP.Value = _maxHP;
         Level.Value = _level;
-        
+        RefreshExperienceProgress();
+
         character = GetComponent<Character>();
         EventManager.Instance.RegisterCharacterGetter(GetCharacter);
-        EventManager.Instance.RegisterPlayerGetter(() => this);
+        EventManager.Instance.RegisterPlayerGetter(GetPlayer);
 
         character.SetCursorLocked(true);
     }
@@ -53,13 +55,18 @@ public class Player : MonoBehaviour, IDamage
             eventManager.AddExper -= AddExperience;
             eventManager.TriggerBuff -= ApplySelectedBuff;
             eventManager.UnregisterCharacterGetter(GetCharacter);
-            eventManager.UnregisterPlayerGetter(() => this);
+            eventManager.UnregisterPlayerGetter(GetPlayer);
         }
     }
 
     private Character GetCharacter()
     {
         return character;
+    }
+
+    private Player GetPlayer()
+    {
+        return this;
     }
 
     private void AddExperience(float experience)
@@ -84,10 +91,29 @@ public class Player : MonoBehaviour, IDamage
         }
 
         int levelUpCount = _level - levelBefore;
+        RefreshExperienceProgress();
         if (levelUpCount <= 0) return;
 
         _pendingBuffChooseCount += levelUpCount;
         DrawLevelUpBuffs();
+    }
+
+    private float GetExperienceProgress()
+    {
+        if (_levelExperienceAsset == null || _levelExperienceAsset.LevelExperienceRequirements == null)
+            return 0f;
+
+        int levelIndex = _level - 1;
+        float requiredExperience = _levelExperienceAsset.GetRequiredExperience(levelIndex);
+        if (requiredExperience <= 0f)
+            return 0f;
+
+        return Mathf.Clamp01(_experience / requiredExperience);
+    }
+
+    private void RefreshExperienceProgress()
+    {
+        ExperienceProgress.Value = GetExperienceProgress();
     }
 
     private void DrawLevelUpBuffs()

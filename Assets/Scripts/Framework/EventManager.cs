@@ -31,6 +31,7 @@ public class EventManager : LazySingleton<EventManager>
     private WaveManager _waveManager;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _levelBindings = new Dictionary<Delegate, Delegate>();
+    private Dictionary<Delegate, Delegate> _experienceProgressBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _levelUpBuffBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _aimingBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _runningBindings = new Dictionary<Delegate, Delegate>();
@@ -124,6 +125,30 @@ public class EventManager : LazySingleton<EventManager>
         {
             ps.Level.OnValueChanged -= callback;
             _levelBindings.Remove(callback);
+        }
+    }
+
+    /// <summary> 绑定经验进度变化回调，参数为 0-1 归一化经验比例 </summary>
+    public void BindPlayerExperienceProgress(Action<float> callback)
+    {
+        var ps = Player;
+        if (ps == null) return;
+
+        _experienceProgressBindings[callback] = callback;
+        ps.ExperienceProgress.OnValueChanged += callback;
+        callback(ps.ExperienceProgress.Value);
+    }
+
+    /// <summary> 解绑经验进度变化回调 </summary>
+    public void UnbindPlayerExperienceProgress(Action<float> callback)
+    {
+        var ps = Player;
+        if (ps == null) return;
+
+        if (_experienceProgressBindings.ContainsKey(callback))
+        {
+            ps.ExperienceProgress.OnValueChanged -= callback;
+            _experienceProgressBindings.Remove(callback);
         }
     }
 
