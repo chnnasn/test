@@ -486,7 +486,7 @@ namespace InfimaGames.LowPolyShooterPack
                 if (player == null)
                     player = characterBehaviour.GetComponentInParent<global::Player>();
                 if (player == null)
-                    player = global::EventManager.Instance.GetPlayerObject()?.GetComponent<global::Player>();
+                    player = global::RunTimeContext.Instance.Player;
                 if (player != null)
                     finalProjectileDamage = player.Buff.GetAttackDamage(projectileDamage);
 

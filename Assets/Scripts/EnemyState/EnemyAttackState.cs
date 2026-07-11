@@ -28,7 +28,7 @@ public class EnemyAttackState : EnemyState
     {
         if (!enemy.IsAlive) return;
 
-        if (EventManager.Instance.GetPlayerObject() == null) return;
+        if (RunTimeContext.Instance.PlayerObject == null) return;
 
         // 始终面向目标
         movement.FaceTarget(enemy.Target);

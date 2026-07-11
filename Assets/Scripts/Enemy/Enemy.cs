@@ -65,7 +65,7 @@ public class Enemy : MonoBehaviour,IDamage
     /// </summary>
     private bool DetectAttackHitPlayer()
     {
-        GameObject player = EventManager.Instance.GetPlayerObject();
+        GameObject player = RunTimeContext.Instance.PlayerObject;
         if (player == null) return false;
 
         Vector3 origin = transform.position + _attackCastOffset;

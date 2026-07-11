@@ -67,7 +67,7 @@ public class WaveManager : MonoBehaviour
         if (!_canSpawnWaves || _isWaveRunning)
             return;
 
-        if (EventManager.Instance.GetPlayerObject()!=null)
+        if (RunTimeContext.Instance.PlayerObject != null)
         {
             if (currentWave < _portalWaves.Length)
             {

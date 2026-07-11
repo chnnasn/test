@@ -27,10 +27,14 @@ public class UIManager : MonoBehaviour
 
     private void OnEnable()
     {
-        EventManager.Instance.BindLevelUpBuffs(OnLevelUpBuffs);
+        EventManager.Instance.LevelUpBuffs += OnLevelUpBuffs;
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
-        BindWaveToText();
+        if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
+        {
+            context.WaveManagerChanged += OnWaveManagerChanged;
+            context.InjectWaveManager(BindWaveToText);
+        }
         InitWaveCountdownPosition();
 
         if (BuffChoose != null)
@@ -41,34 +45,53 @@ public class UIManager : MonoBehaviour
     {
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
         {
-            eventManager.UnbindLevelUpBuffs(OnLevelUpBuffs);
+            eventManager.LevelUpBuffs -= OnLevelUpBuffs;
             eventManager.LevelUpBuffsFinished -= OnLevelUpBuffsFinished;
         }
 
-        UnbindWaveFromText();
+        if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
+        {
+            context.WaveManagerChanged -= OnWaveManagerChanged;
+            context.InjectWaveManager(UnbindWaveFromText);
+        }
+
         KillWaveCountdownTween();
     }
 
     #region WaveText 绑定
 
     /// <summary>
-    /// 通过 EventManager 订阅 WaveManager 的 GenericProperty，显示波次与倒计时。
-    /// UIManager 不直接持有 WaveManager 引用，完全通过 EventManager 中介。
+    /// 基于 RunTimeContext 注入的 WaveManager 订阅 GenericProperty，显示波次与倒计时。
     /// </summary>
-    private void BindWaveToText()
+    private void OnWaveManagerChanged(WaveManager oldWaveManager, WaveManager newWaveManager)
     {
-        EventManager.Instance.BindWaveNumber(OnWaveNumberChanged);
-        EventManager.Instance.BindWaveTotal(OnWaveTotalChanged);
-        EventManager.Instance.BindWaveCountdown(OnWaveCountdownChanged);
+        UnbindWaveFromText(oldWaveManager);
+        BindWaveToText(newWaveManager);
     }
 
-    private void UnbindWaveFromText()
+    private void BindWaveToText(WaveManager waveManager)
     {
-        if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+        if (waveManager == null) return;
 
-        eventManager.UnbindWaveNumber(OnWaveNumberChanged);
-        eventManager.UnbindWaveTotal(OnWaveTotalChanged);
-        eventManager.UnbindWaveCountdown(OnWaveCountdownChanged);
+        waveManager.WaveNumber.OnValueChanged -= OnWaveNumberChanged;
+        waveManager.WaveNumber.OnValueChanged += OnWaveNumberChanged;
+        waveManager.WaveTotal.OnValueChanged -= OnWaveTotalChanged;
+        waveManager.WaveTotal.OnValueChanged += OnWaveTotalChanged;
+        waveManager.WaveCountdown.OnValueChanged -= OnWaveCountdownChanged;
+        waveManager.WaveCountdown.OnValueChanged += OnWaveCountdownChanged;
+
+        OnWaveNumberChanged(waveManager.WaveNumber.Value);
+        OnWaveTotalChanged(waveManager.WaveTotal.Value);
+        OnWaveCountdownChanged(waveManager.WaveCountdown.Value);
+    }
+
+    private void UnbindWaveFromText(WaveManager waveManager)
+    {
+        if (waveManager == null) return;
+
+        waveManager.WaveNumber.OnValueChanged -= OnWaveNumberChanged;
+        waveManager.WaveTotal.OnValueChanged -= OnWaveTotalChanged;
+        waveManager.WaveCountdown.OnValueChanged -= OnWaveCountdownChanged;
     }
 
     private void OnWaveNumberChanged(int waveNumber)

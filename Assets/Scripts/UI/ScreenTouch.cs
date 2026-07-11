@@ -75,7 +75,7 @@ public class ScreenTouch : MonoBehaviour
 
 	private void Update()
 	{
-		if (EventManager.Instance.GetCharacter() == null) return;
+		if (RunTimeContext.Instance.Character == null) return;
 		HandleTouchLook();
 	}
 
@@ -180,7 +180,7 @@ public class ScreenTouch : MonoBehaviour
 
 		float x = delta.x * sensitivityX;
 		float y = delta.y * sensitivityY * (invertY ? -1.0f : 1.0f);
-		EventManager.Instance.GetCharacter()?.OnLook(new Vector2(x, y));
+		RunTimeContext.Instance.Character?.OnLook(new Vector2(x, y));
 	}
 
 	private void ResetLookFinger()
@@ -189,8 +189,8 @@ public class ScreenTouch : MonoBehaviour
 		hasLastLookPosition = false;
 
 		// OnDisable 时单例可能已被销毁，判空保护
-		if (GameManager.Instance == null || EventManager.Instance == null) return;
-		EventManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
+		if (GameManager.Instance == null) return;
+		RunTimeContext.Instance.Character?.OnLook(Vector2.zero);
 	}
 
 	/// <summary>

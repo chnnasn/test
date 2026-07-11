@@ -1,3 +1,4 @@
+using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 
 public class Cross : MonoBehaviour
@@ -93,20 +94,53 @@ public class Cross : MonoBehaviour
 
 	private void OnEnable()
 	{
-		EventManager.Instance.BindCharacterAiming(SetAiming);
-		EventManager.Instance.BindCharacterRunning(SetRunning);
-		EventManager.Instance.BindCharacterFiring(SetFiring);
-		EventManager.Instance.BindCurrentWeaponSpread(SetWeaponSpread);
+		if (!RunTimeContext.TryGetExistingInstance(out RunTimeContext context)) return;
+
+		context.CharacterChanged += OnCharacterChanged;
+		context.InjectCharacter(BindCharacter);
 	}
 
 	private void OnDisable()
 	{
-		if (!EventManager.TryGetExistingInstance(out EventManager eventManager)) return;
+		if (!RunTimeContext.TryGetExistingInstance(out RunTimeContext context)) return;
 
-		eventManager.UnbindCharacterAiming(SetAiming);
-		eventManager.UnbindCharacterRunning(SetRunning);
-		eventManager.UnbindCharacterFiring(SetFiring);
-		eventManager.UnbindCurrentWeaponSpread(SetWeaponSpread);
+		context.CharacterChanged -= OnCharacterChanged;
+		context.InjectCharacter(UnbindCharacter);
+	}
+
+	private void OnCharacterChanged(Character oldCharacter, Character newCharacter)
+	{
+		UnbindCharacter(oldCharacter);
+		BindCharacter(newCharacter);
+	}
+
+	private void BindCharacter(Character character)
+	{
+		if (character == null) return;
+
+		character.IsAimingProp.OnValueChanged -= SetAiming;
+		character.IsAimingProp.OnValueChanged += SetAiming;
+		character.IsRunningProp.OnValueChanged -= SetRunning;
+		character.IsRunningProp.OnValueChanged += SetRunning;
+		character.IsFiringProp.OnValueChanged -= SetFiring;
+		character.IsFiringProp.OnValueChanged += SetFiring;
+		character.CurrentWeaponSpreadProp.OnValueChanged -= SetWeaponSpread;
+		character.CurrentWeaponSpreadProp.OnValueChanged += SetWeaponSpread;
+
+		SetAiming(character.IsAimingProp.Value);
+		SetRunning(character.IsRunningProp.Value);
+		SetFiring(character.IsFiringProp.Value);
+		SetWeaponSpread(character.GetCurrentWeaponSpread());
+	}
+
+	private void UnbindCharacter(Character character)
+	{
+		if (character == null) return;
+
+		character.IsAimingProp.OnValueChanged -= SetAiming;
+		character.IsRunningProp.OnValueChanged -= SetRunning;
+		character.IsFiringProp.OnValueChanged -= SetFiring;
+		character.CurrentWeaponSpreadProp.OnValueChanged -= SetWeaponSpread;
 	}
 
 	private void Start()
