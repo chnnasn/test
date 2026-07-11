@@ -26,10 +26,6 @@ public class EventManager : LazySingleton<EventManager>
     public Action GamePause;
     public Action GameResume;
 
-    private Player _player;
-    private Func<Character> _getCharacter;
-    private Func<Player> _getPlayer;
-    private WaveManager _waveManager;
     private Dictionary<Delegate, Delegate> _hpBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _levelBindings = new Dictionary<Delegate, Delegate>();
     private Dictionary<Delegate, Delegate> _experienceProgressBindings = new Dictionary<Delegate, Delegate>();
@@ -45,41 +41,17 @@ public class EventManager : LazySingleton<EventManager>
     private Dictionary<Delegate, Delegate> _waveCountdownBindings = new Dictionary<Delegate, Delegate>();
 
 
-    private Player Player => _getPlayer?.Invoke();
+    private Player Player => RunTimeContext.TryGetExistingInstance(out RunTimeContext context) ? context.Player : null;
 
-    private Character Character => _getCharacter?.Invoke();
+    private Character Character => RunTimeContext.TryGetExistingInstance(out RunTimeContext context) ? context.Character : null;
 
-    public void RegisterCharacterGetter(Func<Character> getCharacter)
+    private WaveManager WaveManager => RunTimeContext.TryGetExistingInstance(out RunTimeContext context) ? context.WaveManager : null;
+
+    public void BindPendingRuntimeContextProperties()
     {
-        _getCharacter = getCharacter;
-        BindPendingCharacterProperties();
-    }
-    
-    public void RegisterPlayerGetter(Func<Player> getPlayer)
-    {
-        _getPlayer = getPlayer;
         BindPendingPlayerProperties();
-    }
-
-    public void UnregisterCharacterGetter(Func<Character> getCharacter)
-    {
-        if (_getCharacter == getCharacter)
-            _getCharacter = null;
-    }
-    public void UnregisterPlayerGetter(Func<Player> getPlayer)
-    {
-        if (_getPlayer == getPlayer)
-            _getPlayer = null;
-    }
-
-    private WaveManager WaveManager
-    {
-        get
-        {
-            if (_waveManager == null)
-                _waveManager = FindObjectOfType<WaveManager>();
-            return _waveManager;
-        }
+        BindPendingCharacterProperties();
+        BindPendingWaveProperties();
     }
 
     private void BindPendingPlayerProperties()
@@ -129,6 +101,7 @@ public class EventManager : LazySingleton<EventManager>
             Action<bool> callback = (Action<bool>)binding.Key;
             character.IsAimingProp.OnValueChanged -= callback;
             character.IsAimingProp.OnValueChanged += callback;
+            callback(character.IsAimingProp.Value);
         }
 
         foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_runningBindings))
@@ -136,6 +109,7 @@ public class EventManager : LazySingleton<EventManager>
             Action<bool> callback = (Action<bool>)binding.Key;
             character.IsRunningProp.OnValueChanged -= callback;
             character.IsRunningProp.OnValueChanged += callback;
+            callback(character.IsRunningProp.Value);
         }
 
         foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_firingBindings))
@@ -143,6 +117,7 @@ public class EventManager : LazySingleton<EventManager>
             Action<bool> callback = (Action<bool>)binding.Key;
             character.IsFiringProp.OnValueChanged -= callback;
             character.IsFiringProp.OnValueChanged += callback;
+            callback(character.IsFiringProp.Value);
         }
 
         foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_weaponSpreadBindings))
@@ -170,6 +145,36 @@ public class EventManager : LazySingleton<EventManager>
         }
     }
 
+    private void BindPendingWaveProperties()
+    {
+        var wm = WaveManager;
+        if (wm == null) return;
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_waveNumberBindings))
+        {
+            Action<int> callback = (Action<int>)binding.Key;
+            wm.WaveNumber.OnValueChanged -= callback;
+            wm.WaveNumber.OnValueChanged += callback;
+            callback(wm.WaveNumber.Value);
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_waveTotalBindings))
+        {
+            Action<int> callback = (Action<int>)binding.Key;
+            wm.WaveTotal.OnValueChanged -= callback;
+            wm.WaveTotal.OnValueChanged += callback;
+            callback(wm.WaveTotal.Value);
+        }
+
+        foreach (var binding in new List<KeyValuePair<Delegate, Delegate>>(_waveCountdownBindings))
+        {
+            Action<float> callback = (Action<float>)binding.Key;
+            wm.WaveCountdown.OnValueChanged -= callback;
+            wm.WaveCountdown.OnValueChanged += callback;
+            callback(wm.WaveCountdown.Value);
+        }
+    }
+
     /// <summary> 绑定 HP 变化回调，(currentHp, maxHp) </summary>
     public void BindPlayerHp(Action<float, float> callback)
     {
@@ -186,6 +191,7 @@ public class EventManager : LazySingleton<EventManager>
             _hpBindings[callback] = handler;
         }
 
+        ps.CurrentHP.OnValueChanged -= handler;
         ps.CurrentHP.OnValueChanged += handler;
         callback(ps.CurrentHP.Value, ps.MaxHP);
     }
@@ -208,6 +214,7 @@ public class EventManager : LazySingleton<EventManager>
         var ps = Player;
         if (ps == null) return;
 
+        ps.Level.OnValueChanged -= callback;
         ps.Level.OnValueChanged += callback;
         callback(ps.Level.Value);
     }
@@ -230,6 +237,7 @@ public class EventManager : LazySingleton<EventManager>
         var ps = Player;
         if (ps == null) return;
 
+        ps.ExperienceProgress.OnValueChanged -= callback;
         ps.ExperienceProgress.OnValueChanged += callback;
         callback(ps.ExperienceProgress.Value);
     }
@@ -361,6 +369,7 @@ public class EventManager : LazySingleton<EventManager>
         var character = Character;
         if (character == null) return;
 
+        character.CurrentAmmoProp.OnValueChanged -= callback;
         character.CurrentAmmoProp.OnValueChanged += callback;
         callback(character.GetCurrentAmmo());
     }
@@ -383,6 +392,7 @@ public class EventManager : LazySingleton<EventManager>
         var character = Character;
         if (character == null) return;
 
+        character.GunAccessoryVisibleProp.OnValueChanged -= callback;
         character.GunAccessoryVisibleProp.OnValueChanged += callback;
         callback(character.GetGunAccessoryVisible());
     }
@@ -400,10 +410,12 @@ public class EventManager : LazySingleton<EventManager>
     /// <summary> 绑定波次变化回调 </summary>
     public void BindWaveNumber(Action<int> callback)
     {
+        _waveNumberBindings[callback] = callback;
+
         var wm = WaveManager;
         if (wm == null) return;
 
-        _waveNumberBindings[callback] = callback;
+        wm.WaveNumber.OnValueChanged -= callback;
         wm.WaveNumber.OnValueChanged += callback;
         callback(wm.WaveNumber.Value);
     }
@@ -412,22 +424,21 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindWaveNumber(Action<int> callback)
     {
         var wm = WaveManager;
-        if (wm == null) return;
-
-        if (_waveNumberBindings.ContainsKey(callback))
-        {
+        if (wm != null && _waveNumberBindings.ContainsKey(callback))
             wm.WaveNumber.OnValueChanged -= callback;
-            _waveNumberBindings.Remove(callback);
-        }
+
+        _waveNumberBindings.Remove(callback);
     }
 
     /// <summary> 绑定总波次变化回调 </summary>
     public void BindWaveTotal(Action<int> callback)
     {
+        _waveTotalBindings[callback] = callback;
+
         var wm = WaveManager;
         if (wm == null) return;
 
-        _waveTotalBindings[callback] = callback;
+        wm.WaveTotal.OnValueChanged -= callback;
         wm.WaveTotal.OnValueChanged += callback;
         callback(wm.WaveTotal.Value);
     }
@@ -436,22 +447,21 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindWaveTotal(Action<int> callback)
     {
         var wm = WaveManager;
-        if (wm == null) return;
-
-        if (_waveTotalBindings.ContainsKey(callback))
-        {
+        if (wm != null && _waveTotalBindings.ContainsKey(callback))
             wm.WaveTotal.OnValueChanged -= callback;
-            _waveTotalBindings.Remove(callback);
-        }
+
+        _waveTotalBindings.Remove(callback);
     }
 
     /// <summary> 绑定波次倒计时变化回调 </summary>
     public void BindWaveCountdown(Action<float> callback)
     {
+        _waveCountdownBindings[callback] = callback;
+
         var wm = WaveManager;
         if (wm == null) return;
 
-        _waveCountdownBindings[callback] = callback;
+        wm.WaveCountdown.OnValueChanged -= callback;
         wm.WaveCountdown.OnValueChanged += callback;
         callback(wm.WaveCountdown.Value);
     }
@@ -460,13 +470,10 @@ public class EventManager : LazySingleton<EventManager>
     public void UnbindWaveCountdown(Action<float> callback)
     {
         var wm = WaveManager;
-        if (wm == null) return;
-
-        if (_waveCountdownBindings.ContainsKey(callback))
-        {
+        if (wm != null && _waveCountdownBindings.ContainsKey(callback))
             wm.WaveCountdown.OnValueChanged -= callback;
-            _waveCountdownBindings.Remove(callback);
-        }
+
+        _waveCountdownBindings.Remove(callback);
     }
 
     public void SetBuffIndex(int index)
@@ -532,12 +539,12 @@ public class EventManager : LazySingleton<EventManager>
     {
         GameResume?.Invoke();
     }
-    
+
     public Character GetCharacter()
     {
         return Character;
     }
-    
+
     public GameObject GetPlayerObject()
     {
         return Character != null ? Character.gameObject : null;

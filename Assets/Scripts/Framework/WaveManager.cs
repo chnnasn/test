@@ -33,9 +33,16 @@ public class WaveManager : MonoBehaviour
         WaveTotal.Value = totalWaves;
         WaveNumber.Value = totalWaves > 0 ? 1 : 0;
         WaveCountdown.Value = 0f;
+        RunTimeContext.Instance.RegisterWaveManager(this);
 
         if (totalWaves > 0)
             StartCoroutine(FirstWaveCountdown(5));
+    }
+
+    private void OnDisable()
+    {
+        if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
+            context.UnregisterWaveManager(this);
     }
 
     public static void PrewarmFirstWave(PortalWave firstWave)

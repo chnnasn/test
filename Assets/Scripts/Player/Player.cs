@@ -34,8 +34,7 @@ public class Player : MonoBehaviour, IDamage
         RefreshExperienceProgress();
 
         character = GetComponent<Character>();
-        EventManager.Instance.RegisterCharacterGetter(GetCharacter);
-        EventManager.Instance.RegisterPlayerGetter(GetPlayer);
+        RunTimeContext.Instance.RegisterPlayer(this);
 
         character.SetCursorLocked(true);
     }
@@ -54,19 +53,10 @@ public class Player : MonoBehaviour, IDamage
             eventManager.OnAttackedAction -= TakeDamage;
             eventManager.AddExper -= AddExperience;
             eventManager.TriggerBuff -= ApplySelectedBuff;
-            eventManager.UnregisterCharacterGetter(GetCharacter);
-            eventManager.UnregisterPlayerGetter(GetPlayer);
         }
-    }
 
-    private Character GetCharacter()
-    {
-        return character;
-    }
-
-    private Player GetPlayer()
-    {
-        return this;
+        if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
+            context.UnregisterPlayer(this);
     }
 
     private void AddExperience(float experience)
