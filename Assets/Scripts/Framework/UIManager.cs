@@ -201,7 +201,6 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            WaveCountDown.text = string.Empty;
             HideWaveCountdown();
         }
     }
@@ -261,7 +260,10 @@ public class UIManager : MonoBehaviour
         MoveWaveCountdown(WaveCountdownHiddenX, () =>
         {
             if (!_isWaveCountdownShowing && WaveCountDown != null)
+            {
+                WaveCountDown.text = string.Empty;
                 WaveCountDown.gameObject.SetActive(false);
+            }
         });
     }
 
