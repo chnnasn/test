@@ -140,10 +140,13 @@ public class PlayerStates : MonoBehaviour, IDamage
     {
         if (buff == null) return false;
 
-        if (!TryApplyBuffWorldEffect(buff, out bool refreshWeaponSetup))
+        WeaponAttachmentManagerBehaviour attachmentManager = NeedsAttachmentManager(buff.Kind) ? GetCurrentAttachmentManager() : null;
+        if (NeedsAttachmentManager(buff.Kind) && attachmentManager == null)
+            return false;
+        if (buff.Kind == PlayerBuffKind.Hp && buff.Value <= 0f)
             return false;
 
-        if (!_playerBuff.TriggerBuff(buff))
+        if (!_playerBuff.TriggerBuff(buff, attachmentManager, CurrentHP, _maxHP, out bool refreshWeaponSetup))
             return false;
 
         if (refreshWeaponSetup)
@@ -156,54 +159,12 @@ public class PlayerStates : MonoBehaviour, IDamage
         return true;
     }
 
-    private bool TryApplyBuffWorldEffect(PlayerBuffAsset buff, out bool refreshWeaponSetup)
+    private bool NeedsAttachmentManager(PlayerBuffKind kind)
     {
-        refreshWeaponSetup = false;
-        if (buff == null) return false;
-
-        return buff.Kind switch
-        {
-            PlayerBuffKind.Scope => EquipAttachment(buff.Kind, out refreshWeaponSetup),
-            PlayerBuffKind.Laser => EquipAttachment(buff.Kind, out refreshWeaponSetup),
-            PlayerBuffKind.Grip => EquipAttachment(buff.Kind, out refreshWeaponSetup),
-            PlayerBuffKind.Magazine => AddMagazineCapacityFromCurrentWeapon(out refreshWeaponSetup),
-            PlayerBuffKind.Hp => AddHp(buff.Value),
-            PlayerBuffKind.AttackMultiplier => true,
-            PlayerBuffKind.DamageReduction => true,
-            PlayerBuffKind.SkillUnlock => true,
-            _ => false
-        };
-    }
-
-    private bool EquipAttachment(PlayerBuffKind kind, out bool refreshWeaponSetup)
-    {
-        refreshWeaponSetup = false;
-
-        WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
-        if (attachmentManager == null) return false;
-
-        bool applied = kind switch
-        {
-            PlayerBuffKind.Scope => attachmentManager.EquipScope(0),
-            PlayerBuffKind.Laser => attachmentManager.EquipLaser(0),
-            PlayerBuffKind.Grip => attachmentManager.EquipGrip(0),
-            _ => false
-        };
-
-        refreshWeaponSetup = applied;
-        return applied;
-    }
-
-    private bool AddMagazineCapacityFromCurrentWeapon(out bool refreshWeaponSetup)
-    {
-        refreshWeaponSetup = false;
-
-        WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
-        if (attachmentManager == null) return false;
-
-        bool applied = AddMagazineCapacity(attachmentManager);
-        refreshWeaponSetup = applied;
-        return applied;
+        return kind == PlayerBuffKind.Scope ||
+               kind == PlayerBuffKind.Laser ||
+               kind == PlayerBuffKind.Grip ||
+               kind == PlayerBuffKind.Magazine;
     }
 
     private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
@@ -211,27 +172,6 @@ public class PlayerStates : MonoBehaviour, IDamage
         Character character = GameManager.Instance.GetCharacter();
         WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
         return weapon?.GetAttachmentManager();
-    }
-
-    private bool AddHp(float value)
-    {
-        if (value <= 0f) return false;
-
-        CurrentHP.Value = Mathf.Min(CurrentHP.Value + value, _maxHP);
-        return true;
-    }
-
-    private bool AddMagazineCapacity(WeaponAttachmentManagerBehaviour attachmentManager)
-    {
-        if (attachmentManager.GetEquippedMagazine() is not Magazine magazine)
-            return false;
-
-        int increase = Mathf.FloorToInt(magazine.GetAmmunitionTotal() * 0.5f);
-        if (increase <= 0)
-            return false;
-
-        magazine.AddAmmunitionTotal(increase);
-        return true;
     }
 
 

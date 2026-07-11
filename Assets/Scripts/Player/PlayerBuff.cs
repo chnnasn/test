@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 
 public class PlayerBuff
@@ -14,28 +15,21 @@ public class PlayerBuff
     public float AddedHp { get; private set; }
     public bool HasHpBuff => AddedHp > 0f;
 
-    public bool TriggerBuff(PlayerBuffAsset buff)
+    public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, GenericProperty<float> currentHp, float maxHp, out bool refreshWeaponSetup)
     {
+        refreshWeaponSetup = false;
         if (buff == null) return false;
 
         switch (buff.Kind)
         {
             case PlayerBuffKind.Scope:
-                HasScopeBuff = true;
-                return true;
             case PlayerBuffKind.Laser:
-                HasLaserBuff = true;
-                return true;
             case PlayerBuffKind.Grip:
-                HasGripBuff = true;
-                return true;
+                return EquipAttachment(buff.Kind, attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Magazine:
-                HasMagazineBuff = true;
-                return true;
+                return AddMagazineCapacity(attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Hp:
-                if (buff.Value <= 0f) return false;
-                AddedHp += buff.Value;
-                return true;
+                return AddHp(buff.Value, currentHp, maxHp);
             case PlayerBuffKind.AttackMultiplier:
                 AttackMultiplier *= buff.Value;
                 return true;
@@ -62,6 +56,62 @@ public class PlayerBuff
     public bool IsSkillUnlocked(PlayerSkillKind skill)
     {
         return skill != PlayerSkillKind.None && _unlockedSkills.Contains(skill);
+    }
+
+    private bool EquipAttachment(PlayerBuffKind kind, WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+        if (attachmentManager == null) return false;
+
+        bool applied = kind switch
+        {
+            PlayerBuffKind.Scope => attachmentManager.EquipScope(0),
+            PlayerBuffKind.Laser => attachmentManager.EquipLaser(0),
+            PlayerBuffKind.Grip => attachmentManager.EquipGrip(0),
+            _ => false
+        };
+
+        if (!applied) return false;
+
+        switch (kind)
+        {
+            case PlayerBuffKind.Scope:
+                HasScopeBuff = true;
+                break;
+            case PlayerBuffKind.Laser:
+                HasLaserBuff = true;
+                break;
+            case PlayerBuffKind.Grip:
+                HasGripBuff = true;
+                break;
+        }
+
+        refreshWeaponSetup = true;
+        return true;
+    }
+
+    private bool AddMagazineCapacity(WeaponAttachmentManagerBehaviour attachmentManager, out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+        if (attachmentManager == null) return false;
+        if (attachmentManager.GetEquippedMagazine() is not Magazine magazine) return false;
+
+        int increase = Mathf.FloorToInt(magazine.GetAmmunitionTotal() * 0.5f);
+        if (increase <= 0) return false;
+
+        magazine.AddAmmunitionTotal(increase);
+        HasMagazineBuff = true;
+        refreshWeaponSetup = true;
+        return true;
+    }
+
+    private bool AddHp(float value, GenericProperty<float> currentHp, float maxHp)
+    {
+        if (value <= 0f || currentHp == null) return false;
+
+        currentHp.Value = Mathf.Min(currentHp.Value + value, maxHp);
+        AddedHp += value;
+        return true;
     }
 
     private bool UnlockSkill(PlayerSkillKind skill)
