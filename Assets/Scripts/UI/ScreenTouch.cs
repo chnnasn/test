@@ -188,9 +188,9 @@ public class ScreenTouch : MonoBehaviour
 		lookFinger = null;
 		hasLastLookPosition = false;
 
-		// OnDisable 时 GameManager 可能已被销毁，判空保护
-		if (GameManager.Instance == null) return;
-			EventManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
+		// OnDisable 时单例可能已被销毁，判空保护
+		if (GameManager.Instance == null || EventManager.Instance == null) return;
+		EventManager.Instance.GetCharacter()?.OnLook(Vector2.zero);
 	}
 
 	/// <summary>
