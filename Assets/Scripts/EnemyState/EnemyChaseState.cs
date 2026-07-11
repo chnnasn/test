@@ -51,14 +51,14 @@ public class EnemyChaseState : EnemyState
         _lastStableDirection = enemy.transform.forward;
         _lastDistanceToTarget = float.MaxValue;
         _orbitNoProgressTimer = 0f;
-        enemy.SetTarget(GameManager.Instance.GetPlayer()?.transform);
+        enemy.SetTarget(EventManager.Instance.GetPlayerObject()?.transform);
     }
 
     public override void Update()
     {
         if (!enemy.IsAlive) return;
 
-        Transform target = GameManager.Instance.GetPlayer()?.transform;
+        Transform target = EventManager.Instance.GetPlayerObject()?.transform;
         if (target == null) return;
 
         // 进入攻击范围 → 攻击

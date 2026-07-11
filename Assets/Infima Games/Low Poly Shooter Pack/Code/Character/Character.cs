@@ -339,7 +339,7 @@ namespace InfimaGames.LowPolyShooterPack
 		if (weaponAttachmentManager == null)
 			return visible;
 
-		Player player = global::GameManager.Instance.GetPlayer()?.GetComponent<global::Player>();
+		Player player = GetComponent<Player>();
 		PlayerBuff buff = player?.Buff;
 		visible[0] = buff != null && buff.HasMagazineBuff;
 		visible[1] = buff != null && buff.HasLaserBuff;

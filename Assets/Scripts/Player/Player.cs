@@ -33,7 +33,7 @@ public class Player : MonoBehaviour, IDamage
         
         character = GetComponent<Character>();
         EventManager.Instance.RegisterCharacterGetter(GetCharacter);
-        EventManager.Instance.RegisterCharacterGetter(GetCharacter);
+        EventManager.Instance.RegisterPlayerGetter(() => this);
 
         character.SetCursorLocked(true);
     }
@@ -53,6 +53,7 @@ public class Player : MonoBehaviour, IDamage
             eventManager.AddExper -= AddExperience;
             eventManager.TriggerBuff -= ApplySelectedBuff;
             eventManager.UnregisterCharacterGetter(GetCharacter);
+            eventManager.UnregisterPlayerGetter(() => this);
         }
     }
 
