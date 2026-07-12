@@ -233,7 +233,7 @@ MonoBehaviour:
   _birthDuration: 1.5
   _deadDestroyExtraDelay: 1.5
   _attackRange: 2.5
-  _attackDamage: 10
+  _attackDamage: 5
   _attackInterval: 1.2
   _attackSphereRadius: 0.75
   _attackCastOffset: {x: 0, y: 1, z: 0}
