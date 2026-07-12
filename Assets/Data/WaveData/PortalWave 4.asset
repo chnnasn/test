@@ -15,11 +15,11 @@ MonoBehaviour:
   spawnPortals:
   - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}
   - {fileID: 278875111475884485, guid: 6f4d1beeb5a941d40bc8111ce0212e5f, type: 3}
-  totalEnemyCount: 20
+  totalEnemyCount: 30
   waveNumber: 4
-  timeBetweenEnemyWaves: 1.8
+  timeBetweenEnemyWaves: 1.5
   enemyCountPerRound:
-  - 3
-  - 3
-  - 2
-  - 2
+  - 8
+  - 8
+  - 7
+  - 7

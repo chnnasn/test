@@ -16,7 +16,13 @@ MonoBehaviour:
   - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}
   - {fileID: 278875111475884485, guid: 6f4d1beeb5a941d40bc8111ce0212e5f, type: 3}
   - {fileID: 278875111475884485, guid: 6f4d1beeb5a941d40bc8111ce0212e5f, type: 3}
-  totalEnemyCount: 48
+  totalEnemyCount: 75
   waveNumber: 6
-  timeBetweenEnemyWaves: 1.3
-  enemyCountPerRound: 030000000300000003000000030000000200000002000000
+  timeBetweenEnemyWaves: 1
+  enemyCountPerRound:
+  - 13
+  - 13
+  - 13
+  - 12
+  - 12
+  - 12

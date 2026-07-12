@@ -14,11 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   spawnPortals:
   - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}
-  totalEnemyCount: 8
-  waveNumber: 4
+  totalEnemyCount: 17
+  waveNumber: 3
   timeBetweenEnemyWaves: 2
   enemyCountPerRound:
-  - 2
-  - 2
-  - 2
-  - 2
+  - 6
+  - 6
+  - 5

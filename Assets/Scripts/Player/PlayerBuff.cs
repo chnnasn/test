@@ -43,7 +43,12 @@ public class PlayerBuff
             case PlayerBuffKind.Magazine:
                 return AddMagazineCapacity(buff, attachmentManager, out refreshWeaponSetup);
             case PlayerBuffKind.Hp:
-                return AddHp(buff.Value, addHpCallback);
+            {
+                float normalizedValue = GetNormalizedBuffValue(buff);
+                if (normalizedValue <= 0f || addHpCallback == null) return false;
+                addHpCallback.Invoke(normalizedValue);
+                return true;
+            }
             case PlayerBuffKind.AttackMultiplier:
                 AttackMultiplier *= buff.Value;
                 return true;
@@ -188,15 +193,6 @@ public class PlayerBuff
         _addedMagazineCapacity += increase;
         HasMagazineBuff = true;
         refreshWeaponSetup = true;
-        return true;
-    }
-
-    private bool AddHp(float value, Action<float> addHpCallback)
-    {
-        if (value <= 0f || addHpCallback == null) return false;
-
-        AddedHp += value;
-        addHpCallback.Invoke(value);
         return true;
     }
 

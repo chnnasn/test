@@ -83,7 +83,7 @@ public class Player : MonoBehaviour, IDamage
 
         int levelUpCount = _level - levelBefore;
         if (levelUpCount > 0)
-            AddHp(PlayerBuff.MaxHPGrowthPerLevel * levelUpCount);
+            HealFlat(PlayerBuff.MaxHPGrowthPerLevel * levelUpCount);
 
         RefreshExperienceProgress();
         if (levelUpCount <= 0) return;
@@ -182,7 +182,7 @@ public class Player : MonoBehaviour, IDamage
         if (buff == null) return false;
 
         WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
-        if (!_playerBuff.TriggerBuff(buff, attachmentManager, AddHp, out bool refreshWeaponSetup))
+        if (!_playerBuff.TriggerBuff(buff, attachmentManager, HealByPercent, out bool refreshWeaponSetup))
             return false;
 
         if (refreshWeaponSetup)
@@ -202,9 +202,15 @@ public class Player : MonoBehaviour, IDamage
         return weapon?.GetAttachmentManager();
     }
 
-    private void AddHp(float value)
+    private void HealByPercent(float percent)
     {
-        CurrentHP.Value = Mathf.Min(CurrentHP.Value + value, MaxHP);
+        float healAmount = MaxHP * percent;
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value + healAmount, MaxHP);
+    }
+
+    private void HealFlat(float amount)
+    {
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value + amount, MaxHP);
     }
 
     public void TakeDamage(float damage)
