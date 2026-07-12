@@ -9,6 +9,10 @@ public class EnemyChaseState : EnemyState
     // 目标更新间隔
     private float _updateTimer;
 
+    // WaveManager分批寻路时缓存的移动方向，移动仍每帧执行以避免卡顿。
+    private Vector3 _cachedMoveDirection;
+    private bool _hasCachedMoveDirection;
+
     // 平滑方向插值：避免分离力突变导致的坐标/旋转抖动
     private Vector3 _smoothedDirection;
     private Vector3 _velocityRef; // SmoothDamp 内部速度缓存
@@ -49,9 +53,29 @@ public class EnemyChaseState : EnemyState
         // 初始化平滑方向为当前朝向，避免进入时突变
         _smoothedDirection = enemy.transform.forward;
         _lastStableDirection = enemy.transform.forward;
+        _cachedMoveDirection = Vector3.zero;
+        _hasCachedMoveDirection = false;
         _lastDistanceToTarget = float.MaxValue;
         _orbitNoProgressTimer = 0f;
         enemy.SetTarget(RunTimeContext.Instance.PlayerObject?.transform);
+    }
+
+    public void ResetState()
+    {
+        _updateTimer = 0f;
+        _cachedMoveDirection = Vector3.zero;
+        _hasCachedMoveDirection = false;
+        _smoothedDirection = Vector3.zero;
+        _velocityRef = Vector3.zero;
+        _lastStableDirection = Vector3.zero;
+        _lastDistanceToTarget = float.MaxValue;
+        _orbitNoProgressTimer = 0f;
+        _prevSteer = Vector3.zero;
+        _flipCount = 0;
+        _flipWindowTimer = 0f;
+        _orbitSide = 0;
+        _orbitLockTimer = 0f;
+        _lateralAssistTimer = 0f;
     }
 
     public override void Update()
@@ -61,15 +85,16 @@ public class EnemyChaseState : EnemyState
         Transform target = RunTimeContext.Instance.PlayerObject?.transform;
         if (target == null) return;
 
-        // 进入攻击范围 → 攻击
+        // 进入攻击范围 → 攻击。这里仍然每帧检测，避免分批寻路导致攻击反应变慢。
         if (enemy.IsTargetInAttackRange())
         {
+            ClearCachedMoveDirection();
             movement.Stop();
             stateMachine.ChangeState(stateMachine.attackState);
             return;
         }
 
-        // 定期更新目标引用
+        // 定期更新目标引用。
         _updateTimer += Time.deltaTime;
         if (_updateTimer >= 0.3f)
         {
@@ -82,7 +107,37 @@ public class EnemyChaseState : EnemyState
         if (_lateralAssistTimer > 0f)
             _lateralAssistTimer -= Time.deltaTime;
 
-        // 计算目标转向方向 = FlowField + 分离 + 避障
+        // 翻转窗口计时：超过窗口时间未再翻转，重置计数。
+        _flipWindowTimer += Time.deltaTime;
+        if (_flipWindowTimer > FLIP_WINDOW)
+        {
+            _flipCount = 0;
+            _flipWindowTimer = 0f;
+        }
+
+        // 移动仍然每帧执行，方向由WaveManager分批刷新，避免移动卡顿。
+        if (_hasCachedMoveDirection && _cachedMoveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
+            movement.Move(_cachedMoveDirection);
+        else
+            movement.Stop();
+    }
+
+    public override void NavigationUpdate()
+    {
+        if (!enemy.IsAlive || enemy.IsDying)
+        {
+            ClearCachedMoveDirection();
+            return;
+        }
+
+        Transform target = RunTimeContext.Instance.PlayerObject?.transform;
+        if (target == null || enemy.IsTargetInAttackRange())
+        {
+            ClearCachedMoveDirection();
+            return;
+        }
+
+        // 计算目标转向方向 = FlowField + 分离 + 避障。
         Vector3 steer = ComputeSteering(target.position);
 
         // ── 振荡检测：如果 steer 在短时间内反复翻转 > MAX_FLIPS 次，
@@ -97,7 +152,7 @@ public class EnemyChaseState : EnemyState
 
                 if (_flipCount >= MAX_FLIPS)
                 {
-                    // 检测到被夹住振荡，短时间强化切向侧滑，同时保留少量流场前进倾向
+                    // 检测到被夹住振荡，短时间强化切向侧滑，同时保留少量流场前进倾向。
                     _lateralAssistTimer = LATERAL_ASSIST_DURATION;
                     Vector3 flowDir = FlowField.GetFlowDirection(enemy.transform.position);
                     if (flowDir == Vector3.zero)
@@ -111,21 +166,13 @@ public class EnemyChaseState : EnemyState
                     {
                         steer = Vector3.Lerp(steer, flowDir, STUCK_BIAS).normalized;
                     }
-                    _flipCount = 0; // 重置计数，继续监控
+                    _flipCount = 0; // 重置计数，继续监控。
                 }
             }
         }
         _prevSteer = steer;
 
-        // 翻转窗口计时：超过窗口时间未再翻转，重置计数
-        _flipWindowTimer += Time.deltaTime;
-        if (_flipWindowTimer > FLIP_WINDOW)
-        {
-            _flipCount = 0;
-            _flipWindowTimer = 0f;
-        }
-
-        // 平滑插值：将瞬时方向渐变到目标方向，消除分离力突变引起的抖动
+        // 平滑插值：将瞬时方向渐变到目标方向，消除分离力突变引起的抖动。
         if (steer.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
         {
             _smoothedDirection = Vector3.SmoothDamp(
@@ -145,19 +192,26 @@ public class EnemyChaseState : EnemyState
             _lastStableDirection = _smoothedDirection.normalized;
             Vector3 moveDirection = ConstrainByObstacle(_smoothedDirection);
             if (moveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-                movement.Move(moveDirection);
-            else
-                movement.Stop();
+            {
+                _cachedMoveDirection = moveDirection;
+                _hasCachedMoveDirection = true;
+                return;
+            }
         }
-        else
-        {
-            movement.Stop();
-        }
+
+        ClearCachedMoveDirection();
     }
 
     public override void Exit()
     {
+        ClearCachedMoveDirection();
         movement.Stop();
+    }
+
+    private void ClearCachedMoveDirection()
+    {
+        _cachedMoveDirection = Vector3.zero;
+        _hasCachedMoveDirection = false;
     }
 
     /// <summary>

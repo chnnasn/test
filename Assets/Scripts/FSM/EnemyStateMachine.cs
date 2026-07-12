@@ -19,6 +19,13 @@ public class EnemyStateMachine : StateMachine
 
     public void ResetStates()
     {
+        chaseState.ResetState();
         deadState.ResetState();
+    }
+
+    public void NavigationUpdate()
+    {
+        if (currentState.Value is EnemyState enemyState)
+            enemyState.NavigationUpdate();
     }
 }

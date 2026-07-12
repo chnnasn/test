@@ -7,9 +7,15 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private PortalWave[] _portalWaves;
     [SerializeField] private SpawnPoint[] _spawnPoints;
     [SerializeField] private int _enemyPoolMaxSize =100;
+    [SerializeField, Min(1)] private int _navigationBatchCount = 5;
 
     private static readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
     private static readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
+
+    private readonly List<Enemy> _activeEnemies = new List<Enemy>(256);
+    private readonly Dictionary<Enemy, int> _activeEnemyIndices = new Dictionary<Enemy, int>(256);
+    private readonly Dictionary<Enemy, Coroutine> _pendingReleaseCoroutines = new Dictionary<Enemy, Coroutine>();
+    private int _navigationBatchCursor;
 
     int currentWave;
     private bool _canSpawnWaves = true;
@@ -39,10 +45,23 @@ public class WaveManager : MonoBehaviour
             StartCoroutine(FirstWaveCountdown(5));
     }
 
+    private void Update()
+    {
+        TickActiveEnemies();
+        TickNavigationBatch();
+    }
+
     private void OnDisable()
     {
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
             context.UnregisterWaveManager(this);
+
+        foreach (KeyValuePair<Enemy, Coroutine> pair in _pendingReleaseCoroutines)
+        {
+            if (pair.Value != null)
+                StopCoroutine(pair.Value);
+        }
+        _pendingReleaseCoroutines.Clear();
     }
 
     public static void PrewarmFirstWave(PortalWave firstWave)
@@ -103,12 +122,16 @@ public class WaveManager : MonoBehaviour
     public Enemy SpawnEnemy(GameObject prefab, Vector3 position, Quaternion rotation)
     {
         Enemy enemy = GetEnemyFromPool(prefab);
+        CancelPendingRelease(enemy);
+
         Transform enemyTransform = enemy.transform;
         enemyTransform.SetParent(null, false);
         enemyTransform.SetPositionAndRotation(position, rotation);
-        enemy.gameObject.SetActive(true);
         enemy.SetPoolReleaseCallback(ReleaseEnemy);
+        enemy.SetPoolReleaseDelayCallback(ScheduleEnemyRelease);
+        enemy.gameObject.SetActive(true);
         enemy.ResetEnemy();
+        AddActiveEnemy(enemy);
 
         _aliveEnemies++;
         return enemy;
@@ -117,6 +140,11 @@ public class WaveManager : MonoBehaviour
     public void ReleaseEnemy(Enemy enemy)
     {
         if (enemy == null) return;
+
+        CancelPendingRelease(enemy);
+        RemoveActiveEnemy(enemy);
+        enemy.SetPoolReleaseCallback(null);
+        enemy.SetPoolReleaseDelayCallback(null);
 
         if (!_enemyPrefabMap.TryGetValue(enemy, out GameObject prefab))
         {
@@ -145,6 +173,34 @@ public class WaveManager : MonoBehaviour
     {
         _activePortals = Mathf.Max(0, _activePortals - 1);
         TrySpawnNextWave();
+    }
+
+    public void ScheduleEnemyRelease(Enemy enemy, float delay)
+    {
+        if (enemy == null || _pendingReleaseCoroutines.ContainsKey(enemy))
+            return;
+
+        _pendingReleaseCoroutines[enemy] = StartCoroutine(ReleaseEnemyAfterDelay(enemy, delay));
+    }
+
+    private IEnumerator ReleaseEnemyAfterDelay(Enemy enemy, float delay)
+    {
+        yield return new WaitForSeconds(Mathf.Max(0f, delay));
+
+        _pendingReleaseCoroutines.Remove(enemy);
+        ReleaseEnemy(enemy);
+    }
+
+    private void CancelPendingRelease(Enemy enemy)
+    {
+        if (enemy == null) return;
+
+        if (!_pendingReleaseCoroutines.TryGetValue(enemy, out Coroutine coroutine))
+            return;
+
+        if (coroutine != null)
+            StopCoroutine(coroutine);
+        _pendingReleaseCoroutines.Remove(enemy);
     }
 
     private Enemy GetEnemyFromPool(GameObject prefab)
@@ -205,6 +261,77 @@ public class WaveManager : MonoBehaviour
         Enemy newEnemy = enemyObject.GetComponent<Enemy>();
         _enemyPrefabMap[newEnemy] = prefab;
         return newEnemy;
+    }
+
+    private void TickActiveEnemies()
+    {
+        for (int i = _activeEnemies.Count - 1; i >= 0; i--)
+        {
+            Enemy enemy = _activeEnemies[i];
+            if (enemy == null || !enemy.isActiveAndEnabled)
+            {
+                RemoveActiveEnemyAt(i);
+                continue;
+            }
+
+            enemy.TickState();
+        }
+    }
+
+    private void TickNavigationBatch()
+    {
+        int count = _activeEnemies.Count;
+        if (count == 0) return;
+
+        int batchCount = Mathf.Max(1, _navigationBatchCount);
+        int batch = _navigationBatchCursor;
+        _navigationBatchCursor = (_navigationBatchCursor + 1) % batchCount;
+
+        for (int i = batch; i < count && i < _activeEnemies.Count; i += batchCount)
+        {
+            Enemy enemy = _activeEnemies[i];
+            if (enemy == null || !enemy.isActiveAndEnabled || !enemy.IsAlive || enemy.IsDying)
+                continue;
+
+            enemy.TickNavigation();
+        }
+    }
+
+    private void AddActiveEnemy(Enemy enemy)
+    {
+        if (enemy == null || _activeEnemyIndices.ContainsKey(enemy))
+            return;
+
+        int index = _activeEnemies.Count;
+        _activeEnemies.Add(enemy);
+        _activeEnemyIndices[enemy] = index;
+    }
+
+    private void RemoveActiveEnemy(Enemy enemy)
+    {
+        if (enemy == null || !_activeEnemyIndices.TryGetValue(enemy, out int index))
+            return;
+
+        RemoveActiveEnemyAt(index);
+    }
+
+    private void RemoveActiveEnemyAt(int index)
+    {
+        int lastIndex = _activeEnemies.Count - 1;
+        Enemy removedEnemy = _activeEnemies[index];
+        Enemy lastEnemy = _activeEnemies[lastIndex];
+
+        if (index != lastIndex)
+        {
+            _activeEnemies[index] = lastEnemy;
+            if (lastEnemy != null)
+                _activeEnemyIndices[lastEnemy] = index;
+        }
+
+        _activeEnemies.RemoveAt(lastIndex);
+
+        if (removedEnemy != null)
+            _activeEnemyIndices.Remove(removedEnemy);
     }
 
     private void TrySpawnNextWave()

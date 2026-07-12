@@ -26,6 +26,7 @@ public class Enemy : MonoBehaviour,IDamage
     private bool _isDying;
     private Action<bool> _attackDetectCallback;
     private Action<Enemy> _poolReleaseCallback;
+    private Action<Enemy, float> _poolReleaseDelayCallback;
 
     public EnemyStateMachine stateMachine { get; private set; }
     public EnemyMovement Movement { get; private set; }
@@ -133,6 +134,19 @@ public class Enemy : MonoBehaviour,IDamage
         _poolReleaseCallback = callback;
     }
 
+    public void SetPoolReleaseDelayCallback(Action<Enemy, float> callback)
+    {
+        _poolReleaseDelayCallback = callback;
+    }
+
+    public void ScheduleReleaseToPool(float delay)
+    {
+        if (_poolReleaseDelayCallback != null)
+            _poolReleaseDelayCallback.Invoke(this, delay);
+        else
+            ReleaseToPool();
+    }
+
     public void ReleaseToPool()
     {
         if (_poolReleaseCallback != null)
@@ -141,9 +155,14 @@ public class Enemy : MonoBehaviour,IDamage
             Destroy(gameObject);
     }
 
-    private void Update()
+    public void TickState()
     {
         stateMachine.Update();
+    }
+
+    public void TickNavigation()
+    {
+        stateMachine.NavigationUpdate();
     }
 
     /// <summary>

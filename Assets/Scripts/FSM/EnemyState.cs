@@ -25,6 +25,10 @@ public abstract class EnemyState : IState
     {
     }
 
+    public virtual void NavigationUpdate()
+    {
+    }
+
     public virtual void OnAnimationTranslateEvent(IState state)
     {
         stateMachine.ChangeState(state);

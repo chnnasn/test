@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyDeadState : EnemyState
@@ -25,19 +23,13 @@ public class EnemyDeadState : EnemyState
         // 禁用碰撞体，避免死后还能被攻击或阻挡
         movement.DisableCollision();
 
-        // 死后一段时间销毁，计算 Dead 死亡动画时间再加 1.5f
-        enemy.StartCoroutine(DestroyAfterDelay(enemy.DeadDestroyDelay));
+        // 死亡动画完成后由WaveManager统一调度回收到对象池。
+        enemy.ScheduleReleaseToPool(enemy.DeadDestroyDelay);
     }
 
     public void ResetState()
     {
         _destroyScheduled = false;
-    }
-
-    private IEnumerator DestroyAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        enemy.ReleaseToPool();
     }
 
     public override void Update()
