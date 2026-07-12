@@ -11,11 +11,14 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e42b6756a214bd296c65142261810fa, type: 3}
   m_Name: PortalWave 1
-  m_EditorClassIdentifier: 
-  waveNumber: 1
-timeBetweenEnemyWaves: 1
-totalEnemyCount: 20
-enemyCountPerRound:
-- 5
-spawnPortals:
+  m_EditorClassIdentifier:
+  spawnPortals:
   - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}
+  totalEnemyCount: 8
+  waveNumber: 4
+  timeBetweenEnemyWaves: 2
+  enemyCountPerRound:
+  - 2
+  - 2
+  - 2
+  - 2

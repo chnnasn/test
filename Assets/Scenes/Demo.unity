@@ -12522,6 +12522,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f4b3f77b21de68247aeb7ece4278ca82, type: 2}
   - {fileID: 11400000, guid: 7eb147229c639474ea549b8b9116ca22, type: 2}
   - {fileID: 11400000, guid: da97c145a42cf44479b7e7b91a9af612, type: 2}
+  - {fileID: 11400000, guid: 2b4b48a471c548b7a7d67e0c274b0c0a, type: 2}
+  - {fileID: 11400000, guid: 40fbd869cc244a2e8c77fc2356201d42, type: 2}
+  - {fileID: 11400000, guid: 1550737d1f2e427cb9747ff5d807113e, type: 2}
+  - {fileID: 11400000, guid: 44e533c9928a4c7a97b3f192e2d4ffb0, type: 2}
+  - {fileID: 11400000, guid: cc0f5f4577fb4cd2a0f4882d2a6f5966, type: 2}
+  - {fileID: 11400000, guid: 4bc4e0248ac148f3b164b7737a77bb80, type: 2}
+  - {fileID: 11400000, guid: 9471f4e90cd14be8886fc136f5919564, type: 2}
   _spawnPoints: []
   _enemyManager: {fileID: 1256139167}
 --- !u!114 &1256139167
