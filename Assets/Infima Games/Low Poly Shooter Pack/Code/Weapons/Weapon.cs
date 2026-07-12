@@ -176,6 +176,10 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private Animator animator;
         /// <summary>
+        /// 射击音效专用音源。连射时复用同一个AudioSource，避免一次性音效堆叠过多导致后续枪声被Unity虚拟化静音。
+        /// </summary>
+        private AudioSource fireAudioSource;
+        /// <summary>
         /// 武器附件管理器。用于获取各种已装备的配件引用。
         /// </summary>
         private WeaponAttachmentManagerBehaviour attachmentManager;
@@ -237,6 +241,9 @@ namespace InfimaGames.LowPolyShooterPack
         {
             //获取武器自身的Animator组件。
             animator = GetComponent<Animator>();
+            fireAudioSource = gameObject.AddComponent<AudioSource>();
+            fireAudioSource.playOnAwake = false;
+            fireAudioSource.spatialBlend = 0.0f;
             //获取武器附件管理器组件。
             attachmentManager = GetComponent<WeaponAttachmentManagerBehaviour>();
 
@@ -479,7 +486,7 @@ namespace InfimaGames.LowPolyShooterPack
                 SetSlideBack(1);
 
             //每次实际开火时直接播放射击音效，不再依赖动画 State 进入事件。
-            ServiceLocator.Current.Get<IAudioManagerService>()?.PlayOneShot(GetAudioClipFire(), new AudioSettings(0.2f, 0.0f, true));
+            PlayFireAudio();
 
             //播放所有枪口特效（粒子、灯光等）。
             muzzleBehaviour.Effect();
@@ -524,6 +531,19 @@ namespace InfimaGames.LowPolyShooterPack
                 if (projectileRigidbody != null)
                     projectileRigidbody.velocity = projectile.transform.forward * projectileImpulse;
             }
+        }
+
+        private void PlayFireAudio()
+        {
+            AudioClip clip = GetAudioClipFire();
+            if (clip == null || fireAudioSource == null)
+                return;
+
+            fireAudioSource.volume = 0.2f;
+            fireAudioSource.spatialBlend = 0.0f;
+            fireAudioSource.Stop();
+            fireAudioSource.clip = clip;
+            fireAudioSource.Play();
         }
 
         /// <summary>

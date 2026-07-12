@@ -90,7 +90,7 @@ public class WaveManager : MonoBehaviour
                         int portalIndex = portalNumber - 1;
                         SpawnPortal portal = Instantiate(wave.spawnPortals[portalIndex], _spawnPoints[rnd].transform.position, Quaternion.identity);
                         int portalEnemyCount = wave.GetPortalEnemyCount(portalIndex);
-                        portal.Init(_enemyManager.SpawnEnemy, NotifyPortalFinished, portalEnemyCount, wave.waveNumber, wave.timeBetweenEnemyWaves, wave.enemyCountPerRound);
+                        portal.Init(_enemyManager.SpawnEnemy, NotifyPortalFinished, portalEnemyCount, wave.waveNumber, wave.timeBetweenEnemyWaves, wave.enemyCountPerRound, GetRandomSpawnPosition);
                         _spawnPoints[rnd].busy = true;
                         _activePortals++;
                         portalNumber--;
@@ -163,6 +163,15 @@ public class WaveManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    private Vector3 GetRandomSpawnPosition()
+    {
+        if (_spawnPoints == null || _spawnPoints.Length == 0)
+            return transform.position;
+
+        int rnd = Random.Range(0, _spawnPoints.Length);
+        return _spawnPoints[rnd].transform.position;
     }
 
     private IEnumerator FirstWaveCountdown(float time)

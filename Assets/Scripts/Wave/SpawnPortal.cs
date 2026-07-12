@@ -11,6 +11,7 @@ public class SpawnPortal : MonoBehaviour
     public bool isLastPortal;
 
     private Func<GameObject, Vector3, Quaternion, Enemy> _spawnEnemy;
+    private Func<Vector3> _getSpawnPosition;
     private Action _onPortalFinished;
     private int _totalEnemyCount;
     private int _waveNumber;
@@ -35,9 +36,10 @@ public class SpawnPortal : MonoBehaviour
         }
     }
 
-    public void Init(Func<GameObject, Vector3, Quaternion, Enemy> spawnEnemy, Action onPortalFinished, int totalEnemyCount, int waveNumber, float timeBetweenEnemyWaves, int[] enemyCountPerRound)
+    public void Init(Func<GameObject, Vector3, Quaternion, Enemy> spawnEnemy, Action onPortalFinished, int totalEnemyCount, int waveNumber, float timeBetweenEnemyWaves, int[] enemyCountPerRound, Func<Vector3> getSpawnPosition = null)
     {
         _spawnEnemy = spawnEnemy;
+        _getSpawnPosition = getSpawnPosition;
         _onPortalFinished = onPortalFinished;
         _totalEnemyCount = Mathf.Max(0, totalEnemyCount);
         _waveNumber = Mathf.Max(1, waveNumber);
@@ -60,6 +62,7 @@ public class SpawnPortal : MonoBehaviour
         while (enemyNumberLeft > 0 && roundIndex < _waveNumber)
         {
             int currentRoundCount = Mathf.Min(GetEnemyCountPerRound(roundIndex), enemyNumberLeft);
+            Vector3 spawnPosition = GetCurrentRoundSpawnPosition();
             roundIndex++;
             enemyNumberLeft -= currentRoundCount;
 
@@ -67,7 +70,7 @@ public class SpawnPortal : MonoBehaviour
             {
                 int i = GetEnemyNumber();
                 currentRoundCount--;
-                _spawnEnemy?.Invoke(_enemies[i], transform.position, Quaternion.identity);
+                _spawnEnemy?.Invoke(_enemies[i], spawnPosition, Quaternion.identity);
                 yield return new WaitForSeconds(enemySpawnDuration);
             }
             if (enemyNumberLeft > 0)
@@ -84,6 +87,11 @@ public class SpawnPortal : MonoBehaviour
 
         int index = Mathf.Clamp(roundIndex, 0, _enemyCountPerRound.Length - 1);
         return Mathf.Max(1, _enemyCountPerRound[index]);
+    }
+
+    private Vector3 GetCurrentRoundSpawnPosition()
+    {
+        return _getSpawnPosition != null ? _getSpawnPosition.Invoke() : transform.position;
     }
 
     private int GetEnemyNumber()
