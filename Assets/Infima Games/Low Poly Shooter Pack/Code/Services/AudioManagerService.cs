@@ -43,12 +43,31 @@ namespace InfimaGames.LowPolyShooterPack
             }
         }
 
-        [Tooltip("一次性音效AudioSource对象池的最大缓存数量。")]
+        [Tooltip("一次性音效AudioSource对象池预热数量。池为空时会自动实例化扩容。")]
         [SerializeField]
-        private int poolMaxSize = 100;
+        private int poolPrewarmSize = 30;
 
         private readonly Queue<AudioSource> audioSourcePool = new Queue<AudioSource>();
+        private readonly Dictionary<AudioSource, int> audioSourcePlayIds = new Dictionary<AudioSource, int>();
         private Transform poolRoot;
+
+        private void Awake()
+        {
+            PrewarmPool();
+        }
+
+        /// <summary>
+        /// 预热一次性音效对象池，运行中池为空仍会继续实例化扩容。
+        /// </summary>
+        private void PrewarmPool()
+        {
+            for (int i = audioSourcePool.Count; i < poolPrewarmSize; i++)
+            {
+                AudioSource source = CreateSource();
+                source.gameObject.SetActive(false);
+                audioSourcePool.Enqueue(source);
+            }
+        }
 
         /// <summary>
         /// 检查一个AudioSource是否有效且正在播放。
@@ -71,6 +90,7 @@ namespace InfimaGames.LowPolyShooterPack
             AudioSource source = audioSourcePool.Count > 0 ? audioSourcePool.Dequeue() : CreateSource();
             source.gameObject.SetActive(true);
             source.transform.SetParent(GetPoolRoot(), false);
+            audioSourcePlayIds[source] = audioSourcePlayIds.TryGetValue(source, out int playId) ? playId + 1 : 1;
             return source;
         }
 
@@ -101,8 +121,20 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private IEnumerator ReleaseSourceWhenFinished(AudioSource source)
         {
+            if (source == null)
+                yield break;
+
+            int playId = audioSourcePlayIds.TryGetValue(source, out int value) ? value : 0;
+
             //等待音频源播放完整个剪辑。
             yield return new WaitWhile(() => IsPlayingSource(source));
+
+            if (source == null)
+                yield break;
+
+            //如果这个AudioSource已经被复用播放新的音效，旧协程不能回收它。
+            if (!audioSourcePlayIds.TryGetValue(source, out int currentPlayId) || currentPlayId != playId)
+                yield break;
 
             ReleaseSource(source);
         }
@@ -120,11 +152,7 @@ namespace InfimaGames.LowPolyShooterPack
             source.outputAudioMixerGroup = null;
             source.transform.SetParent(GetPoolRoot(), false);
             source.gameObject.SetActive(false);
-
-            if (audioSourcePool.Count >= poolMaxSize)
-                Destroy(source.gameObject);
-            else
-                audioSourcePool.Enqueue(source);
+            audioSourcePool.Enqueue(source);
         }
 
         /// <summary>

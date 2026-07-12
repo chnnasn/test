@@ -12,5 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e42b6756a214bd296c65142261810fa, type: 3}
   m_Name: PortalWave 1
   m_EditorClassIdentifier: 
-  spawnPortals:
+  waveNumber: 1
+timeBetweenEnemyWaves: 1
+totalEnemyCount: 20
+enemyCountPerRound:
+- 5
+spawnPortals:
   - {fileID: 278875111475884485, guid: 78162f1f88c9c1e4eb196746d1f3e725, type: 3}

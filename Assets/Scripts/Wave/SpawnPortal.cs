@@ -7,22 +7,21 @@ public class SpawnPortal : MonoBehaviour
 {
     [SerializeField] private GameObject[] _enemies;
     [SerializeField] private int[] _enemySpawnWeight;
-    [SerializeField] private int _averageEnemyPerWave;
-    [SerializeField] private float _timeBetweenEnemyWaves;
-    [SerializeField] private int _waveNumber;
     private float enemySpawnDuration = 0.5f;
     public bool isLastPortal;
 
     private Func<GameObject, Vector3, Quaternion, Enemy> _spawnEnemy;
     private Action _onPortalFinished;
+    private int _totalEnemyCount;
+    private int _waveNumber;
+    private float _timeBetweenEnemyWaves;
+    private int[] _enemyCountPerRound;
 
-    public int MaxEnemySpawnCount => Mathf.Max(0, _waveNumber) * Mathf.Max(0, _averageEnemyPerWave + 1);
-
-    public void CollectPrewarmEnemies(Dictionary<GameObject, int> counts)
+    public void CollectPrewarmEnemies(Dictionary<GameObject, int> counts, int maxEnemySpawnCount)
     {
         if (counts == null || _enemies == null) return;
 
-        int count = MaxEnemySpawnCount;
+        int count = Mathf.Max(0, maxEnemySpawnCount);
         if (count <= 0) return;
 
         for (int i = 0; i < _enemies.Length; i++)
@@ -36,10 +35,14 @@ public class SpawnPortal : MonoBehaviour
         }
     }
 
-    public void Init(Func<GameObject, Vector3, Quaternion, Enemy> spawnEnemy, Action onPortalFinished)
+    public void Init(Func<GameObject, Vector3, Quaternion, Enemy> spawnEnemy, Action onPortalFinished, int totalEnemyCount, int waveNumber, float timeBetweenEnemyWaves, int[] enemyCountPerRound)
     {
         _spawnEnemy = spawnEnemy;
         _onPortalFinished = onPortalFinished;
+        _totalEnemyCount = Mathf.Max(0, totalEnemyCount);
+        _waveNumber = Mathf.Max(1, waveNumber);
+        _timeBetweenEnemyWaves = Mathf.Max(0f, timeBetweenEnemyWaves);
+        _enemyCountPerRound = enemyCountPerRound;
     }
 
     void Start()
@@ -51,24 +54,36 @@ public class SpawnPortal : MonoBehaviour
 
     private IEnumerator SpawningCoroutine()
     {
-        int waveNumberLeft = _waveNumber;
+        int enemyNumberLeft = _totalEnemyCount;
+        int roundIndex = 0;
         yield return new WaitForSeconds(1.5f);
-        while (waveNumberLeft > 0)
+        while (enemyNumberLeft > 0 && roundIndex < _waveNumber)
         {
-            waveNumberLeft--;
-            int rnd = UnityEngine.Random.Range(_averageEnemyPerWave - 1, _averageEnemyPerWave + 2);
-            while (rnd > 0)
+            int currentRoundCount = Mathf.Min(GetEnemyCountPerRound(roundIndex), enemyNumberLeft);
+            roundIndex++;
+            enemyNumberLeft -= currentRoundCount;
+
+            while (currentRoundCount > 0)
             {
                 int i = GetEnemyNumber();
-                rnd--;
+                currentRoundCount--;
                 _spawnEnemy?.Invoke(_enemies[i], transform.position, Quaternion.identity);
                 yield return new WaitForSeconds(enemySpawnDuration);
             }
-            if (waveNumberLeft > 0)
+            if (enemyNumberLeft > 0)
                 yield return new WaitForSeconds(_timeBetweenEnemyWaves);
         }
         _onPortalFinished?.Invoke();
         Destroy(gameObject);
+    }
+
+    private int GetEnemyCountPerRound(int roundIndex)
+    {
+        if (_enemyCountPerRound == null || _enemyCountPerRound.Length == 0)
+            return 1;
+
+        int index = Mathf.Clamp(roundIndex, 0, _enemyCountPerRound.Length - 1);
+        return Mathf.Max(1, _enemyCountPerRound[index]);
     }
 
     private int GetEnemyNumber()

@@ -85,8 +85,10 @@ public class WaveManager : MonoBehaviour
                     int rnd = Random.Range(0, _spawnPoints.Length);
                     if (!_spawnPoints[rnd].busy)
                     {
-                        SpawnPortal portal = Instantiate(wave.spawnPortals[portalNumber - 1], _spawnPoints[rnd].transform.position, Quaternion.identity);
-                        portal.Init(_enemyManager.SpawnEnemy, NotifyPortalFinished);
+                        int portalIndex = portalNumber - 1;
+                        SpawnPortal portal = Instantiate(wave.spawnPortals[portalIndex], _spawnPoints[rnd].transform.position, Quaternion.identity);
+                        int portalEnemyCount = wave.GetPortalEnemyCount(portalIndex);
+                        portal.Init(_enemyManager.SpawnEnemy, NotifyPortalFinished, portalEnemyCount, wave.waveNumber, wave.timeBetweenEnemyWaves, wave.enemyCountPerRound);
                         _spawnPoints[rnd].busy = true;
                         _activePortals++;
                         portalNumber--;

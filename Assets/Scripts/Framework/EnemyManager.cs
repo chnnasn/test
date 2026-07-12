@@ -120,7 +120,7 @@ public class EnemyManager : MonoBehaviour
         {
             SpawnPortal portal = wave.spawnPortals[i];
             if (portal != null)
-                portal.CollectPrewarmEnemies(prewarmCounts);
+                portal.CollectPrewarmEnemies(prewarmCounts, wave.GetPortalEnemyCount(i));
         }
 
         foreach (KeyValuePair<GameObject, int> pair in prewarmCounts)
