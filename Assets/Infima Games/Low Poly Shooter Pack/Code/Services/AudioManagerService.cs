@@ -70,31 +70,29 @@ namespace InfimaGames.LowPolyShooterPack
         {
             AudioSource source = audioSourcePool.Count > 0 ? audioSourcePool.Dequeue() : CreateSource();
             source.gameObject.SetActive(true);
-            source.transform.SetParent(transform, false);
+            source.transform.SetParent(GetPoolRoot(), false);
             return source;
         }
 
         /// <summary>
-        /// 创建新的AudioSource并挂到音频管理器下。
+        /// 创建新的AudioSource并挂到统一对象池根节点下。
         /// </summary>
         private AudioSource CreateSource()
         {
             var sourceObject = new GameObject("Audio Source");
-            sourceObject.transform.SetParent(transform, false);
+            sourceObject.transform.SetParent(GetPoolRoot(), false);
             return sourceObject.AddComponent<AudioSource>();
         }
 
         /// <summary>
-        /// 获取对象池根节点。
+        /// 获取统一对象池根节点。
         /// </summary>
         private Transform GetPoolRoot()
         {
             if (poolRoot != null)
                 return poolRoot;
 
-            var rootObject = new GameObject("[AudioSourcePool]");
-            rootObject.transform.SetParent(transform, false);
-            poolRoot = rootObject.transform;
+            poolRoot = global::ProjectilePool.Root;
             return poolRoot;
         }
 

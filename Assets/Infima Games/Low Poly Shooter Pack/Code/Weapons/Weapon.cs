@@ -531,7 +531,12 @@ namespace InfimaGames.LowPolyShooterPack
             if (prefabDustParticle == null || dustObstacleLayerMask == 0)
                 return false;
 
-            if (!Physics.Raycast(playerCamera.position, direction, out RaycastHit hit, dustParticleRayDistance, dustObstacleLayerMask, QueryTriggerInteraction.Ignore))
+            //先检测弹道最先命中的物体，避免穿过僵尸后又在后方墙面生成尘土。
+            if (!Physics.Raycast(playerCamera.position, direction, out RaycastHit hit, dustParticleRayDistance, ~0, QueryTriggerInteraction.Ignore))
+                return false;
+
+            //只有最先命中的物体属于障碍物层时，才生成尘土粒子。
+            if ((dustObstacleLayerMask.value & (1 << hit.collider.gameObject.layer)) == 0)
                 return false;
 
             Quaternion rotation = Quaternion.LookRotation(hit.normal);
