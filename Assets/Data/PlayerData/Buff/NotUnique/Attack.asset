@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Attack
   m_EditorClassIdentifier: 
   _buffName: "\u4F24\u5BB3\u52A0\u6210"
-  _description: "\u63D0\u9AD830%\u5B50\u5F39\u7684\u4F24\u5BB3\u52A0\u6210"
+  _description: "\u63D0\u9AD815%\u5B50\u5F39\u7684\u4F24\u5BB3\u52A0\u6210"
   _kind: 5
   _unique: 0
-  _value: 30
+  _value: 15
   _valueMode: 1
   _operation: 0
   _skillKind: 1

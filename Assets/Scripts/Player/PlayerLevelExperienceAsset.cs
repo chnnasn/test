@@ -9,9 +9,10 @@ public class PlayerLevelExperienceAsset : ScriptableObject
 
     public float GetRequiredExperience(int levelIndex)
     {
-        if (_levelExperienceRequirements == null || levelIndex < 0 || levelIndex >= _levelExperienceRequirements.Length)
+        if (_levelExperienceRequirements == null || _levelExperienceRequirements.Length == 0 || levelIndex < 0)
             return 0f;
 
-        return _levelExperienceRequirements[levelIndex];
+        int index = Mathf.Clamp(levelIndex, 0, _levelExperienceRequirements.Length - 1);
+        return _levelExperienceRequirements[index];
     }
 }

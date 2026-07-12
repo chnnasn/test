@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Laser
   m_EditorClassIdentifier: 
   _buffName: "\u5C04\u7EBF"
-  _description: "\u88C5\u5907\u5C04\u7EBF\uFF0C\u63D0\u9AD830%\u5C04\u51FB\u901F\u5EA6"
+  _description: "\u88C5\u5907\u5C04\u7EBF\uFF0C\u63D0\u9AD815%\u5C04\u51FB\u901F\u5EA6"
   _kind: 1
   _unique: 1
-  _value: 30
+  _value: 15
   _valueMode: 1
   _operation: 0
   _skillKind: 0

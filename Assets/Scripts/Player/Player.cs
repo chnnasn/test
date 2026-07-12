@@ -73,10 +73,9 @@ public class Player : MonoBehaviour, IDamage
 
         int levelBefore = _level;
 
-        while (_level - 1 < _levelExperienceAsset.LevelExperienceRequirements.Length &&
-               _experience >= _levelExperienceAsset.LevelExperienceRequirements[_level - 1])
+        while (_experience >= GetRequiredExperienceForCurrentLevel())
         {
-            _experience -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
+            _experience -= GetRequiredExperienceForCurrentLevel();
             _level++;
             _playerBuff.SetLevel(_level);
             Level.Value = _level;
@@ -84,7 +83,7 @@ public class Player : MonoBehaviour, IDamage
 
         int levelUpCount = _level - levelBefore;
         if (levelUpCount > 0)
-            AddHp(5f * levelUpCount);
+            AddHp(PlayerBuff.MaxHPGrowthPerLevel * levelUpCount);
 
         RefreshExperienceProgress();
         if (levelUpCount <= 0) return;
@@ -95,15 +94,19 @@ public class Player : MonoBehaviour, IDamage
 
     private float GetExperienceProgress()
     {
-        if (_levelExperienceAsset == null || _levelExperienceAsset.LevelExperienceRequirements == null)
-            return 0f;
-
-        int levelIndex = _level - 1;
-        float requiredExperience = _levelExperienceAsset.GetRequiredExperience(levelIndex);
+        float requiredExperience = GetRequiredExperienceForCurrentLevel();
         if (requiredExperience <= 0f)
             return 0f;
 
         return Mathf.Clamp01(_experience / requiredExperience);
+    }
+
+    private float GetRequiredExperienceForCurrentLevel()
+    {
+        if (_levelExperienceAsset == null)
+            return 0f;
+
+        return _levelExperienceAsset.GetRequiredExperience(_level - 1);
     }
 
     private void RefreshExperienceProgress()

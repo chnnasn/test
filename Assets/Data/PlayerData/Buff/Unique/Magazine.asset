@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Magazine
   m_EditorClassIdentifier: 
   _buffName: "\u5F39\u5939"
-  _description: "\u589E\u52A050%\u5F39\u5323\u5BB9\u91CF"
+  _description: "\u589E\u52A025%\u5F39\u5323\u5BB9\u91CF"
   _kind: 3
   _unique: 1
-  _value: 50
+  _value: 25
   _valueMode: 1
   _operation: 0
   _skillKind: 0

@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class PlayerBuff
 {
-    private const float MaxHPGrowthPerLevel = 5f;
+    public const float MaxHPGrowthPerLevel = 5f;
     private const float AttackMultiplierGrowthPerLevel = 1f;
 
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();

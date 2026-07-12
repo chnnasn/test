@@ -13,14 +13,17 @@ MonoBehaviour:
   m_Name: PlayerLevel
   m_EditorClassIdentifier: 
   _levelExperienceRequirements:
-  - 100
-  - 200
-  - 400
-  - 700
-  - 1100
-  - 1600
-  - 2200
-  - 3000
-  - 4000
-  - 5200
-  - 6200
+  - 75
+  - 212
+  - 390
+  - 600
+  - 838
+  - 1102
+  - 1389
+  - 1697
+  - 2025
+  - 2372
+  - 2736
+  - 3118
+  - 3515
+  - 3928

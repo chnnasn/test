@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Hp
   m_EditorClassIdentifier: 
   _buffName: "\u8840\u5305"
-  _description: "\u56DE\u590D20%\u7684\u8840\u91CF"
+  _description: "\u56DE\u590D10%\u7684\u8840\u91CF"
   _kind: 4
   _unique: 0
-  _value: 20
+  _value: 10
   _valueMode: 1
   _operation: 0
   _skillKind: 0
