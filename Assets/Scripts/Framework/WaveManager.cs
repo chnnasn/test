@@ -6,7 +6,7 @@ public class WaveManager : MonoBehaviour
 {
     [SerializeField] private PortalWave[] _portalWaves;
     [SerializeField] private SpawnPoint[] _spawnPoints;
-    [SerializeField] private int _enemyPoolMaxSize = 30;
+    [SerializeField] private int _enemyPoolMaxSize =100;
 
     private static readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
     private static readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
