@@ -47,6 +47,10 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private int poolPrewarmSize = 30;
 
+        [Tooltip("一次性音效AudioSource对象池的最大缓存数量。池满后生命周期结束的对象会直接销毁。")]
+        [SerializeField]
+        private int poolMaxSize = 100;
+
         private readonly Queue<AudioSource> audioSourcePool = new Queue<AudioSource>();
         private readonly Dictionary<AudioSource, int> audioSourcePlayIds = new Dictionary<AudioSource, int>();
         private Transform poolRoot;
@@ -79,7 +83,7 @@ namespace InfimaGames.LowPolyShooterPack
                 return false;
 
             //返回播放状态。
-            return source.isPlaying;
+            return source.gameObject.activeInHierarchy && source.isPlaying;
         }
 
         /// <summary>
@@ -152,7 +156,16 @@ namespace InfimaGames.LowPolyShooterPack
             source.outputAudioMixerGroup = null;
             source.transform.SetParent(GetPoolRoot(), false);
             source.gameObject.SetActive(false);
-            audioSourcePool.Enqueue(source);
+
+            if (audioSourcePool.Count >= poolMaxSize)
+            {
+                audioSourcePlayIds.Remove(source);
+                Destroy(source.gameObject);
+            }
+            else
+            {
+                audioSourcePool.Enqueue(source);
+            }
         }
 
         /// <summary>
