@@ -259,15 +259,15 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.SetGameResume();
     }
 
-    private void OnLevelUpBuffs(string[] levelUpBuffs)
+    private void OnLevelUpBuffs(string[] names, string[] descs)
     {
-        bool hasBuffs = levelUpBuffs != null && levelUpBuffs.Length > 0;
+        bool hasBuffs = names != null && names.Length > 0;
 
         if (BuffChoose != null)
         {
             BuffChoose.gameObject.SetActive(hasBuffs);
             if (hasBuffs)
-                BuffChoose.SetBuffs(levelUpBuffs);
+                BuffChoose.SetBuffs(names, descs);
         }
 
         if (hasBuffs)

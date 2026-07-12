@@ -7,7 +7,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action<float> OnAttackedAction;
 
     public Action<int> TriggerBuff;
-    public Action<string[]> LevelUpBuffs;
+    public Action<string[], string[]> LevelUpBuffs;
     public Action LevelUpBuffsFinished;
 
     public Action Fire;
@@ -28,9 +28,9 @@ public class EventManager : LazySingleton<EventManager>
         TriggerBuff?.Invoke(index);
     }
 
-    public void SetLevelUpBuffs(string[] buffstrStrings)
+    public void SetLevelUpBuffs(string[] buffNames, string[] buffDescs)
     {
-        LevelUpBuffs?.Invoke(buffstrStrings);
+        LevelUpBuffs?.Invoke(buffNames, buffDescs);
     }
 
     public void SetLevelUpBuffsFinished()

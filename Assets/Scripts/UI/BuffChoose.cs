@@ -12,8 +12,9 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     private HashSet<GameObject> _validTargets;
     private GameObject _selectedTarget;
 
-    [SerializeField]private Text[] _texts;
+    [SerializeField]private Transform[] _texts;
     private string[] _buffs;
+    private string[] _buffDescs;
 
     private int _index = -1;
     private bool _canChoose;
@@ -59,6 +60,17 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     public void SetBuffs(string[] buffs)
     {
         _buffs = buffs;
+        _buffDescs = null;
+        _index = -1;
+        ResetSelectedTarget();
+        _canChoose = true;
+        RefreshTexts();
+    }
+
+    public void SetBuffs(string[] buffs, string[] descs)
+    {
+        _buffs = buffs;
+        _buffDescs = descs;
         _index = -1;
         ResetSelectedTarget();
         _canChoose = true;
@@ -77,7 +89,17 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         for (int i = 0; i < _texts.Length; i++)
         {
             if (_texts[i] == null) continue;
-            _texts[i].text = _buffs != null && i < _buffs.Length ? _buffs[i] : string.Empty;
+            Transform parent = _texts[i];
+            if (parent.childCount < 2) continue;
+
+            Text nameText = parent.GetChild(0).GetComponent<Text>();
+            Text descText = parent.GetChild(1).GetComponent<Text>();
+
+            if (nameText != null)
+                nameText.text = _buffs != null && i < _buffs.Length ? _buffs[i] : string.Empty;
+
+            if (descText != null)
+                descText.text = _buffDescs != null && i < _buffDescs.Length ? _buffDescs[i] : string.Empty;
         }
     }
 
@@ -191,6 +213,7 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         _canChoose = false;
         EventManager.Instance.SetBuffIndex(_index);
         _buffs = null;
+        _buffDescs = null;
         _index = -1;
     }
 }

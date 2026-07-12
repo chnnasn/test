@@ -132,28 +132,30 @@ public class Player : MonoBehaviour, IDamage
         }
 
         _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs);
-        EventManager.Instance.SetLevelUpBuffs(GetBuffDescriptions(_currentLevelUpBuffs));
+        (string[] names, string[] descs) = GetBuffNamesAndDescs(_currentLevelUpBuffs);
+        EventManager.Instance.SetLevelUpBuffs(names, descs);
     }
 
-    private string[] GetBuffDescriptions(PlayerBuffAsset[] buffs)
+    private (string[] names, string[] descs) GetBuffNamesAndDescs(PlayerBuffAsset[] buffs)
     {
-        if (buffs == null) return null;
+        if (buffs == null) return (null, null);
 
-        string[] descriptions = new string[buffs.Length];
+        string[] names = new string[buffs.Length];
+        string[] descs = new string[buffs.Length];
         for (int i = 0; i < buffs.Length; i++)
         {
             if (buffs[i] == null)
             {
-                descriptions[i] = string.Empty;
+                names[i] = string.Empty;
+                descs[i] = string.Empty;
                 continue;
             }
 
-            string buffName = buffs[i].BuffName;
-            string description = buffs[i].Description;
-            descriptions[i] = string.IsNullOrEmpty(description) ? buffName : $"{buffName}\n{description}";
+            names[i] = buffs[i].BuffName;
+            descs[i] = buffs[i].Description ?? string.Empty;
         }
 
-        return descriptions;
+        return (names, descs);
     }
 
     public PlayerBuffAsset GetCurrentLevelUpBuff(int index)
