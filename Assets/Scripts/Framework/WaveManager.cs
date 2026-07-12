@@ -10,6 +10,7 @@ public class WaveManager : MonoBehaviour
     int currentWave;
     private bool _canSpawnWaves = true;
     private bool _isWaveRunning;
+    private bool _isLastWave;
     private int _activePortals;
     /// <summary> 当前波次（1-based），通过 EventManager 绑定到 UI </summary>
     public GenericProperty<int> WaveNumber { get; private set; } = new GenericProperty<int>();
@@ -79,6 +80,7 @@ public class WaveManager : MonoBehaviour
                 _enemyManager.BeginWave(TrySpawnNextWave);
 
                 PortalWave wave = _portalWaves[currentWave];
+                _isLastWave = HasLastPortal(wave);
                 int portalNumber = wave.spawnPortals.Length;
                 while (portalNumber > 0)
                 {
@@ -114,6 +116,14 @@ public class WaveManager : MonoBehaviour
             return;
 
         _isWaveRunning = false;
+        if (_isLastWave)
+        {
+            _canSpawnWaves = false;
+            WaveCountdown.Value = 0f;
+            Debug.Log("最后一波结束，开始结算");
+            return;
+        }
+
         StartCoroutine(canSpawnWavesCoroutine());
         WaveNumber.Value += 1;
     }
@@ -139,6 +149,20 @@ public class WaveManager : MonoBehaviour
         {
             _spawnPoints[i].busy = false;
         }
+    }
+
+    private bool HasLastPortal(PortalWave wave)
+    {
+        if (wave == null || wave.spawnPortals == null)
+            return false;
+
+        for (int i = 0; i < wave.spawnPortals.Length; i++)
+        {
+            if (wave.spawnPortals[i] != null && wave.spawnPortals[i].isLastPortal)
+                return true;
+        }
+
+        return false;
     }
 
     private IEnumerator FirstWaveCountdown(float time)
