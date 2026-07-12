@@ -263,7 +263,7 @@ namespace InfimaGames.LowPolyShooterPack
 
             //将弹药补满至弹匣容量上限。
             if (magazineBehaviour != null)
-                ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
+                ammunitionCurrent = GetAmmunitionTotal();
 
             if (characterBehaviour is Character character)
                 character.RefreshCurrentWeaponSetup(false);
@@ -379,9 +379,9 @@ namespace InfimaGames.LowPolyShooterPack
         public override int GetAmmunitionCurrent() => ammunitionCurrent;
 
         /// <summary>
-        /// 获取弹匣总容量。从弹匣配件获取。
+        /// 获取弹匣总容量。从弹匣配件获取基础容量，再通过玩家Buff计算最终容量。
         /// </summary>
-        public override int GetAmmunitionTotal() => magazineBehaviour != null ? magazineBehaviour.GetAmmunitionTotal() : 0;
+        public override int GetAmmunitionTotal() => GetEffectiveAmmunitionTotal();
         /// <summary>
         /// 是否使用循环换弹模式。
         /// </summary>
@@ -421,7 +421,7 @@ namespace InfimaGames.LowPolyShooterPack
 	/// <summary>
 	/// 弹药是否已满（当前弹药量等于弹匣容量）。
 	/// </summary>
-	public override bool IsFull() => magazineBehaviour != null && ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
+	public override bool IsFull() => magazineBehaviour != null && ammunitionCurrent == GetAmmunitionTotal();
         /// <summary>
         /// 是否还有剩余弹药。
         /// </summary>
@@ -546,6 +546,21 @@ namespace InfimaGames.LowPolyShooterPack
             fireAudioSource.Play();
         }
 
+        private int GetEffectiveAmmunitionTotal()
+        {
+            if (magazineBehaviour == null)
+                return 0;
+
+            int baseCapacity = magazineBehaviour.GetAmmunitionTotal();
+            global::Player player = characterBehaviour != null ? characterBehaviour.GetComponent<global::Player>() : null;
+            if (player == null && characterBehaviour != null)
+                player = characterBehaviour.GetComponentInParent<global::Player>();
+            if (player == null && global::RunTimeContext.TryGetExistingInstance(out global::RunTimeContext context))
+                player = context.Player;
+
+            return player != null ? player.Buff.GetMagazineCapacity(baseCapacity) : baseCapacity;
+        }
+
         /// <summary>
         /// 在弹道命中障碍物层时生成尘土粒子，并让粒子Z轴朝向命中点法线。
         /// </summary>
@@ -628,7 +643,7 @@ namespace InfimaGames.LowPolyShooterPack
             gripBehaviour = attachmentManager.GetEquippedGrip();
 
             if (clampAmmo && magazineBehaviour != null)
-                ammunitionCurrent = Mathf.Clamp(ammunitionCurrent, 0, magazineBehaviour.GetAmmunitionTotal());
+                ammunitionCurrent = Mathf.Clamp(ammunitionCurrent, 0, GetAmmunitionTotal());
         }
 
         #endregion

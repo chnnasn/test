@@ -17,7 +17,7 @@ public class Player : MonoBehaviour, IDamage
     private readonly PlayerBuff _playerBuff = new PlayerBuff();
 
     public bool IsAlive => CurrentHP.Value > 0f;
-    public float MaxHP => _maxHP;
+    public float MaxHP => _playerBuff.GetMaxHP(_maxHP);
     public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
     public PlayerBuff Buff => _playerBuff;
 
@@ -29,7 +29,7 @@ public class Player : MonoBehaviour, IDamage
     
     private void Awake()
     {
-        CurrentHP.Value = _maxHP;
+        CurrentHP.Value = MaxHP;
         Level.Value = _level;
         RefreshExperienceProgress();
 
@@ -194,7 +194,7 @@ public class Player : MonoBehaviour, IDamage
 
     private void AddHp(float value)
     {
-        CurrentHP.Value = Mathf.Min(CurrentHP.Value + value, _maxHP);
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value + value, MaxHP);
     }
 
     public void TakeDamage(float damage)

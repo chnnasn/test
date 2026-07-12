@@ -137,11 +137,9 @@ namespace InfimaGames.LowPolyShooterPack
             verticalRotation += swayData.Movement.Vertical.rotationCurves.EvaluateCurves(movement.y) *
                                 swayData.Movement.Vertical.rotationMultiplier;
 
-            float playerSwayMultiplier = 1f;
+            float swayMultiplier = scopeBehaviour.GetSwayMultiplier();
             if (global::RunTimeContext.TryGetExistingInstance(out global::RunTimeContext context) && context.Player != null)
-                playerSwayMultiplier = context.Player.Buff.SwayMultiplier;
-
-            float swayMultiplier = scopeBehaviour.GetSwayMultiplier() * playerSwayMultiplier;
+                swayMultiplier = context.Player.Buff.GetSwayMultiplier(swayMultiplier);
 
             //更新位置弹簧目标值：水平+垂直摇摆分量合并后乘以瞄准镜和玩家Buff摇摆倍率。
             springLocation.UpdateEndValue(swayMultiplier * (horizontalLocation + verticalLocation));

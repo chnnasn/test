@@ -24,6 +24,7 @@ public class Enemy : MonoBehaviour,IDamage
     private float _currentHP;
     private Transform _target;
     private bool _isDying;
+    private readonly EnemyBuff _enemyBuff = new EnemyBuff();
     private Action<bool> _attackDetectCallback;
     private Action<Enemy> _poolReleaseCallback;
     private Action<Enemy, float> _poolReleaseDelayCallback;
@@ -38,13 +39,15 @@ public class Enemy : MonoBehaviour,IDamage
     public float BirthDuration => _birthDuration;
     public bool IsAlive => _currentHP > 0;
     public bool IsDying => _isDying;
-    public float AttackRange => _attackRange;
-    public float AttackDamage => _attackDamage;
-    public float AttackInterval => _attackInterval;
-    public float AttackSphereRadius => _attackSphereRadius;
+    public EnemyBuff Buff => _enemyBuff;
+    public float MaxHP => _enemyBuff.GetMaxHP(_maxHP);
+    public float AttackRange => _enemyBuff.GetAttackRange(_attackRange);
+    public float AttackDamage => _enemyBuff.GetAttackDamage(_attackDamage);
+    public float AttackInterval => _enemyBuff.GetAttackInterval(_attackInterval);
+    public float AttackSphereRadius => _enemyBuff.GetAttackSphereRadius(_attackSphereRadius);
     public Vector3 AttackCastOffset => _attackCastOffset;
     public LayerMask PlayerLayerMask => _playerLayerMask;
-    public float ExperienceReward => _experienceReward;
+    public float ExperienceReward => _enemyBuff.GetExperienceReward(_experienceReward);
     public float DeadDestroyDelay => Mathf.Max(AnimatorController != null ? AnimatorController.DeadAnimationDuration : 0f, 0f) + _deadDestroyExtraDelay;
 
     public void SetAttackDetectCallback(Action<bool> callback)
@@ -69,10 +72,10 @@ public class Enemy : MonoBehaviour,IDamage
         GameObject player = RunTimeContext.Instance.PlayerObject;
         if (player == null) return false;
 
-        Vector3 origin = transform.position + _attackCastOffset;
+        Vector3 origin = transform.position + AttackCastOffset;
         Vector3 direction = transform.forward;
-        float distance = Mathf.Max(_attackRange - _attackSphereRadius, 0f);
-        int hitCount = Physics.SphereCastNonAlloc(origin, _attackSphereRadius, direction, _attackHits, distance, _playerLayerMask, QueryTriggerInteraction.Ignore);
+        float distance = Mathf.Max(AttackRange - AttackSphereRadius, 0f);
+        int hitCount = Physics.SphereCastNonAlloc(origin, AttackSphereRadius, direction, _attackHits, distance, PlayerLayerMask, QueryTriggerInteraction.Ignore);
 
         for (int i = 0; i < hitCount; i++)
         {
@@ -91,7 +94,7 @@ public class Enemy : MonoBehaviour,IDamage
     {
         if (_target == null) return false;
         float dist = Vector3.Distance(transform.position, _target.position);
-        return dist <= _attackRange;
+        return dist <= AttackRange;
     }
 
     private void Awake()
@@ -119,7 +122,8 @@ public class Enemy : MonoBehaviour,IDamage
 
     public void ResetEnemy()
     {
-        _currentHP = _maxHP;
+        _enemyBuff.Reset();
+        _currentHP = MaxHP;
         _isDying = false;
         _target = null;
         if (BloodParticle != null)
@@ -228,7 +232,7 @@ public class Enemy : MonoBehaviour,IDamage
         if (_isDying) return;
 
         _isDying = true;
-        EventManager.Instance.SetAddExperience(_experienceReward);
+        EventManager.Instance.SetAddExperience(ExperienceReward);
         Movement?.Stop();
         if (AnimatorController != null && AnimatorController.HasAnimator)
             AnimatorController.PlayDead();

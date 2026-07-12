@@ -19,10 +19,11 @@ public class EnemyMovement : MonoBehaviour
     [SerializeField] private LayerMask _obstacleLayerMask;
 
     private CharacterController _characterController;
+    private Enemy _enemy;
     private bool _missingCharacterControllerLogged;
 
     public Vector3 Velocity { get; private set; }
-    public float MoveSpeed => _moveSpeed;
+    public float MoveSpeed => _enemy != null ? _enemy.Buff.GetMoveSpeed(_moveSpeed) : _moveSpeed;
     public float SeparationRadius => _separationRadius;
     public float SeparationForce => _separationForce;
     public float HardPushDistance => _hardPushDistance;
@@ -37,6 +38,7 @@ public class EnemyMovement : MonoBehaviour
     private void Awake()
     {
         _characterController = GetComponent<CharacterController>();
+        _enemy = GetComponent<Enemy>();
     }
 
     public void Move(Vector3 direction, float speedMultiplier = 1f)
@@ -50,7 +52,7 @@ public class EnemyMovement : MonoBehaviour
         }
 
         float magnitude = Mathf.Clamp01(inputMagnitude) * Mathf.Max(0f, speedMultiplier);
-        Vector3 velocity = direction / inputMagnitude * _moveSpeed * magnitude;
+        Vector3 velocity = direction / inputMagnitude * MoveSpeed * magnitude;
 
         if (_characterController != null && _characterController.enabled)
         {

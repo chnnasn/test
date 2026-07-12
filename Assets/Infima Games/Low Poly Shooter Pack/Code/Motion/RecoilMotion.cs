@@ -160,7 +160,7 @@ namespace InfimaGames.LowPolyShooterPack
 
                 float playerRecoilMultiplier = 1f;
                 if (global::RunTimeContext.TryGetExistingInstance(out global::RunTimeContext context) && context.Player != null)
-                    playerRecoilMultiplier = context.Player.Buff.RecoilMultiplier;
+                    playerRecoilMultiplier = context.Player.Buff.GetRecoilMultiplier(playerRecoilMultiplier);
 
                 //乘以位置倍率、状态倍率和玩家Buff后坐力倍率。
                 recoilLocation *= recoilCurves.LocationMultiplier * recoilDataMultiplier * playerRecoilMultiplier;

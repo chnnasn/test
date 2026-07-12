@@ -18,6 +18,8 @@ public class PlayerBuff
     public float SwayMultiplier { get; private set; } = 1f;
     public float RecoilMultiplier { get; private set; } = 1f;
     public float FireRateMultiplier { get; private set; } = 1f;
+    private int _addedMagazineCapacity;
+    public int AddedMagazineCapacity => _addedMagazineCapacity;
     public GenericProperty<bool> SprintUnlocked { get; private set; } = new GenericProperty<bool>();
 
     public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out bool refreshWeaponSetup)
@@ -59,6 +61,31 @@ public class PlayerBuff
     public float GetReceivedDamage(float rawDamage)
     {
         return Mathf.Max(0f, rawDamage * IncomingDamageMultiplier);
+    }
+
+    public float GetMaxHP(float baseMaxHP)
+    {
+        return Mathf.Max(0f, baseMaxHP + AddedHp);
+    }
+
+    public float GetFireRate(float baseRateOfFire)
+    {
+        return Mathf.Max(1f, baseRateOfFire * FireRateMultiplier);
+    }
+
+    public float GetSwayMultiplier(float baseMultiplier)
+    {
+        return Mathf.Max(0f, baseMultiplier * SwayMultiplier);
+    }
+
+    public float GetRecoilMultiplier(float baseMultiplier)
+    {
+        return Mathf.Max(0f, baseMultiplier * RecoilMultiplier);
+    }
+
+    public int GetMagazineCapacity(int baseCapacity)
+    {
+        return Mathf.Max(0, baseCapacity + _addedMagazineCapacity);
     }
 
     public bool IsSkillUnlocked(PlayerSkillKind skill)
@@ -139,7 +166,7 @@ public class PlayerBuff
         int increase = GetBuffAmountFromValue(magazine.GetAmmunitionTotal(), buff);
         if (increase <= 0) return false;
 
-        magazine.AddAmmunitionTotal(increase);
+        _addedMagazineCapacity += increase;
         HasMagazineBuff = true;
         refreshWeaponSetup = true;
         return true;
@@ -149,8 +176,8 @@ public class PlayerBuff
     {
         if (value <= 0f || addHpCallback == null) return false;
 
-        addHpCallback.Invoke(value);
         AddedHp += value;
+        addHpCallback.Invoke(value);
         return true;
     }
 

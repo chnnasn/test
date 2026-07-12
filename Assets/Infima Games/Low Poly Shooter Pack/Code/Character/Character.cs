@@ -367,7 +367,7 @@ namespace InfimaGames.LowPolyShooterPack
 			float rateOfFire = equippedWeapon != null ? equippedWeapon.GetRateOfFire() : 200f;
 
 			if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context) && context.Player != null)
-				rateOfFire *= context.Player.Buff.FireRateMultiplier;
+				rateOfFire = context.Player.Buff.GetFireRate(rateOfFire);
 
 			return Mathf.Max(1f, rateOfFire);
 		}
