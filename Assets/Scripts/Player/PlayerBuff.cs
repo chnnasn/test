@@ -5,6 +5,9 @@ using UnityEngine;
 
 public class PlayerBuff
 {
+    private const float MaxHPGrowthPerLevel = 5f;
+    private const float AttackMultiplierGrowthPerLevel = 1f;
+
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
 
     public float AttackMultiplier { get; private set; } = 1f;
@@ -14,6 +17,7 @@ public class PlayerBuff
     public bool HasScopeBuff { get; private set; }
     public bool HasGripBuff { get; private set; }
     public float AddedHp { get; private set; }
+    public int Level { get; private set; } = 1;
     public bool HasHpBuff => AddedHp > 0f;
     public float SwayMultiplier { get; private set; } = 1f;
     public float RecoilMultiplier { get; private set; } = 1f;
@@ -55,7 +59,7 @@ public class PlayerBuff
 
     public float GetAttackDamage(float baseDamage)
     {
-        return Mathf.Max(0f, baseDamage * AttackMultiplier);
+        return Mathf.Max(0f, baseDamage * GetLevelAttackMultiplier() * AttackMultiplier);
     }
 
     public float GetReceivedDamage(float rawDamage)
@@ -65,7 +69,7 @@ public class PlayerBuff
 
     public float GetMaxHP(float baseMaxHP)
     {
-        return Mathf.Max(0f, baseMaxHP + AddedHp);
+        return Mathf.Max(0f, baseMaxHP + GetLevelMaxHPBonus() + AddedHp);
     }
 
     public float GetFireRate(float baseRateOfFire)
@@ -86,6 +90,21 @@ public class PlayerBuff
     public int GetMagazineCapacity(int baseCapacity)
     {
         return Mathf.Max(0, baseCapacity + _addedMagazineCapacity);
+    }
+
+    public void SetLevel(int level)
+    {
+        Level = Mathf.Max(1, level);
+    }
+
+    private float GetLevelMaxHPBonus()
+    {
+        return MaxHPGrowthPerLevel * Mathf.Max(0, Level - 1);
+    }
+
+    private float GetLevelAttackMultiplier()
+    {
+        return 1f + AttackMultiplierGrowthPerLevel * Mathf.Max(0, Level - 1);
     }
 
     public bool IsSkillUnlocked(PlayerSkillKind skill)

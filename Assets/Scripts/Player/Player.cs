@@ -29,6 +29,7 @@ public class Player : MonoBehaviour, IDamage
     
     private void Awake()
     {
+        _playerBuff.SetLevel(_level);
         CurrentHP.Value = MaxHP;
         Level.Value = _level;
         RefreshExperienceProgress();
@@ -77,10 +78,14 @@ public class Player : MonoBehaviour, IDamage
         {
             _experience -= _levelExperienceAsset.LevelExperienceRequirements[_level - 1];
             _level++;
+            _playerBuff.SetLevel(_level);
             Level.Value = _level;
         }
 
         int levelUpCount = _level - levelBefore;
+        if (levelUpCount > 0)
+            AddHp(5f * levelUpCount);
+
         RefreshExperienceProgress();
         if (levelUpCount <= 0) return;
 
