@@ -12438,6 +12438,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1256139165}
   - component: {fileID: 1256139166}
+  - component: {fileID: 1256139167}
   m_Layer: 0
   m_Name: WaveManager
   m_TagString: Untagged
@@ -12486,7 +12487,21 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7eb147229c639474ea549b8b9116ca22, type: 2}
   - {fileID: 11400000, guid: da97c145a42cf44479b7e7b91a9af612, type: 2}
   _spawnPoints: []
-  _enemyPoolMaxSize: 30
+  _enemyManager: {fileID: 1256139167}
+--- !u!114 &1256139167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1256139164}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 069835f8c9da1b946bfc633710d797d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _enemyPoolMaxSize: 100
+  _navigationBatchCount: 5
 --- !u!1 &1269856214
 GameObject:
   m_ObjectHideFlags: 0

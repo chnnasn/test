@@ -49,5 +49,5 @@ MonoBehaviour:
   _enemySpawnWeight: 08000000
   _averageEnemyPerWave: 2
   _timeBetweenEnemyWaves: 8
-  _waveNumber: 3
+  _waveNumber: 200
   isLastPortal: 0
