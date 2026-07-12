@@ -20,6 +20,10 @@ public class EnemyDeadState : EnemyState
         // 停止移动
         movement.Stop();
 
+        // 死亡前修正到地面，避免禁用 CharacterController 后浮空
+        movement.EndKeepGrounded();
+        movement.SnapToGround();
+
         // 禁用碰撞体，避免死后还能被攻击或阻挡
         movement.DisableCollision();
 

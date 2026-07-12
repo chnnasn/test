@@ -15,6 +15,7 @@ public class EnemyBirthState : EnemyState
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入出生状态");
 #endif
+        movement.BeginKeepGrounded();
         movement.DisableCollision();
     }
 
@@ -27,6 +28,8 @@ public class EnemyBirthState : EnemyState
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 出生完成，准备追击");
 #endif
+        movement.EndKeepGrounded();
+        movement.SnapToGround();
         movement.EnableCollision();
     }
     

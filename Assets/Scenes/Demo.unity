@@ -13167,10 +13167,14 @@ MonoBehaviour:
   _enemyManager: {fileID: 1256139167}
   _spawnRandomRadius: 2.5
   _spawnCheckRadius: 0.35
+  _spawnCheckHeight: 1.7
   _spawnPositionTryCount: 24
   _spawnBlockLayerMask:
     serializedVersion: 2
     m_Bits: 2056
+  _spawnGroundLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!114 &1256139167
 MonoBehaviour:
   m_ObjectHideFlags: 0

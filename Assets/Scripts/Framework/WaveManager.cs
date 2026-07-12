@@ -17,8 +17,10 @@ public class WaveManager : MonoBehaviour
     [Header("生成位置")]
     [SerializeField] private float _spawnRandomRadius = 2.5f;
     [SerializeField] private float _spawnCheckRadius = 0.35f;
+    [SerializeField] private float _spawnCheckHeight = 1.7f;
     [SerializeField] private int _spawnPositionTryCount = 24;
     [SerializeField] private LayerMask _spawnBlockLayerMask = 1 << 11;
+    [SerializeField] private LayerMask _spawnGroundLayerMask = 1 << 6;
     private readonly List<Enemy> _spawnNeighborBuffer = new List<Enemy>(32);
     /// <summary> 当前波次（1-based），通过 EventManager 绑定到 UI </summary>
     public GenericProperty<int> WaveNumber { get; private set; } = new GenericProperty<int>();
@@ -186,7 +188,7 @@ public class WaveManager : MonoBehaviour
         for (int i = 0; i < tryCount; i++)
         {
             Vector2 offset = UnityEngine.Random.insideUnitCircle * radius;
-            Vector3 candidate = center + new Vector3(offset.x, 0f, offset.y);
+            Vector3 candidate = SnapSpawnPositionToGround(center + new Vector3(offset.x, 0f, offset.y));
             if (IsValidSpawnPosition(candidate))
                 return candidate;
         }
@@ -196,6 +198,7 @@ public class WaveManager : MonoBehaviour
 
     private Vector3 FindFallbackSpawnPosition(Vector3 center, float radius)
     {
+        center = SnapSpawnPositionToGround(center);
         if (IsValidSpawnPosition(center))
             return center;
 
@@ -208,7 +211,7 @@ public class WaveManager : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 float angle = i * Mathf.PI * 2f / count;
-                Vector3 candidate = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * currentRadius;
+                Vector3 candidate = SnapSpawnPositionToGround(center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * currentRadius);
                 if (IsValidSpawnPosition(candidate))
                     return candidate;
             }
@@ -220,15 +223,33 @@ public class WaveManager : MonoBehaviour
     private bool IsValidSpawnPosition(Vector3 position)
     {
         float radius = Mathf.Max(0.05f, _spawnCheckRadius);
+        float height = Mathf.Max(radius * 2f, _spawnCheckHeight);
 
         if (!FlowField.IsWalkable(position))
             return false;
 
-        if (_spawnBlockLayerMask != 0 && Physics.CheckSphere(position + Vector3.up * radius, radius, _spawnBlockLayerMask, QueryTriggerInteraction.Ignore))
-            return false;
+        if (_spawnBlockLayerMask != 0)
+        {
+            Vector3 bottom = position + Vector3.up * radius;
+            Vector3 top = position + Vector3.up * (height - radius);
+            if (Physics.CheckCapsule(bottom, top, radius, _spawnBlockLayerMask, QueryTriggerInteraction.Ignore))
+                return false;
+        }
 
         SpatialGrid.QueryNeighbors(position, radius * 2f, null, _spawnNeighborBuffer);
         return _spawnNeighborBuffer.Count == 0;
+    }
+
+    private Vector3 SnapSpawnPositionToGround(Vector3 position)
+    {
+        if (_spawnGroundLayerMask == 0)
+            return position;
+
+        Vector3 origin = position + Vector3.up * 3f;
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 10f, _spawnGroundLayerMask, QueryTriggerInteraction.Ignore))
+            position.y = hit.point.y;
+
+        return position;
     }
 
     private IEnumerator FirstWaveCountdown(float time)
