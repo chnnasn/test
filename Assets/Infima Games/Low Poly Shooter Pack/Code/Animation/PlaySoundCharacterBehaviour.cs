@@ -77,6 +77,10 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
+            //射击音效由 Weapon.Fire() 在每次实际开火时播放，避免连射时动画 State 未重新进入导致漏音。
+            if (soundType == SoundType.Fire)
+                return;
+
             //获取角色组件。使用??=延迟初始化，首次访问时从服务定位器获取。
             playerCharacter ??= ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
 

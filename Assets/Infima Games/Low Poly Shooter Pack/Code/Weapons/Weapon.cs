@@ -478,6 +478,9 @@ namespace InfimaGames.LowPolyShooterPack
             if (ammunitionCurrent == 0)
                 SetSlideBack(1);
 
+            //每次实际开火时直接播放射击音效，不再依赖动画 State 进入事件。
+            ServiceLocator.Current.Get<IAudioManagerService>()?.PlayOneShot(GetAudioClipFire(), new AudioSettings(0.2f, 0.0f, true));
+
             //播放所有枪口特效（粒子、灯光等）。
             muzzleBehaviour.Effect();
 
