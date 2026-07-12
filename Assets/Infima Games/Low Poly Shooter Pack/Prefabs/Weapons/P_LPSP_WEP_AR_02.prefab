@@ -533,6 +533,11 @@ MonoBehaviour:
     type: 3}
   prefabProjectile: {fileID: 1086664671600574, guid: 5953171a59c27394e9ad5cbb564affa8,
     type: 3}
+  prefabDustParticle: {fileID: 7416751304366959079, guid: c23c976dbf66c9d40ab9599d4f5fc6a2, type: 3}
+  dustObstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 2048
+  dustParticleNormalOffset: 0.02
   controller: {fileID: 22100000, guid: 721c041fc33a0bc4fa626ec5c5ffd1ca, type: 2}
   spriteBody: {fileID: 21300000, guid: 3ac6bd3c94406ee4b93468601b767738, type: 3}
   audioClipHolster: {fileID: 8300000, guid: 8c4ede782a70c6e4b9e515d40d6e6e69, type: 3}

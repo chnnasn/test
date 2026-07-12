@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
+  m_Name: Attack
+  m_EditorClassIdentifier: 
+  _buffName: "\u4F24\u5BB3\u52A0\u6210"
+  _description: "\u63D0\u9AD830%\u5B50\u5F39\u7684\u4F24\u5BB3\u52A0\u6210"
+  _kind: 5
+  _unique: 0
+  _value: 30
+  _valueMode: 1
+  _operation: 0
+  _skillKind: 1

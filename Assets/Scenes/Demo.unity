@@ -4875,6 +4875,14 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 2203191837357831097, guid: 19eadcf8fbed56b4da77ca94c1b4145f, type: 3}
+      propertyPath: prefabDustParticle
+      value: 
+      objectReference: {fileID: 7416751304366959079, guid: c23c976dbf66c9d40ab9599d4f5fc6a2, type: 3}
+    - target: {fileID: 2203191837357831097, guid: 19eadcf8fbed56b4da77ca94c1b4145f, type: 3}
+      propertyPath: dustObstacleLayerMask.m_Bits
+      value: 2112
+      objectReference: {fileID: 0}
     - target: {fileID: 2208100277159050444, guid: 19eadcf8fbed56b4da77ca94c1b4145f, type: 3}
       propertyPath: m_Layer
       value: 10

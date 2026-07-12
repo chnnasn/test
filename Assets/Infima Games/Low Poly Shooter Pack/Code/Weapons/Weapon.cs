@@ -99,6 +99,22 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private GameObject prefabProjectile;
 
+        [Tooltip("击中障碍物层时生成的尘土粒子预制体。")]
+        [SerializeField]
+        private GameObject prefabDustParticle;
+
+        [Tooltip("可以生成尘土粒子的障碍物层。")]
+        [SerializeField]
+        private LayerMask dustObstacleLayerMask = 1 << 11;
+
+        [Tooltip("射线检测障碍物的最大距离。")]
+        [SerializeField]
+        private float dustParticleRayDistance = 1000.0f;
+
+        [Tooltip("尘土粒子沿命中法线偏移的距离，避免粒子陷入墙面。")]
+        [SerializeField]
+        private float dustParticleNormalOffset = 0.02f;
+
         [Tooltip("持有此武器时角色需要使用的AnimatorController动画控制器。")]
         [SerializeField]
         public RuntimeAnimatorController controller;
@@ -249,6 +265,8 @@ namespace InfimaGames.LowPolyShooterPack
                 global::ProjectilePool.Prewarm(prefabProjectile, projectilePoolPrewarm);
             if (prefabCasing != null && casingPoolPrewarm > 0)
                 global::ProjectilePool.Prewarm(prefabCasing, casingPoolPrewarm);
+            if (prefabDustParticle != null && projectilePoolPrewarm > 0)
+                global::ProjectilePool.Prewarm(prefabDustParticle, projectilePoolPrewarm);
         }
 
         #endregion
@@ -463,6 +481,8 @@ namespace InfimaGames.LowPolyShooterPack
             //播放所有枪口特效（粒子、灯光等）。
             muzzleBehaviour.Effect();
 
+            bool dustParticleSpawned = false;
+
             //根据shotCount生成对应数量的弹丸（霰弹枪等需要多个弹丸）。
             for (var i = 0; i < shotCount; i++)
             {
@@ -474,7 +494,11 @@ namespace InfimaGames.LowPolyShooterPack
                 spreadValue = playerCamera.TransformDirection(spreadValue);
 
                 //在摄像机位置生成弹丸，方向为摄像机朝向加上散布偏移。
-                GameObject projectile = global::ProjectilePool.Spawn(prefabProjectile, playerCamera.position, Quaternion.Euler(playerCamera.eulerAngles + spreadValue));
+                Quaternion projectileRotation = Quaternion.Euler(playerCamera.eulerAngles + spreadValue);
+                if (!dustParticleSpawned)
+                    dustParticleSpawned = SpawnDustParticle(projectileRotation * Vector3.forward);
+
+                GameObject projectile = global::ProjectilePool.Spawn(prefabProjectile, playerCamera.position, projectileRotation);
                 if (projectile == null) continue;
 
                 global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
@@ -497,6 +521,29 @@ namespace InfimaGames.LowPolyShooterPack
                 if (projectileRigidbody != null)
                     projectileRigidbody.velocity = projectile.transform.forward * projectileImpulse;
             }
+        }
+
+        /// <summary>
+        /// 在弹道命中障碍物层时生成尘土粒子，并让粒子Z轴朝向命中点法线。
+        /// </summary>
+        private bool SpawnDustParticle(Vector3 direction)
+        {
+            if (prefabDustParticle == null || dustObstacleLayerMask == 0)
+                return false;
+
+            if (!Physics.Raycast(playerCamera.position, direction, out RaycastHit hit, dustParticleRayDistance, dustObstacleLayerMask, QueryTriggerInteraction.Ignore))
+                return false;
+
+            Quaternion rotation = Quaternion.LookRotation(hit.normal);
+            Vector3 position = hit.point + hit.normal * dustParticleNormalOffset;
+            GameObject dustParticle = global::ProjectilePool.Spawn(prefabDustParticle, position, rotation);
+            if (dustParticle == null) return false;
+
+            global::PooledParticle pooledParticle = dustParticle.GetComponent<global::PooledParticle>();
+            if (pooledParticle == null)
+                pooledParticle = dustParticle.AddComponent<global::PooledParticle>();
+            pooledParticle.Initialize();
+            return true;
         }
 
         /// <summary>
