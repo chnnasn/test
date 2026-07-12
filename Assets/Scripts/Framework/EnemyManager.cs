@@ -23,6 +23,7 @@ public class EnemyManager : MonoBehaviour
     private int _navigationBatchCursor;
     private Action _currentWaveClearedCallback;
     private bool _currentWaveClearedNotified;
+    private int _currentWaveNumber = 1;
 
     public bool HasCurrentWaveEnemies => _currentWaveEnemies.Count > 0;
 
@@ -44,9 +45,15 @@ public class EnemyManager : MonoBehaviour
 
     public void BeginWave(Action currentWaveClearedCallback)
     {
+        BeginWave(currentWaveClearedCallback, 1);
+    }
+
+    public void BeginWave(Action currentWaveClearedCallback, int waveNumber)
+    {
         _currentWaveEnemies.Clear();
         _currentWaveClearedCallback = currentWaveClearedCallback;
         _currentWaveClearedNotified = false;
+        _currentWaveNumber = Mathf.Max(1, waveNumber);
     }
 
     public Enemy SpawnEnemy(GameObject prefab, Vector3 position, Quaternion rotation)
@@ -61,6 +68,7 @@ public class EnemyManager : MonoBehaviour
         enemy.SetPoolReleaseDelayCallback(ScheduleEnemyRelease);
         enemy.gameObject.SetActive(true);
         enemy.ResetEnemy();
+        enemy.ApplyWaveGrowth(_currentWaveNumber);
 
         AddActiveEnemy(enemy);
         AddNavigationEnemy(enemy);

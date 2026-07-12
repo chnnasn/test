@@ -9,7 +9,7 @@ public class Enemy : MonoBehaviour,IDamage
 
     [Header("基础属性")]
     [SerializeField] private float _maxHP = 100f;
-    [SerializeField] private float _experienceReward = 1000f;
+    [SerializeField] private float _experienceReward = 50f;
     [SerializeField] private float _birthDuration = 1.5f;
     [SerializeField] private float _deadDestroyExtraDelay = 1.5f;
 
@@ -131,6 +131,12 @@ public class Enemy : MonoBehaviour,IDamage
         Movement?.DisableCollision();
         stateMachine.ResetStates();
         stateMachine.ChangeState(stateMachine.BirthState);
+    }
+
+    public void ApplyWaveGrowth(int waveNumber)
+    {
+        _enemyBuff.ApplyWaveGrowth(waveNumber);
+        _currentHP = MaxHP;
     }
 
     public void SetPoolReleaseCallback(Action<Enemy> callback)

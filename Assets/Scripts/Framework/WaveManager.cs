@@ -77,7 +77,7 @@ public class WaveManager : MonoBehaviour
                 _isWaveRunning = true;
                 _activePortals = 0;
                 WaveCountdown.Value = 0f;
-                _enemyManager.BeginWave(TrySpawnNextWave);
+                _enemyManager.BeginWave(TrySpawnNextWave, currentWave + 1);
 
                 PortalWave wave = _portalWaves[currentWave];
                 _isLastWave = HasLastPortal(wave);
