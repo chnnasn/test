@@ -221,6 +221,15 @@ public static class FlowField
         return TryGetFlowDirection(position, out Vector3 direction) ? direction : Vector3.zero;
     }
 
+    public static bool IsWalkable(Vector3 position)
+    {
+        if (!_initialized) return true;
+
+        Vector2Int cell = WorldToCell(position);
+        int idx = CellToIndex(cell);
+        return idx >= 0 && _blockedCells != null && idx < _blockedCells.Length && !_blockedCells[idx];
+    }
+
     public static bool TryGetFlowDirection(Vector3 position, out Vector3 direction)
     {
         direction = Vector3.zero;

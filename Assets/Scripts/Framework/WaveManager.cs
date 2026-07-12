@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class WaveManager : MonoBehaviour
@@ -12,6 +13,13 @@ public class WaveManager : MonoBehaviour
     private bool _isWaveRunning;
     private bool _isLastWave;
     private int _activePortals;
+
+    [Header("生成位置")]
+    [SerializeField] private float _spawnRandomRadius = 2.5f;
+    [SerializeField] private float _spawnCheckRadius = 0.35f;
+    [SerializeField] private int _spawnPositionTryCount = 24;
+    [SerializeField] private LayerMask _spawnBlockLayerMask = 1 << 11;
+    private readonly List<Enemy> _spawnNeighborBuffer = new List<Enemy>(32);
     /// <summary> 当前波次（1-based），通过 EventManager 绑定到 UI </summary>
     public GenericProperty<int> WaveNumber { get; private set; } = new GenericProperty<int>();
     /// <summary> 总波次，通过 EventManager 绑定到 UI </summary>
@@ -87,11 +95,12 @@ public class WaveManager : MonoBehaviour
                     int rnd = Random.Range(0, _spawnPoints.Length);
                     if (!_spawnPoints[rnd].busy)
                     {
+                        SpawnPoint spawnPoint = _spawnPoints[rnd];
                         int portalIndex = portalNumber - 1;
-                        SpawnPortal portal = Instantiate(wave.spawnPortals[portalIndex], _spawnPoints[rnd].transform.position, Quaternion.identity);
+                        SpawnPortal portal = Instantiate(wave.spawnPortals[portalIndex], spawnPoint.transform.position, Quaternion.identity);
                         int portalEnemyCount = wave.GetPortalEnemyCount(portalIndex);
-                        portal.Init(_enemyManager.SpawnEnemy, NotifyPortalFinished, portalEnemyCount, wave.waveNumber, wave.timeBetweenEnemyWaves, wave.enemyCountPerRound, GetRandomSpawnPosition);
-                        _spawnPoints[rnd].busy = true;
+                        portal.Init(_enemyManager.SpawnEnemy, NotifyPortalFinished, portalEnemyCount, wave.waveNumber, wave.timeBetweenEnemyWaves, wave.enemyCountPerRound, () => GetRandomSpawnPosition(spawnPoint));
+                        spawnPoint.busy = true;
                         _activePortals++;
                         portalNumber--;
                     }
@@ -165,13 +174,61 @@ public class WaveManager : MonoBehaviour
         return false;
     }
 
-    private Vector3 GetRandomSpawnPosition()
+    private Vector3 GetRandomSpawnPosition(SpawnPoint spawnPoint)
     {
-        if (_spawnPoints == null || _spawnPoints.Length == 0)
+        if (spawnPoint == null)
             return transform.position;
 
-        int rnd = Random.Range(0, _spawnPoints.Length);
-        return _spawnPoints[rnd].transform.position;
+        Vector3 center = spawnPoint.transform.position;
+        float radius = Mathf.Max(0f, _spawnRandomRadius);
+        int tryCount = Mathf.Max(1, _spawnPositionTryCount);
+
+        for (int i = 0; i < tryCount; i++)
+        {
+            Vector2 offset = UnityEngine.Random.insideUnitCircle * radius;
+            Vector3 candidate = center + new Vector3(offset.x, 0f, offset.y);
+            if (IsValidSpawnPosition(candidate))
+                return candidate;
+        }
+
+        return FindFallbackSpawnPosition(center, radius);
+    }
+
+    private Vector3 FindFallbackSpawnPosition(Vector3 center, float radius)
+    {
+        if (IsValidSpawnPosition(center))
+            return center;
+
+        float step = Mathf.Max(_spawnCheckRadius * 2f, 0.5f);
+        int ringCount = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(radius, step) / step));
+        for (int ring = 1; ring <= ringCount; ring++)
+        {
+            float currentRadius = step * ring;
+            int count = Mathf.Max(8, ring * 8);
+            for (int i = 0; i < count; i++)
+            {
+                float angle = i * Mathf.PI * 2f / count;
+                Vector3 candidate = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * currentRadius;
+                if (IsValidSpawnPosition(candidate))
+                    return candidate;
+            }
+        }
+
+        return center;
+    }
+
+    private bool IsValidSpawnPosition(Vector3 position)
+    {
+        float radius = Mathf.Max(0.05f, _spawnCheckRadius);
+
+        if (!FlowField.IsWalkable(position))
+            return false;
+
+        if (_spawnBlockLayerMask != 0 && Physics.CheckSphere(position + Vector3.up * radius, radius, _spawnBlockLayerMask, QueryTriggerInteraction.Ignore))
+            return false;
+
+        SpatialGrid.QueryNeighbors(position, radius * 2f, null, _spawnNeighborBuffer);
+        return _spawnNeighborBuffer.Count == 0;
     }
 
     private IEnumerator FirstWaveCountdown(float time)

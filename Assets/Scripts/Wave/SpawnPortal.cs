@@ -62,7 +62,6 @@ public class SpawnPortal : MonoBehaviour
         while (enemyNumberLeft > 0 && roundIndex < _waveNumber)
         {
             int currentRoundCount = Mathf.Min(GetEnemyCountPerRound(roundIndex), enemyNumberLeft);
-            Vector3 spawnPosition = GetCurrentRoundSpawnPosition();
             roundIndex++;
             enemyNumberLeft -= currentRoundCount;
 
@@ -70,6 +69,7 @@ public class SpawnPortal : MonoBehaviour
             {
                 int i = GetEnemyNumber();
                 currentRoundCount--;
+                Vector3 spawnPosition = GetCurrentRoundSpawnPosition();
                 _spawnEnemy?.Invoke(_enemies[i], spawnPosition, Quaternion.identity);
                 yield return new WaitForSeconds(enemySpawnDuration);
             }

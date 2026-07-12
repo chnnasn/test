@@ -13165,6 +13165,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9471f4e90cd14be8886fc136f5919564, type: 2}
   _spawnPoints: []
   _enemyManager: {fileID: 1256139167}
+  _spawnRandomRadius: 2.5
+  _spawnCheckRadius: 0.35
+  _spawnPositionTryCount: 24
+  _spawnBlockLayerMask:
+    serializedVersion: 2
+    m_Bits: 2056
 --- !u!114 &1256139167
 MonoBehaviour:
   m_ObjectHideFlags: 0
