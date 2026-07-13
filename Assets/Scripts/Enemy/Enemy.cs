@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(EnemyMovement))]
@@ -7,6 +8,7 @@ public class Enemy : MonoBehaviour,IDamage
 {
     private const int EnemyLayer = 3;
     private static readonly RaycastHit[] _attackHits = new RaycastHit[8];
+    private static readonly Collider[] _boomHits = new Collider[8];
 
     [Header("基础属性")]
     [SerializeField] private float _maxHP = 100f;
@@ -30,12 +32,14 @@ public class Enemy : MonoBehaviour,IDamage
     private Action<bool> _attackDetectCallback;
     private Action<Enemy> _poolReleaseCallback;
     private Action<Enemy, float> _poolReleaseDelayCallback;
+    private Coroutine _boomParticleReleaseCoroutine;
 
     public EnemyStateMachine stateMachine { get; private set; }
     public EnemyMovement Movement { get; private set; }
     public EnemyAnimator AnimatorController { get; private set; }
 
     public ParticleSystem BloodParticle;
+    [SerializeField] private ParticleSystem _boomParticle;
 
     public Transform Target => _target;
     public float BirthDuration => _birthDuration;
@@ -72,7 +76,6 @@ public class Enemy : MonoBehaviour,IDamage
 
         Movement?.Stop();
         Movement?.DisableCollision();
-        ScheduleReleaseToPool(animationLength);
     }
 
     /// <summary>
@@ -105,6 +108,84 @@ public class Enemy : MonoBehaviour,IDamage
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 动画事件触发自爆检测
+    /// </summary>
+    public void OnBoomAnimationEvent()
+    {
+        if (!_boomAfterAttack || _isDying) return;
+
+        PlayBoomParticle();
+
+        if (DetectBoomHitPlayer())
+            EventManager.Instance.OnAttackedAction?.Invoke(AttackDamage);
+    }
+
+    /// <summary>
+    /// 自爆球形范围检测是否命中玩家
+    /// </summary>
+    private bool DetectBoomHitPlayer()
+    {
+        GameObject player = RunTimeContext.Instance.PlayerObject;
+        if (player == null) return false;
+
+        Vector3 origin = transform.position + AttackCastOffset;
+        int hitCount = Physics.OverlapSphereNonAlloc(origin, AttackRange, _boomHits, PlayerLayerMask, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hitCollider = _boomHits[i];
+            if (hitCollider != null && hitCollider.transform.IsChildOf(player.transform))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void PlayBoomParticle()
+    {
+        
+        
+        ParticleSystem boomParticle = GetBoomParticle();
+        if (boomParticle == null)
+        {
+            ReleaseToPool();
+            return;
+        }
+
+        if (_boomParticleReleaseCoroutine != null)
+            StopCoroutine(_boomParticleReleaseCoroutine);
+
+        boomParticle.transform.localPosition = AttackCastOffset;
+        boomParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        boomParticle.Play(true);
+        _boomParticleReleaseCoroutine = StartCoroutine(ReleaseToPoolAfterParticle(boomParticle));
+    }
+
+    private ParticleSystem GetBoomParticle()
+    {
+        if (_boomParticle != null) return _boomParticle;
+
+        Transform boomParticleTransform = transform.Find("BoomParticle");
+        if (boomParticleTransform == null) return null;
+
+        _boomParticle = boomParticleTransform.GetComponent<ParticleSystem>();
+        return _boomParticle;
+    }
+
+    private IEnumerator ReleaseToPoolAfterParticle(ParticleSystem particle)
+    {
+        if (particle != null)
+        {
+            yield return new WaitWhile(() => particle != null && particle.IsAlive(true));
+            if (particle != null)
+                particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        _boomParticleReleaseCoroutine = null;
+        ReleaseToPool();
     }
 
     /// <summary>
@@ -163,8 +244,16 @@ public class Enemy : MonoBehaviour,IDamage
         _currentHP = MaxHP;
         _isDying = false;
         _target = null;
+        if (_boomParticleReleaseCoroutine != null)
+        {
+            StopCoroutine(_boomParticleReleaseCoroutine);
+            _boomParticleReleaseCoroutine = null;
+        }
         if (BloodParticle != null)
             BloodParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ParticleSystem boomParticle = GetBoomParticle();
+        if (boomParticle != null)
+            boomParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         AnimatorController?.ResetParameters();
         Movement?.EnableCollision();
         stateMachine.ResetStates();

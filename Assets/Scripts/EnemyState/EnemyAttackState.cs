@@ -71,7 +71,7 @@ public class EnemyAttackState : EnemyState
     /// </summary>
     private void OnAttackDetectResult(bool hitPlayer)
     {
-        if (!hitPlayer) return;
+        if (!hitPlayer || enemy.BoomAfterAttack) return;
 
         //事件发送扣除玩家血量
         EventManager.Instance.OnAttackedAction?.Invoke(enemy.AttackDamage);
