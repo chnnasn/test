@@ -1122,6 +1122,7 @@ MonoBehaviour:
   _boomAfterAttack: 1
   BloodParticle: {fileID: 4068884377327676947}
   _boomParticle: {fileID: 2077108939864280065}
+  _visualRoot: {fileID: 0}
 --- !u!1 &7714031276401815452
 GameObject:
   m_ObjectHideFlags: 0
@@ -1530,17 +1531,25 @@ PrefabInstance:
       propertyPath: m_Name
       value: BoomParticle
       objectReference: {fileID: 0}
+    - target: {fileID: 3183926671015877980, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
+      propertyPath: InitialModule.startSize.scalar
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3183926671015877980, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
+      propertyPath: InitialModule.startSize.minScalar
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8294137996909100927, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8294137996909100927, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.468
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: 8294137996909100927, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8294137996909100927, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
       propertyPath: m_LocalRotation.w

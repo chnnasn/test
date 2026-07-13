@@ -13,7 +13,10 @@ public class EnemyAttackState : EnemyState
         _attackTimer = 0f;
         enemyAnimator.SetChaseState(1f);
         if (enemy.BoomAfterAttack)
+        {
+            enemy.BeginBoomCountdown();
             enemyAnimator.WaitForAttackAnimationFinished();
+        }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"{enemy.gameObject.name} 进入攻击状态");
 #endif
@@ -31,6 +34,12 @@ public class EnemyAttackState : EnemyState
         if (!enemy.IsAlive) return;
 
         if (RunTimeContext.Instance.PlayerObject == null) return;
+
+        if (enemy.IsBooming)
+        {
+            movement.Stop();
+            return;
+        }
 
         // 始终面向目标
         movement.FaceTarget(enemy.Target);

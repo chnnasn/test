@@ -28,6 +28,7 @@ public class Enemy : MonoBehaviour,IDamage
     private float _currentHP;
     private Transform _target;
     private bool _isDying;
+    private bool _isBooming;
     private readonly EnemyBuff _enemyBuff = new EnemyBuff();
     private Action<bool> _attackDetectCallback;
     private Action<Enemy> _poolReleaseCallback;
@@ -40,11 +41,13 @@ public class Enemy : MonoBehaviour,IDamage
 
     public ParticleSystem BloodParticle;
     [SerializeField] private ParticleSystem _boomParticle;
+    [SerializeField] private Transform _visualRoot;
 
     public Transform Target => _target;
     public float BirthDuration => _birthDuration;
     public bool IsAlive => _currentHP > 0;
     public bool IsDying => _isDying;
+    public bool IsBooming => _isBooming;
     public EnemyBuff Buff => _enemyBuff;
     public float MaxHP => _enemyBuff.GetMaxHP(_maxHP);
     public float AttackRange => _enemyBuff.GetAttackRange(_attackRange);
@@ -62,10 +65,19 @@ public class Enemy : MonoBehaviour,IDamage
         _attackDetectCallback = callback;
     }
 
+    public void BeginBoomCountdown()
+    {
+        if (!_boomAfterAttack || _isDying) return;
+
+        _isBooming = true;
+        Movement?.Stop();
+    }
+
     public void OnAttackAnimationFinished()
     {
         if (!_boomAfterAttack || _isDying) return;
 
+        _isBooming = true;
         Movement?.Stop();
         AnimatorController?.SetBoom(true);
     }
@@ -146,8 +158,8 @@ public class Enemy : MonoBehaviour,IDamage
 
     private void PlayBoomParticle()
     {
-        
-        
+        SetVisualRootActive(false);
+
         ParticleSystem boomParticle = GetBoomParticle();
         if (boomParticle == null)
         {
@@ -173,6 +185,21 @@ public class Enemy : MonoBehaviour,IDamage
 
         _boomParticle = boomParticleTransform.GetComponent<ParticleSystem>();
         return _boomParticle;
+    }
+
+    private void SetVisualRootActive(bool active)
+    {
+        Transform visualRoot = GetVisualRoot();
+        if (visualRoot != null)
+            visualRoot.gameObject.SetActive(active);
+    }
+
+    private Transform GetVisualRoot()
+    {
+        if (_visualRoot != null) return _visualRoot;
+
+        _visualRoot = transform.Find("VisualRoot");
+        return _visualRoot;
     }
 
     private IEnumerator ReleaseToPoolAfterParticle(ParticleSystem particle)
@@ -243,6 +270,7 @@ public class Enemy : MonoBehaviour,IDamage
         _enemyBuff.Reset();
         _currentHP = MaxHP;
         _isDying = false;
+        _isBooming = false;
         _target = null;
         if (_boomParticleReleaseCoroutine != null)
         {
@@ -254,6 +282,7 @@ public class Enemy : MonoBehaviour,IDamage
         ParticleSystem boomParticle = GetBoomParticle();
         if (boomParticle != null)
             boomParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        SetVisualRootActive(true);
         AnimatorController?.ResetParameters();
         Movement?.EnableCollision();
         stateMachine.ResetStates();
@@ -331,6 +360,8 @@ public class Enemy : MonoBehaviour,IDamage
             Die();
             return;
         }
+
+        if (_isBooming) return;
 
         Movement.Stop();
         AnimatorController?.PlayGetHit();
