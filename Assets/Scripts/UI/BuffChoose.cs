@@ -57,16 +57,6 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         }
     }
 
-    public void SetBuffs(string[] buffs)
-    {
-        _buffs = buffs;
-        _buffDescs = null;
-        _index = -1;
-        ResetSelectedTarget();
-        _canChoose = true;
-        RefreshTexts();
-    }
-
     public void SetBuffs(string[] buffs, string[] descs)
     {
         _buffs = buffs;
@@ -77,11 +67,6 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         RefreshTexts();
     }
 
-    public void SetCanChoose(bool canChoose)
-    {
-        _canChoose = canChoose;
-    }
-
     private void RefreshTexts()
     {
         if (_texts == null) return;
@@ -89,11 +74,15 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         for (int i = 0; i < _texts.Length; i++)
         {
             if (_texts[i] == null) continue;
-            Transform parent = _texts[i];
-            if (parent.childCount < 2) continue;
 
-            Text nameText = parent.GetChild(0).GetComponent<Text>();
-            Text descText = parent.GetChild(1).GetComponent<Text>();
+            Transform parent = _texts[i];
+            if (parent.childCount < 1) continue;
+
+            Transform textRoot = parent.GetChild(0);
+            if (textRoot.childCount < 2) continue;
+
+            Text nameText = textRoot.GetChild(0).GetComponent<Text>();
+            Text descText = textRoot.GetChild(1).GetComponent<Text>();
 
             if (nameText != null)
                 nameText.text = _buffs != null && i < _buffs.Length ? _buffs[i] : string.Empty;
@@ -102,7 +91,6 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
                 descText.text = _buffDescs != null && i < _buffDescs.Length ? _buffDescs[i] : string.Empty;
         }
     }
-
     public void OnPointerClick(PointerEventData eventData)
     {
         if (!_canChoose) return;

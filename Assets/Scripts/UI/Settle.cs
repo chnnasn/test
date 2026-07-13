@@ -1,6 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class Settle : MonoBehaviour
@@ -21,5 +20,16 @@ public class Settle : MonoBehaviour
         }
     }
 
-    
+    public void Quit()
+    {
+        Application.Quit();
+    }
+
+    public void ReStart()
+    {
+        EventManager.Instance.SetGameResume();
+        LoadingSceneManager.SetAutoStartOnLoad();
+        SceneManager.LoadScene("Loading");
+    }
+
 }

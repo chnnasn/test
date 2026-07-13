@@ -13,35 +13,52 @@ public class LoadingSceneManager : MonoBehaviour
     [SerializeField] private GameObject _titleObject;
     [SerializeField] private float _fadeDuration = 0.5f;
 
+    private static bool _autoStartOnLoad;
+
     private bool _isStarting;
+
+    public static void SetAutoStartOnLoad()
+    {
+        _autoStartOnLoad = true;
+    }
 
     private void Start()
     {
+        bool autoStart = _autoStartOnLoad;
+        _autoStartOnLoad = false;
 
         if (_titleObject != null)
         {
             CanvasGroup titleCanvasGroup = GetOrAddCanvasGroup(_titleObject);
-            titleCanvasGroup.alpha = 1f;
-            _titleObject.SetActive(true);
+            titleCanvasGroup.alpha = autoStart ? 0f : 1f;
+            _titleObject.SetActive(!autoStart);
         }
 
         if (_progressSlider != null)
         {
             _progressSlider.value = 0f;
             CanvasGroup sliderCanvasGroup = GetOrAddCanvasGroup(_progressSlider.gameObject);
-            sliderCanvasGroup.alpha = 0f;
-            _progressSlider.gameObject.SetActive(false);
+            sliderCanvasGroup.alpha = autoStart ? 1f : 0f;
+            _progressSlider.gameObject.SetActive(autoStart);
         }
+
+        if (autoStart)
+            StartGame(true);
     }
 
     public void StartGame()
+    {
+        StartGame(false);
+    }
+
+    private void StartGame(bool skipTitle)
     {
         if (_isStarting) return;
 
         _isStarting = true;
         if (_loadingShow != null)
             _loadingShow.StartLoading(_progressSlider);
-        StartCoroutine(StartGameRoutine());
+        StartCoroutine(StartGameRoutine(skipTitle));
     }
 
     public void QuitGame()
@@ -49,9 +66,9 @@ public class LoadingSceneManager : MonoBehaviour
         Application.Quit();
     }
 
-    private IEnumerator StartGameRoutine()
+    private IEnumerator StartGameRoutine(bool skipTitle)
     {
-        if (_titleObject != null)
+        if (!skipTitle && _titleObject != null)
         {
             CanvasGroup titleCanvasGroup = GetOrAddCanvasGroup(_titleObject);
             yield return FadeCanvasGroup(titleCanvasGroup, 1f, 0f);
@@ -64,7 +81,10 @@ public class LoadingSceneManager : MonoBehaviour
             _loadingShow?.SetProgress(0f);
             _progressSlider.gameObject.SetActive(true);
             CanvasGroup sliderCanvasGroup = GetOrAddCanvasGroup(_progressSlider.gameObject);
-            yield return FadeCanvasGroup(sliderCanvasGroup, 0f, 1f);
+            if (skipTitle)
+                sliderCanvasGroup.alpha = 1f;
+            else
+                yield return FadeCanvasGroup(sliderCanvasGroup, 0f, 1f);
         }
 
         yield return LoadRoutine();
