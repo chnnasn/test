@@ -111,6 +111,10 @@ namespace InfimaGames.LowPolyShooterPack
         [SerializeField]
         private float dustParticleRayDistance = 1000.0f;
 
+        [Tooltip("玩家射击命中敌人的射线最大距离。")]
+        [SerializeField]
+        private float damageRayDistance = 1000.0f;
+
         [Tooltip("尘土粒子沿命中法线偏移的距离，避免粒子陷入墙面。")]
         [SerializeField]
         private float dustParticleNormalOffset = 0.02f;
@@ -505,15 +509,9 @@ namespace InfimaGames.LowPolyShooterPack
 
                 //在摄像机位置生成弹丸，方向为摄像机朝向加上散布偏移。
                 Quaternion projectileRotation = Quaternion.Euler(playerCamera.eulerAngles + spreadValue);
+                Vector3 shotDirection = projectileRotation * Vector3.forward;
                 if (!dustParticleSpawned)
-                    dustParticleSpawned = SpawnDustParticle(projectileRotation * Vector3.forward);
-
-                GameObject projectile = global::ProjectilePool.Spawn(prefabProjectile, playerCamera.position, projectileRotation);
-                if (projectile == null) continue;
-
-                global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
-                if (damageComponent == null)
-                    damageComponent = projectile.AddComponent<global::PlayerProjectileDamage>();
+                    dustParticleSpawned = SpawnDustParticle(shotDirection);
 
                 float finalProjectileDamage = projectileDamage;
                 global::Player player = characterBehaviour.GetComponent<global::Player>();
@@ -524,12 +522,20 @@ namespace InfimaGames.LowPolyShooterPack
                 if (player != null)
                     finalProjectileDamage = player.Buff.GetAttackDamage(projectileDamage);
 
-                damageComponent.Initialize(characterBehaviour.gameObject, finalProjectileDamage);
+                ApplyRayDamage(shotDirection, finalProjectileDamage);
+
+                GameObject projectile = global::ProjectilePool.Spawn(prefabProjectile, playerCamera.position, projectileRotation);
+                if (projectile == null) continue;
+
+                global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
+                if (damageComponent == null)
+                    damageComponent = projectile.AddComponent<global::PlayerProjectileDamage>();
+                damageComponent.Initialize(characterBehaviour.gameObject, 0f);
 
                 //为弹丸添加速度。velocity = 弹丸自身前方 * 弹丸冲量。
                 Rigidbody projectileRigidbody = projectile.GetComponent<Rigidbody>();
                 if (projectileRigidbody != null)
-                    projectileRigidbody.velocity = projectile.transform.forward * projectileImpulse;
+                    projectileRigidbody.velocity = shotDirection * projectileImpulse;
             }
         }
 
@@ -561,6 +567,43 @@ namespace InfimaGames.LowPolyShooterPack
             return player != null ? player.Buff.GetMagazineCapacity(baseCapacity) : baseCapacity;
         }
 
+        private void ApplyRayDamage(Vector3 direction, float damage)
+        {
+            if (!TryGetFirstShotHit(direction, damageRayDistance, out RaycastHit hit))
+                return;
+
+            global::Enemy enemy = hit.collider.GetComponentInParent<global::Enemy>();
+            if (enemy == null)
+                return;
+
+            enemy.TakeDamage(damage, hit.point);
+        }
+
+        private bool TryGetFirstShotHit(Vector3 direction, float distance, out RaycastHit closestHit)
+        {
+            closestHit = default;
+            RaycastHit[] hits = Physics.RaycastAll(playerCamera.position, direction, distance, ~0, QueryTriggerInteraction.Collide);
+            float closestDistance = float.MaxValue;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit hit = hits[i];
+                if (hit.collider == null)
+                    continue;
+
+                if (characterBehaviour != null && hit.collider.transform.IsChildOf(characterBehaviour.transform))
+                    continue;
+
+                if (hit.distance >= closestDistance)
+                    continue;
+
+                closestDistance = hit.distance;
+                closestHit = hit;
+            }
+
+            return closestDistance < float.MaxValue;
+        }
+
         /// <summary>
         /// 在弹道命中障碍物层时生成尘土粒子，并让粒子Z轴朝向命中点法线。
         /// </summary>
@@ -570,7 +613,7 @@ namespace InfimaGames.LowPolyShooterPack
                 return false;
 
             //先检测弹道最先命中的物体，避免穿过僵尸后又在后方墙面生成尘土。
-            if (!Physics.Raycast(playerCamera.position, direction, out RaycastHit hit, dustParticleRayDistance, ~0, QueryTriggerInteraction.Ignore))
+            if (!TryGetFirstShotHit(direction, dustParticleRayDistance, out RaycastHit hit))
                 return false;
 
             //只有最先命中的物体属于障碍物层时，才生成尘土粒子。
