@@ -14,7 +14,8 @@ public enum ButtonType
 {   shoot,
     anim,
     reload,
-    sprint
+    sprint,
+    pause
 }
 
 public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
@@ -110,6 +111,10 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
             {
                 EventManager.Instance.TriggerExternalSprint();
             }
+        }else if (_type == ButtonType.pause)
+        {
+            transform.GetChild(0).gameObject.SetActive(true);
+            EventManager.Instance.SetGamePause();
         }
     }
 }
