@@ -45,6 +45,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enemies:
-  - {fileID: 797154032667540675, guid: cf08192296fd9bd44ba0c21ad7e035d7, type: 3}
+  - {fileID: 7195785957534944849, guid: 50b0b68bc40f50542a8602aff8787aa9, type: 3}
   _enemySpawnWeight: 08000000
   isLastPortal: 0
