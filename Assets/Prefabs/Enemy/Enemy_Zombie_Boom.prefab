@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4619168685843377260}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHandThumb3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -40,7 +40,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1145847148314580112}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -73,7 +73,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4540008052002967078}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_Spine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -106,7 +106,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6067524194121115611}
   - component: {fileID: 6611412775304565253}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CHR_Zombie_006
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -224,7 +224,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8004814789277377109}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftArm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -256,7 +256,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5431234096891071875}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftUpLeg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -288,7 +288,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1219246435657018666}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -320,7 +320,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3849009956521663204}
   - component: {fileID: 3532116761038509387}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: BodyHitbo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -374,7 +374,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 931679075806884735}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: VisualRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -407,7 +407,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3056488954823066611}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightForeArm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -439,7 +439,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7979944365940226848}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_Neck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -471,7 +471,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6574621574290037856}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightArm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -503,7 +503,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6737104163231991119}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHandIndex1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -535,7 +535,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8680805785898003093}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHandIndex1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -567,7 +567,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5602950903359332691}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHandThumb2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -599,7 +599,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3013590697879769421}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHandIndex2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -631,7 +631,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8779023696369745828}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightShoulder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -663,7 +663,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3249339473612316597}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHandIndex3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -694,7 +694,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6134543228867877771}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftToeBase
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -725,7 +725,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6440232321978910168}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_Spine1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -757,7 +757,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7129023362197924785}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftLeg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -789,7 +789,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8594790577566947201}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHandIndex2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -821,7 +821,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 443670412647074752}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHandThumb1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -853,7 +853,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1932247952071797326}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftShoulder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -885,7 +885,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6999556866576651481}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftForeArm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -917,7 +917,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1459833732427873374}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_Spine2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -951,7 +951,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8447026981596144190}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightFoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -988,7 +988,7 @@ GameObject:
   - component: {fileID: 3429614965825895372}
   - component: {fileID: 4080258098156848027}
   - component: {fileID: 5963653317768413621}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Enemy_Zombie_Boom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1133,7 +1133,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8889747526435588929}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightToeBase
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1164,7 +1164,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4738490406156375399}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_Hips
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1199,7 +1199,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8702175004877501535}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightUpLeg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1231,7 +1231,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3490358411358327742}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHandThumb2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1263,7 +1263,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3540270368563838354}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftFoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1295,7 +1295,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2755142057575368553}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHandIndex3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1326,7 +1326,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3468973215917387221}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightLeg
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1358,7 +1358,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9002726901858095071}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHandThumb3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1389,7 +1389,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5219835795203128281}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_RightHand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1422,7 +1422,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2111331965566184855}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone_LeftHandThumb1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1531,6 +1531,10 @@ PrefabInstance:
     - target: {fileID: 1521322630282888389, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
       propertyPath: m_Name
       value: BoomParticle
+      objectReference: {fileID: 0}
+    - target: {fileID: 1521322630282888389, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 3183926671015877980, guid: b0d635749ca868b4288aaeb92d213be9, type: 3}
       propertyPath: InitialModule.startSize.scalar
