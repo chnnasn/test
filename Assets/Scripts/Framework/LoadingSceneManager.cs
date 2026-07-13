@@ -8,6 +8,7 @@ public class LoadingSceneManager : MonoBehaviour
     [SerializeField] private string _demoSceneName = "Demo";
     [SerializeField] private PortalWave _firstWave;
     [SerializeField] private Slider _progressSlider;
+    [SerializeField] private LoadingShow _loadingShow;
     [SerializeField] private float _minLoadingTime;
     [SerializeField] private GameObject _titleObject;
     [SerializeField] private float _fadeDuration = 0.5f;
@@ -38,6 +39,8 @@ public class LoadingSceneManager : MonoBehaviour
         if (_isStarting) return;
 
         _isStarting = true;
+        if (_loadingShow != null)
+            _loadingShow.StartLoading(_progressSlider);
         StartCoroutine(StartGameRoutine());
     }
 
@@ -58,6 +61,7 @@ public class LoadingSceneManager : MonoBehaviour
         if (_progressSlider != null)
         {
             _progressSlider.value = 0f;
+            _loadingShow?.SetProgress(0f);
             _progressSlider.gameObject.SetActive(true);
             CanvasGroup sliderCanvasGroup = GetOrAddCanvasGroup(_progressSlider.gameObject);
             yield return FadeCanvasGroup(sliderCanvasGroup, 0f, 1f);
@@ -137,12 +141,21 @@ public class LoadingSceneManager : MonoBehaviour
             {
                 float warmupProgress = warmupReady ? 1f : 0f;
                 float timeProgress = _minLoadingTime <= 0f ? 1f : Mathf.Clamp01((Time.unscaledTime - startTime) / _minLoadingTime);
-                _progressSlider.value = Mathf.Min(sceneProgress, warmupProgress, timeProgress);
+                float progress = Mathf.Min(sceneProgress, warmupProgress, timeProgress);
+                if (_loadingShow != null)
+                    _loadingShow.SetProgress(progress);
+                else
+                    _progressSlider.value = progress;
             }
 
             if (loadReady && warmupReady && timeReady)
             {
-                if (_progressSlider != null)
+                if (_loadingShow != null)
+                {
+                    yield return _loadingShow.FinishLoading();
+                    _loadingShow.StopLoading();
+                }
+                else if (_progressSlider != null)
                 {
                     _progressSlider.value = 1f;
                 }
