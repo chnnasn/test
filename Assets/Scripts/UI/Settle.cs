@@ -11,6 +11,14 @@ public class Settle : MonoBehaviour
     public void SetTittle(string text)
     {
         Tittle.text = text;
+        if (text == "胜利")
+        {
+            Tittle.gameObject.GetComponent<Text>().color = Color.green;
+        }
+        else
+        {
+            Tittle.gameObject.GetComponent<Text>().color = Color.red;
+        }
     }
 
     
