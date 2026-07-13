@@ -1297,6 +1297,7 @@ MonoBehaviour:
   _minLoadingTime: 5
   _titleObject: {fileID: 2121928705}
   _fadeDuration: 0.5
+  Desc: {fileID: 479387830}
 --- !u!1 &1070985074
 GameObject:
   m_ObjectHideFlags: 0
@@ -1600,8 +1601,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e391bc856eb40f48aaf6f195e44dcaf, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _flowFieldAsset: {fileID: 11400000, guid: d1b6587f19941b14381399ee1094401b, type: 2}
   _tipDatabase: {fileID: 11400000, guid: 87b6e932b60f2904f90164ddb6ca1503, type: 2}
 --- !u!4 &1673699977

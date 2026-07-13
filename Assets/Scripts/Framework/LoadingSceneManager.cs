@@ -12,6 +12,7 @@ public class LoadingSceneManager : MonoBehaviour
     [SerializeField] private float _minLoadingTime;
     [SerializeField] private GameObject _titleObject;
     [SerializeField] private float _fadeDuration = 0.5f;
+    public Text Desc;
 
     private static bool _autoStartOnLoad;
 
@@ -130,6 +131,11 @@ public class LoadingSceneManager : MonoBehaviour
             Debug.LogError("[LoadingSceneController] GameManager 不存在，无法执行 Loading 热机");
             yield break;
         }
+        
+        string tip = GameManager.Instance != null ? GameManager.Instance.GetRandomTip() : string.Empty;
+        
+        Desc.text = string.IsNullOrEmpty(tip) ? string.Empty : $"小Tip：\n{tip}";
+        
 
         bool warmupReady = gameManager.WarmupFlowField();
         if (!warmupReady)
