@@ -21,6 +21,7 @@ public class Enemy : MonoBehaviour,IDamage
     [SerializeField] private float _attackSphereRadius = 0.75f;
     [SerializeField] private Vector3 _attackCastOffset = new Vector3(0f, 1f, 0f);
     [SerializeField] private LayerMask _playerLayerMask = ~0;
+    [SerializeField] private bool _boomAfterAttack;
 
     private float _currentHP;
     private Transform _target;
@@ -50,10 +51,28 @@ public class Enemy : MonoBehaviour,IDamage
     public LayerMask PlayerLayerMask => _playerLayerMask;
     public float ExperienceReward => _enemyBuff.GetExperienceReward(_experienceReward);
     public float DeadDestroyDelay => Mathf.Max(AnimatorController != null ? AnimatorController.DeadAnimationDuration : 0f, 0f) + _deadDestroyExtraDelay;
+    public bool BoomAfterAttack => _boomAfterAttack;
 
     public void SetAttackDetectCallback(Action<bool> callback)
     {
         _attackDetectCallback = callback;
+    }
+
+    public void OnAttackAnimationFinished()
+    {
+        if (!_boomAfterAttack || _isDying) return;
+
+        Movement?.Stop();
+        AnimatorController?.SetBoom(true);
+    }
+
+    public void OnBoomAnimationEnterEvent(float animationLength)
+    {
+        if (!_boomAfterAttack) return;
+
+        Movement?.Stop();
+        Movement?.DisableCollision();
+        ScheduleReleaseToPool(animationLength);
     }
 
     /// <summary>
@@ -146,6 +165,7 @@ public class Enemy : MonoBehaviour,IDamage
         _target = null;
         if (BloodParticle != null)
             BloodParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        AnimatorController?.ResetParameters();
         Movement?.EnableCollision();
         stateMachine.ResetStates();
         stateMachine.ChangeState(stateMachine.BirthState);
