@@ -16,6 +16,7 @@ public class EnemyAnimator : MonoBehaviour
 
     public float DeadAnimationDuration => _deadAnimationDuration;
     public bool HasAnimator => _animator != null;
+    public bool IsBooming => _animator != null && _animator.GetBool(BoomHash);
 
     private void Awake()
     {
