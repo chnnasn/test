@@ -1111,7 +1111,7 @@ MonoBehaviour:
   _experienceReward: 60
   _birthDuration: 1.5
   _deadDestroyExtraDelay: 1.5
-  _attackRange: 2.5
+  _attackRange: 1.5
   _attackDamage: 20
   _attackInterval: 1.2
   _attackSphereRadius: 0.75

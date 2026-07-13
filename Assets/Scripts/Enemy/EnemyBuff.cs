@@ -4,6 +4,7 @@ public class EnemyBuff
 {
     private const float MaxHPGrowthPerWave = 1.13f;
     private const float ExperienceRewardGrowthPerWave = 1.10f;
+    private const float AttackDamageGrowthPerWave = 1.18f;
     private const float MoveSpeedGrowthPerWave = 1.04f;
 
     public float MaxHPMultiplier { get; private set; } = 1f;
@@ -27,6 +28,7 @@ public class EnemyBuff
         int waveIndex = Mathf.Max(0, waveNumber - 1);
         MaxHPMultiplier *= Mathf.Pow(MaxHPGrowthPerWave, waveIndex);
         ExperienceRewardMultiplier *= Mathf.Pow(ExperienceRewardGrowthPerWave, waveIndex);
+        AttackDamageMultiplier *= Mathf.Pow(AttackDamageGrowthPerWave, waveIndex);
         MoveSpeedMultiplier *= Mathf.Pow(MoveSpeedGrowthPerWave, waveIndex);
     }
 

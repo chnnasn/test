@@ -110,9 +110,9 @@ GameObject:
   - component: {fileID: 3351442698115695756}
   - component: {fileID: 1811224839863826854}
   - component: {fileID: 8694621036206986814}
+  - component: {fileID: 3316195039391103667}
   - component: {fileID: 6320409821363206282}
   - component: {fileID: 7987815319824068661}
-  - component: {fileID: 3316195039391103667}
   m_Layer: 3
   m_Name: Enemy_Zombie_Climb
   m_TagString: Untagged
@@ -184,6 +184,34 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.5, z: 0}
+--- !u!114 &3316195039391103667
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 797154032667540675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a39f6d725988423aa5db67ba4a3a6f39, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHP: 60
+  _experienceReward: 70
+  _birthDuration: 1.5
+  _deadDestroyExtraDelay: 1.5
+  _attackRange: 2
+  _attackDamage: 15
+  _attackInterval: 1.2
+  _attackSphereRadius: 0.75
+  _attackCastOffset: {x: 0, y: 1, z: 0}
+  _playerLayerMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  _boomAfterAttack: 0
+  BloodParticle: {fileID: 4353344321033538504}
+  _boomParticle: {fileID: 0}
+  _visualRoot: {fileID: 0}
 --- !u!114 &6320409821363206282
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -219,34 +247,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &3316195039391103667
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 797154032667540675}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a39f6d725988423aa5db67ba4a3a6f39, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _maxHP: 60
-  _experienceReward: 70
-  _birthDuration: 1.5
-  _deadDestroyExtraDelay: 1.5
-  _attackRange: 3
-  _attackDamage: 15
-  _attackInterval: 1.2
-  _attackSphereRadius: 0.75
-  _attackCastOffset: {x: 0, y: 1, z: 0}
-  _playerLayerMask:
-    serializedVersion: 2
-    m_Bits: 1024
-  _boomAfterAttack: 0
-  BloodParticle: {fileID: 4353344321033538504}
-  _boomParticle: {fileID: 0}
-  _visualRoot: {fileID: 0}
 --- !u!1 &878838681382069067
 GameObject:
   m_ObjectHideFlags: 0
