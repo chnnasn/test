@@ -3817,7 +3817,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c2e19d69ae88374db2b122a0e7dec6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHP: 100
+  _maxHP: 500
   _level: 1
   _levelUpBuffChooseCount: 3
   _levelExperienceAsset: {fileID: 11400000, guid: c7e9a4b2d1f84a6db3c5e0f1298ab764, type: 2}
@@ -4699,7 +4699,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 916095938892669238, guid: 19eadcf8fbed56b4da77ca94c1b4145f, type: 3}
       propertyPath: m_CullingMask.m_Bits
-      value: 101751
+      value: 101887
       objectReference: {fileID: 0}
     - target: {fileID: 917082365374862329, guid: 19eadcf8fbed56b4da77ca94c1b4145f, type: 3}
       propertyPath: m_Layer

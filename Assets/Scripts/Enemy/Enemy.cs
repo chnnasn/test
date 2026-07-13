@@ -5,6 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyAnimator))]
 public class Enemy : MonoBehaviour,IDamage
 {
+    private const int EnemyLayer = 3;
     private static readonly RaycastHit[] _attackHits = new RaycastHit[8];
 
     [Header("基础属性")]
@@ -99,6 +100,7 @@ public class Enemy : MonoBehaviour,IDamage
 
     private void Awake()
     {
+        SetLayerRecursively(transform, EnemyLayer);
         Movement = GetComponent<EnemyMovement>();
         AnimatorController = GetComponent<EnemyAnimator>();
         stateMachine = new EnemyStateMachine(this);
@@ -118,6 +120,22 @@ public class Enemy : MonoBehaviour,IDamage
 
     private void Start()
     {
+    }
+
+    private static void SetLayerRecursively(Transform root, int layer)
+    {
+        if (root == null) return;
+
+        root.gameObject.layer = layer;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            SetLayerRecursively(root.GetChild(i), layer);
+        }
+    }
+
+    public bool IsOnEnemyLayer(Collider hitCollider)
+    {
+        return hitCollider != null && hitCollider.gameObject.layer == EnemyLayer;
     }
 
     public void ResetEnemy()

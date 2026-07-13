@@ -47,7 +47,4 @@ MonoBehaviour:
   _enemies:
   - {fileID: 1159361799200795126, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
   _enemySpawnWeight: 08000000
-  _averageEnemyPerWave: 2
-  _timeBetweenEnemyWaves: 8
-  _waveNumber: 3
   isLastPortal: 0

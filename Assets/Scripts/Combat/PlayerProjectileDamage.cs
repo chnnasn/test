@@ -7,6 +7,7 @@ public class PlayerProjectileDamage : MonoBehaviour
     [SerializeField] private float defaultDamage = 25f;
     [SerializeField] private float lifeTime = 5f;
     [SerializeField] private bool destroyOnImpact = true;
+    [SerializeField] private LayerMask enemyLayerMask = 1 << 3;
 
     private float _damage;
     private float _lifeTimer;
@@ -84,8 +85,15 @@ public class PlayerProjectileDamage : MonoBehaviour
         if (_owner != null && hitCollider.transform.IsChildOf(_owner.transform))
             return;
 
+        if ((enemyLayerMask.value & (1 << hitCollider.gameObject.layer)) == 0)
+        {
+            if (destroyOnImpact)
+                ReleaseToPool();
+            return;
+        }
+
         Enemy enemy = hitCollider.GetComponentInParent<Enemy>();
-        if (enemy != null)
+        if (enemy != null && enemy.IsOnEnemyLayer(hitCollider))
         {
             enemy.TakeDamage(_damage, hitPoint);
         }
