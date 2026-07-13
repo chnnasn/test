@@ -7,9 +7,13 @@ public class UIManager : MonoBehaviour
     [Header("BUFF")]
     public BuffChoose BuffChoose;
 
+    [Header("波次")]
     public Text WaveCountDown;
     public Text WaveText;
 
+    [Header("结算")]
+    public Settle SettleUI;
+    
     private int _currentWaveNumber;
     private int _totalWaveNumber;
     private float _currentWaveCountdown;
@@ -30,6 +34,8 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.LevelUpBuffs += OnLevelUpBuffs;
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
+        EventManager.Instance.SettleEvent += SetSettle;
+        
         InitWaveCountdownPosition();
 
         RunTimeContext context = RunTimeContext.Instance;
@@ -46,6 +52,7 @@ public class UIManager : MonoBehaviour
         {
             eventManager.LevelUpBuffs -= OnLevelUpBuffs;
             eventManager.LevelUpBuffsFinished -= OnLevelUpBuffsFinished;
+            EventManager.Instance.SettleEvent -= SetSettle;
         }
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
@@ -272,6 +279,20 @@ public class UIManager : MonoBehaviour
 
         if (hasBuffs)
             EventManager.Instance.SetGamePause();
+    }
+
+    #endregion
+    
+    #region Settle 绑定
+
+    private void SetSettle(string  settle)
+    {
+        
+        SettleUI.gameObject.SetActive(true);
+        
+        SettleUI.SetTittle(settle);
+
+        EventManager.Instance.SetGamePause();
     }
 
     #endregion

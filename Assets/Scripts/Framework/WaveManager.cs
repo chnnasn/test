@@ -131,7 +131,7 @@ public class WaveManager : MonoBehaviour
         {
             _canSpawnWaves = false;
             WaveCountdown.Value = 0f;
-            Debug.Log("最后一波结束，开始结算");
+            EventManager.Instance.TriggerSettle("胜利");
             return;
         }
 

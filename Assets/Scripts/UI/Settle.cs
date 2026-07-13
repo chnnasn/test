@@ -1,20 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Settle : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    
+    public Text Tittle;
+
+    public void SetTittle(string text)
     {
-        
+        Tittle.text = text;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
     
-    //public void R
 }

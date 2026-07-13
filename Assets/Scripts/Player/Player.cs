@@ -227,8 +227,16 @@ public class Player : MonoBehaviour, IDamage
         float finalDamage = _playerBuff.GetReceivedDamage(damage);
         CurrentHP.Value = Mathf.Max(CurrentHP.Value - finalDamage, 0f);
 
+        if (CurrentHP.Value <= 0f)
+            Die();
+        
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"Player 受到 {finalDamage} 点伤害，原始伤害：{damage}，剩余血量：{CurrentHP.Value}");
 #endif
+    }
+
+    private void Die()
+    {
+        EventManager.Instance.TriggerSettle("失败");
     }
 }

@@ -23,6 +23,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action GamePause;
     public Action GameResume;
 
+    public Action<String> SettleEvent;
     public void SetBuffIndex(int index)
     {
         TriggerBuff?.Invoke(index);
@@ -85,5 +86,10 @@ public class EventManager : LazySingleton<EventManager>
     public void SetGameResume()
     {
         GameResume?.Invoke();
+    }
+
+    public void TriggerSettle(string settle)
+    {
+        SettleEvent?.Invoke(settle);
     }
 }

@@ -2464,6 +2464,7 @@ MonoBehaviour:
   BuffChoose: {fileID: 1269856216}
   WaveCountDown: {fileID: 612035049}
   WaveText: {fileID: 6553848}
+  SettleUI: {fileID: 670004521}
 --- !u!1001 &492797213
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3364,7 +3365,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &670004516
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3435,6 +3436,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26a87852622a4bb44a476badde6ed860, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  SettlePanel: {fileID: 0}
+  Tittle: {fileID: 683803174}
 --- !u!114 &670004522
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3447,6 +3450,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26a87852622a4bb44a476badde6ed860, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  SettlePanel: {fileID: 0}
+  Tittle: {fileID: 0}
 --- !u!1001 &671975561
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11170,8 +11175,8 @@ RectTransform:
   - {fileID: 1330325810}
   - {fileID: 1987892384}
   - {fileID: 141050196}
-  - {fileID: 670004516}
   - {fileID: 1269856215}
+  - {fileID: 670004516}
   m_Father: {fileID: 479968426}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
