@@ -215,6 +215,11 @@ public class Player : MonoBehaviour, IDamage
 
     public void TakeDamage(float damage)
     {
+        TakeDamage(damage, transform.position);
+    }
+
+    public void TakeDamage(float damage, Vector3 hitPoint)
+    {
         if (!IsAlive) return;
 
         float finalDamage = _playerBuff.GetReceivedDamage(damage);

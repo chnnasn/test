@@ -530,12 +530,7 @@ namespace InfimaGames.LowPolyShooterPack
                 global::PlayerProjectileDamage damageComponent = projectile.GetComponent<global::PlayerProjectileDamage>();
                 if (damageComponent == null)
                     damageComponent = projectile.AddComponent<global::PlayerProjectileDamage>();
-                damageComponent.Initialize(characterBehaviour.gameObject, 0f);
-
-                //为弹丸添加速度。velocity = 弹丸自身前方 * 弹丸冲量。
-                Rigidbody projectileRigidbody = projectile.GetComponent<Rigidbody>();
-                if (projectileRigidbody != null)
-                    projectileRigidbody.velocity = shotDirection * projectileImpulse;
+                damageComponent.Initialize(characterBehaviour.gameObject, 0f, shotDirection * projectileImpulse);
             }
         }
 
@@ -572,11 +567,11 @@ namespace InfimaGames.LowPolyShooterPack
             if (!TryGetFirstShotHit(direction, damageRayDistance, out RaycastHit hit))
                 return;
 
-            global::Enemy enemy = hit.collider.GetComponentInParent<global::Enemy>();
-            if (enemy == null)
+            IDamage damageTarget = hit.collider.GetComponentInParent<IDamage>();
+            if (damageTarget == null)
                 return;
 
-            enemy.TakeDamage(damage, hit.point);
+            damageTarget.TakeDamage(damage, hit.point);
         }
 
         private bool TryGetFirstShotHit(Vector3 direction, float distance, out RaycastHit closestHit)

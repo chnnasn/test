@@ -232,11 +232,10 @@ public class Enemy : MonoBehaviour,IDamage
         if (BloodParticle == null) return;
 
         Transform bloodTransform = BloodParticle.transform;
-        Vector3 localHitPoint = transform.InverseTransformPoint(hitPoint);
-        Vector3 localPosition = bloodTransform.localPosition;
-        localPosition.x = localHitPoint.x;
-        localPosition.z = localHitPoint.z;
-        bloodTransform.localPosition = localPosition;
+        Vector3 localHitPoint = bloodTransform.parent != null
+            ? bloodTransform.parent.InverseTransformPoint(hitPoint)
+            : hitPoint;
+        bloodTransform.localPosition = localHitPoint;
 
         Vector3 horizontalDirection = hitPoint - transform.position;
         horizontalDirection.y = 0f;

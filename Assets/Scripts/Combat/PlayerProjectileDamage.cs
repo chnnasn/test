@@ -1,7 +1,5 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Collider))]
-[RequireComponent(typeof(Rigidbody))]
 public class PlayerProjectileDamage : MonoBehaviour
 {
     [SerializeField] private float defaultDamage = 25f;
@@ -11,6 +9,7 @@ public class PlayerProjectileDamage : MonoBehaviour
 
     private float _damage;
     private float _lifeTimer;
+    private Vector3 _velocity;
     private GameObject _owner;
     private bool _hasHit;
 
@@ -24,6 +23,8 @@ public class PlayerProjectileDamage : MonoBehaviour
     {
         if (_hasHit || lifeTime <= 0f) return;
 
+        transform.position += _velocity * Time.deltaTime;
+
         _lifeTimer -= Time.deltaTime;
         if (_lifeTimer <= 0f)
             ReleaseToPool();
@@ -31,8 +32,14 @@ public class PlayerProjectileDamage : MonoBehaviour
 
     public void Initialize(GameObject owner, float damage)
     {
+        Initialize(owner, damage, Vector3.zero);
+    }
+
+    public void Initialize(GameObject owner, float damage, Vector3 velocity)
+    {
         _owner = owner;
         _damage = damage;
+        _velocity = velocity;
         _lifeTimer = lifeTime;
         _hasHit = false;
         IgnoreOwnerColliders();
@@ -86,10 +93,10 @@ public class PlayerProjectileDamage : MonoBehaviour
         if (_owner != null && hitCollider.transform.IsChildOf(_owner.transform))
             return;
 
-        Enemy enemy = hitCollider.GetComponentInParent<Enemy>();
-        if (enemy != null)
+        IDamage damageTarget = hitCollider.GetComponentInParent<IDamage>();
+        if (damageTarget != null)
         {
-            enemy.TakeDamage(_damage, hitPoint);
+            damageTarget.TakeDamage(_damage, hitPoint);
             if (destroyOnImpact)
                 ReleaseToPool();
             return;
