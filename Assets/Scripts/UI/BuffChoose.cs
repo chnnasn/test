@@ -142,6 +142,7 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
 
     private void PlayClickEffect(GameObject target)
     {
+        
         if (_selectedTarget == target) return;
 
         ResetSelectedTarget();
@@ -154,14 +155,13 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         targetTransform.DOScale(originalScale * _clickScale, _clickDuration)
             .SetEase(Ease.OutQuad)
             .SetUpdate(true);
-
-        foreach (Image image in target.GetComponentsInChildren<Image>(true))
-        {
-            image.DOKill();
-            image.DOColor(_clickColor, _clickDuration)
-                .SetEase(Ease.OutQuad)
-                .SetUpdate(true);
-        }
+        
+        Image image = target.transform.GetChild(0).GetComponentInChildren<Image>();
+        
+        image.DOKill();
+        image.DOColor(_clickColor, _clickDuration)
+            .SetEase(Ease.OutQuad)
+            .SetUpdate(true);
     }
 
     private void ResetSelectedTarget()

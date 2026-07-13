@@ -604,7 +604,7 @@ GameObject:
   - component: {fileID: 96675999}
   - component: {fileID: 96675998}
   m_Layer: 5
-  m_Name: BG
+  m_Name: BG1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -619,7 +619,7 @@ RectTransform:
   m_GameObject: {fileID: 96675996}
   m_LocalRotation: {x: -0, y: -0, z: 0.08715578, w: 0.9961947}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.6000001, y: 0.6000001, z: 0.6000001}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1522803567}
@@ -2214,6 +2214,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4887460767432162760, guid: 30c819560420f824da028f3502f83728, type: 3}
   m_PrefabInstance: {fileID: 361662980}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &372584846
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1159361799200795126, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_Name
+      value: Enemy_Zombie_Stand
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.258
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -14.04
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7258178519827808304, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
 --- !u!4 &372604144 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3681108526964167273, guid: 19eadcf8fbed56b4da77ca94c1b4145f, type: 3}
@@ -12636,7 +12693,7 @@ GameObject:
   - component: {fileID: 1063866427}
   - component: {fileID: 1063866426}
   m_Layer: 5
-  m_Name: BG
+  m_Name: BG3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12651,7 +12708,7 @@ RectTransform:
   m_GameObject: {fileID: 1063866424}
   m_LocalRotation: {x: -0, y: -0, z: -0.08715578, w: 0.9961947}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.6000001, y: 0.6000001, z: 0.6000001}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 213097665}
@@ -13988,12 +14045,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _texts:
-  - {fileID: 1522803567}
-  - {fileID: 268508389}
-  - {fileID: 213097665}
+  - {fileID: 96675997}
+  - {fileID: 2041878545}
+  - {fileID: 1063866425}
   _clickScale: 1.1
   _clickDuration: 0.15
-  _clickColor: {r: 1, g: 0.9, b: 0.6, a: 1}
+  _clickColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!222 &1269856218
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -18032,7 +18089,7 @@ GameObject:
   - component: {fileID: 2041878547}
   - component: {fileID: 2041878546}
   m_Layer: 5
-  m_Name: BG
+  m_Name: BG2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18047,7 +18104,7 @@ RectTransform:
   m_GameObject: {fileID: 2041878544}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.6000001, y: 0.6000001, z: 0.6000001}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 268508389}
@@ -18632,3 +18689,4 @@ SceneRoots:
   - {fileID: 1664051724}
   - {fileID: 1256139165}
   - {fileID: 1952162454}
+  - {fileID: 372584846}
