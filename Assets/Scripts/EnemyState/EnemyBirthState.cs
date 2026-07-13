@@ -16,7 +16,6 @@ public class EnemyBirthState : EnemyState
         Debug.Log($"{enemy.gameObject.name} 进入出生状态");
 #endif
         movement.SnapToGround();
-        movement.DisableCollision();
     }
 
     public override void Update()
@@ -29,7 +28,6 @@ public class EnemyBirthState : EnemyState
         Debug.Log($"{enemy.gameObject.name} 出生完成，准备追击");
 #endif
         movement.SnapToGround();
-        movement.EnableCollision();
     }
     
 }

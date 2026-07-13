@@ -146,7 +146,7 @@ public class Enemy : MonoBehaviour,IDamage
         _target = null;
         if (BloodParticle != null)
             BloodParticle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        Movement?.DisableCollision();
+        Movement?.EnableCollision();
         stateMachine.ResetStates();
         stateMachine.ChangeState(stateMachine.BirthState);
     }

@@ -912,6 +912,61 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.00015807152, y: -0.027725518, z: -0.058764488}
     m_Extent: {x: 0.51040447, y: 0.15736969, z: 0.49843904}
   m_DirtyAABB: 0
+--- !u!1 &4025710131857583827
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5705399561014256457}
+  - component: {fileID: 5272093078081652043}
+  m_Layer: 3
+  m_Name: BodyHitbo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5705399561014256457
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4025710131857583827}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: -0.1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1932330258560109633}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+--- !u!136 &5272093078081652043
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4025710131857583827}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.3
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &4405116702986852600
 GameObject:
   m_ObjectHideFlags: 0
@@ -1228,6 +1283,7 @@ Transform:
   - {fileID: 653989846463541739}
   - {fileID: 3287109129061833026}
   - {fileID: 7211222333904394682}
+  - {fileID: 5705399561014256457}
   m_Father: {fileID: 7356203977144956415}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6348072041989194698

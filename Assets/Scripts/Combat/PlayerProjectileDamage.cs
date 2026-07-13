@@ -80,22 +80,26 @@ public class PlayerProjectileDamage : MonoBehaviour
 
     private void HandleHit(Collider hitCollider, Vector3 hitPoint)
     {
+        
         if (_hasHit || hitCollider == null) return;
 
         if (_owner != null && hitCollider.transform.IsChildOf(_owner.transform))
             return;
+
+        Enemy enemy = hitCollider.GetComponentInParent<Enemy>();
+        if (enemy != null)
+        {
+            enemy.TakeDamage(_damage, hitPoint);
+            if (destroyOnImpact)
+                ReleaseToPool();
+            return;
+        }
 
         if ((enemyLayerMask.value & (1 << hitCollider.gameObject.layer)) == 0)
         {
             if (destroyOnImpact)
                 ReleaseToPool();
             return;
-        }
-
-        Enemy enemy = hitCollider.GetComponentInParent<Enemy>();
-        if (enemy != null && enemy.IsOnEnemyLayer(hitCollider))
-        {
-            enemy.TakeDamage(_damage, hitPoint);
         }
 
         if (destroyOnImpact)
