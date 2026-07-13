@@ -30,6 +30,7 @@ public class GameManager : LazySingleton<GameManager>
         Application.targetFrameRate = 120;
         EventManager.Instance.GamePause += OnGamePause;
         EventManager.Instance.GameResume += OnGameResume;
+        EventManager.Instance.BeforeDemoRestart += OnBeforeDemoRestart;
         InitCharacter();
         InitFrameText();
 
@@ -45,6 +46,7 @@ public class GameManager : LazySingleton<GameManager>
         {
             eventManager.GamePause -= OnGamePause;
             eventManager.GameResume -= OnGameResume;
+            eventManager.BeforeDemoRestart -= OnBeforeDemoRestart;
         }
     }
 
@@ -134,6 +136,14 @@ public class GameManager : LazySingleton<GameManager>
     private void OnGameResume()
     {
         Time.timeScale = 1f;
+    }
+
+    private void OnBeforeDemoRestart()
+    {
+        _character = null;
+        _frameText = null;
+        ProjectilePool.ReleaseAllActive();
+        SpatialGrid.Clear();
     }
 
 #if UNITY_EDITOR

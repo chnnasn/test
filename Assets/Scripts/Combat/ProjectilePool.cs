@@ -6,6 +6,8 @@ public static class ProjectilePool
     private const int MAX_POOL_SIZE = 30;
 
     private static readonly Dictionary<GameObject, Queue<GameObject>> _pools = new Dictionary<GameObject, Queue<GameObject>>();
+    private static readonly HashSet<GameObject> _activeObjects = new HashSet<GameObject>();
+    private static readonly List<GameObject> _releaseBuffer = new List<GameObject>(128);
     private static Transform _root;
 
     public static Transform Root => GetRoot();
@@ -26,6 +28,7 @@ public static class ProjectilePool
         projectile.transform.SetParent(null, false);
         projectile.transform.SetPositionAndRotation(position, rotation);
         projectile.SetActive(true);
+        _activeObjects.Add(projectile);
 
         if (pooledProjectile != null)
         {
@@ -40,6 +43,8 @@ public static class ProjectilePool
     public static void Release(GameObject projectile)
     {
         if (projectile == null) return;
+
+        _activeObjects.Remove(projectile);
 
         PooledProjectile pooledProjectile = projectile.GetComponent<PooledProjectile>();
         if (pooledProjectile == null || pooledProjectile.Prefab == null)
@@ -64,6 +69,22 @@ public static class ProjectilePool
             Object.Destroy(projectile);
         else
             pool.Enqueue(projectile);
+    }
+
+    public static void ReleaseAllActive()
+    {
+        _releaseBuffer.Clear();
+        foreach (GameObject activeObject in _activeObjects)
+        {
+            if (activeObject != null)
+                _releaseBuffer.Add(activeObject);
+        }
+
+        for (int i = 0; i < _releaseBuffer.Count; i++)
+            Release(_releaseBuffer[i]);
+
+        _releaseBuffer.Clear();
+        _activeObjects.Clear();
     }
 
     public static void Prewarm(GameObject prefab, int count)

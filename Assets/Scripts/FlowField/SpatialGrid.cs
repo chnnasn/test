@@ -105,6 +105,14 @@ public static class SpatialGrid
         return outList.Count;
     }
 
+    public static void Clear()
+    {
+        _cells.Clear();
+        _allEnemies.Clear();
+        _enemyIndices.Clear();
+        _enemyCells.Clear();
+    }
+
     private static void AddToCell(int key, Enemy enemy)
     {
         if (!_cells.TryGetValue(key, out var list))

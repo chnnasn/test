@@ -15,18 +15,28 @@ public class LoadingSceneManager : MonoBehaviour
     public Text Desc;
 
     private static bool _autoStartOnLoad;
+    private static bool _skipWarmupOnLoad;
 
     private bool _isStarting;
 
     public static void SetAutoStartOnLoad()
     {
         _autoStartOnLoad = true;
+        _skipWarmupOnLoad = false;
+    }
+
+    public static void SetRestartOnLoad()
+    {
+        _autoStartOnLoad = true;
+        _skipWarmupOnLoad = true;
     }
 
     private void Start()
     {
         bool autoStart = _autoStartOnLoad;
+        bool skipWarmup = _skipWarmupOnLoad;
         _autoStartOnLoad = false;
+        _skipWarmupOnLoad = false;
 
         if (_titleObject != null)
         {
@@ -44,15 +54,15 @@ public class LoadingSceneManager : MonoBehaviour
         }
 
         if (autoStart)
-            StartGame(true);
+            StartGame(true, skipWarmup);
     }
 
     public void StartGame()
     {
-        StartGame(false);
+        StartGame(false, false);
     }
 
-    private void StartGame(bool skipTitle)
+    private void StartGame(bool skipTitle, bool skipWarmup)
     {
         if (_isStarting) return;
 
@@ -60,7 +70,7 @@ public class LoadingSceneManager : MonoBehaviour
         RefreshTip();
         if (_loadingShow != null)
             _loadingShow.StartLoading(_progressSlider);
-        StartCoroutine(StartGameRoutine(skipTitle));
+        StartCoroutine(StartGameRoutine(skipTitle, skipWarmup));
     }
 
     public void QuitGame()
@@ -68,7 +78,7 @@ public class LoadingSceneManager : MonoBehaviour
         Application.Quit();
     }
 
-    private IEnumerator StartGameRoutine(bool skipTitle)
+    private IEnumerator StartGameRoutine(bool skipTitle, bool skipWarmup)
     {
         if (!skipTitle && _titleObject != null)
         {
@@ -89,7 +99,7 @@ public class LoadingSceneManager : MonoBehaviour
                 yield return FadeCanvasGroup(sliderCanvasGroup, 0f, 1f);
         }
 
-        yield return LoadRoutine();
+        yield return LoadRoutine(skipWarmup);
     }
 
     private IEnumerator FadeCanvasGroup(CanvasGroup canvasGroup, float from, float to)
@@ -130,7 +140,7 @@ public class LoadingSceneManager : MonoBehaviour
         Desc.text = string.IsNullOrEmpty(tip) ? string.Empty : $"小Tip：\n{tip}";
     }
 
-    private IEnumerator LoadRoutine()
+    private IEnumerator LoadRoutine(bool skipWarmup)
     {
         Time.timeScale = 1f;
 
@@ -141,14 +151,15 @@ public class LoadingSceneManager : MonoBehaviour
             yield break;
         }
 
-        bool warmupReady = gameManager.WarmupFlowField();
+        bool warmupReady = skipWarmup || gameManager.WarmupFlowField();
         if (!warmupReady)
         {
             Debug.LogError("[LoadingSceneController] FlowField 热机失败，请检查 GameManager 的 FlowFieldAsset");
             yield break;
         }
 
-        WaveManager.PrewarmFirstWave(_firstWave);
+        if (!skipWarmup)
+            WaveManager.PrewarmFirstWave(_firstWave);
 
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(_demoSceneName);
         if (loadOperation == null)
@@ -163,7 +174,7 @@ public class LoadingSceneManager : MonoBehaviour
         while (!loadOperation.isDone)
         {
             float sceneProgress = Mathf.Clamp01(loadOperation.progress / 0.9f);
-            warmupReady = gameManager.IsFlowFieldReady;
+            warmupReady = skipWarmup || gameManager.IsFlowFieldReady;
             bool timeReady = Time.unscaledTime - startTime >= _minLoadingTime;
             bool loadReady = loadOperation.progress >= 0.9f;
 

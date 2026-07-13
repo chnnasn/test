@@ -19,6 +19,7 @@ public class EnemyManager : MonoBehaviour
 
     private readonly HashSet<Enemy> _currentWaveEnemies = new HashSet<Enemy>();
     private readonly Dictionary<Enemy, Coroutine> _pendingReleaseCoroutines = new Dictionary<Enemy, Coroutine>();
+    private readonly List<Enemy> _releaseAllBuffer = new List<Enemy>(256);
 
     private int _navigationBatchCursor;
     private Action _currentWaveClearedCallback;
@@ -27,6 +28,11 @@ public class EnemyManager : MonoBehaviour
 
     public bool HasCurrentWaveEnemies => _currentWaveEnemies.Count > 0;
 
+    private void OnEnable()
+    {
+        EventManager.Instance.BeforeDemoRestart += OnBeforeDemoRestart;
+    }
+
     private void Update()
     {
         TickActiveEnemies();
@@ -34,6 +40,19 @@ public class EnemyManager : MonoBehaviour
     }
 
     private void OnDisable()
+    {
+        if (EventManager.TryGetExistingInstance(out EventManager eventManager))
+            eventManager.BeforeDemoRestart -= OnBeforeDemoRestart;
+
+        StopPendingReleaseCoroutines();
+    }
+
+    private void OnBeforeDemoRestart()
+    {
+        ReleaseAllActiveEnemies();
+    }
+
+    private void StopPendingReleaseCoroutines()
     {
         foreach (KeyValuePair<Enemy, Coroutine> pair in _pendingReleaseCoroutines)
         {
@@ -107,6 +126,32 @@ public class EnemyManager : MonoBehaviour
             pool.Enqueue(enemy);
 
         RemoveCurrentWaveEnemy(enemy);
+    }
+
+    public void ReleaseAllActiveEnemies()
+    {
+        StopPendingReleaseCoroutines();
+        _currentWaveClearedCallback = null;
+        _currentWaveClearedNotified = true;
+
+        _releaseAllBuffer.Clear();
+        for (int i = 0; i < _activeEnemies.Count; i++)
+        {
+            if (_activeEnemies[i] != null)
+                _releaseAllBuffer.Add(_activeEnemies[i]);
+        }
+
+        for (int i = 0; i < _releaseAllBuffer.Count; i++)
+            ReleaseEnemy(_releaseAllBuffer[i]);
+
+        _releaseAllBuffer.Clear();
+        _activeEnemies.Clear();
+        _activeEnemyIndices.Clear();
+        _navigationEnemies.Clear();
+        _navigationEnemyIndices.Clear();
+        _currentWaveEnemies.Clear();
+        _navigationBatchCursor = 0;
+        _currentWaveNumber = 1;
     }
 
     public void ScheduleEnemyRelease(Enemy enemy, float delay)

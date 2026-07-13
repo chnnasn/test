@@ -51,10 +51,15 @@ public class WaveManager : MonoBehaviour
 
         if (totalWaves > 0)
             StartCoroutine(FirstWaveCountdown(5));
+
+        EventManager.Instance.BeforeDemoRestart += OnBeforeDemoRestart;
     }
 
     private void OnDisable()
     {
+        if (EventManager.TryGetExistingInstance(out EventManager eventManager))
+            eventManager.BeforeDemoRestart -= OnBeforeDemoRestart;
+
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
             context.UnregisterWaveManager(this);
     }
@@ -62,6 +67,24 @@ public class WaveManager : MonoBehaviour
     public static void PrewarmFirstWave(PortalWave firstWave)
     {
         EnemyManager.PrewarmWaveEnemies(firstWave);
+    }
+
+    private void OnBeforeDemoRestart()
+    {
+        StopAllCoroutines();
+        currentWave = 0;
+        _canSpawnWaves = true;
+        _isWaveRunning = false;
+        _isLastWave = false;
+        _activePortals = 0;
+
+        if (_spawnPoints != null)
+            ResetSpawnPoints();
+
+        int totalWaves = _portalWaves != null ? _portalWaves.Length : 0;
+        WaveTotal.Value = totalWaves;
+        WaveNumber.Value = totalWaves > 0 ? 1 : 0;
+        WaveCountdown.Value = 0f;
     }
 
     /// <summary> GameManager 热机调用，预生成第一波可能用到的僵尸并放入对象池 </summary>

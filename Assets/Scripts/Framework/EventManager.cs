@@ -22,6 +22,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action<float> AddExper;
     public Action GamePause;
     public Action GameResume;
+    public Action BeforeDemoRestart;
 
     public Action<String> SettleEvent;
     public void SetBuffIndex(int index)
@@ -86,6 +87,11 @@ public class EventManager : LazySingleton<EventManager>
     public void SetGameResume()
     {
         GameResume?.Invoke();
+    }
+
+    public void TriggerBeforeDemoRestart()
+    {
+        BeforeDemoRestart?.Invoke();
     }
 
     public void TriggerSettle(string settle)

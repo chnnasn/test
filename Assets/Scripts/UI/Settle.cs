@@ -28,7 +28,8 @@ public class Settle : MonoBehaviour
     public void ReStart()
     {
         EventManager.Instance.SetGameResume();
-        LoadingSceneManager.SetAutoStartOnLoad();
+        EventManager.Instance.TriggerBeforeDemoRestart();
+        LoadingSceneManager.SetRestartOnLoad();
         SceneManager.LoadScene("Loading");
     }
 
