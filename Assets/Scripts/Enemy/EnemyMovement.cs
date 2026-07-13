@@ -18,17 +18,9 @@ public class EnemyMovement : MonoBehaviour
     [SerializeField] private float _obstacleAvoidForce = 5f;
     [SerializeField] private LayerMask _obstacleLayerMask;
 
-    [Header("贴地")]
-    [SerializeField] private LayerMask _groundLayerMask = 1 << 6;
-    [SerializeField] private float _groundRaycastUpDistance = 3f;
-    [SerializeField] private float _groundRaycastDownDistance = 10f;
-    [SerializeField] private float _footGroundPadding = 0.02f;
-
     private CharacterController _characterController;
     private Enemy _enemy;
-    private Transform[] _footAnchors;
     private bool _missingCharacterControllerLogged;
-    private bool _keepGrounded;
 
     public Vector3 Velocity { get; private set; }
     public float MoveSpeed => _enemy != null ? _enemy.Buff.GetMoveSpeed(_moveSpeed) : _moveSpeed;
@@ -47,13 +39,6 @@ public class EnemyMovement : MonoBehaviour
     {
         _characterController = GetComponent<CharacterController>();
         _enemy = GetComponent<Enemy>();
-        _footAnchors = FindFootAnchors();
-    }
-
-    private void LateUpdate()
-    {
-        if (_keepGrounded)
-            KeepFeetAboveGround();
     }
 
     public void Move(Vector3 direction, float speedMultiplier = 1f)
@@ -74,6 +59,7 @@ public class EnemyMovement : MonoBehaviour
             Vector3 motion = velocity;
             motion.y = _characterController.isGrounded ? -1f : -4f;
             _characterController.Move(motion * Time.deltaTime);
+            ClampYToZero();
         }
         else
         {
@@ -116,101 +102,23 @@ public class EnemyMovement : MonoBehaviour
 
     public void SnapToGround()
     {
-        if (!TryGetGroundY(transform.position, out float groundY))
-            return;
-
-        Vector3 position = transform.position;
-        position.y = groundY;
-        transform.position = position;
+        ClampYToZero();
     }
 
     public void BeginKeepGrounded()
     {
-        _keepGrounded = true;
-        SnapToGround();
-        KeepFeetAboveGround();
+        ClampYToZero();
     }
 
     public void EndKeepGrounded()
     {
-        _keepGrounded = false;
     }
 
-    private void KeepFeetAboveGround()
+    private void ClampYToZero()
     {
-        if (_footAnchors == null || _footAnchors.Length == 0)
-            _footAnchors = FindFootAnchors();
-
-        if (_footAnchors == null || _footAnchors.Length == 0)
-        {
-            SnapToGround();
-            return;
-        }
-
-        float maxLift = 0f;
-        for (int i = 0; i < _footAnchors.Length; i++)
-        {
-            Transform foot = _footAnchors[i];
-            if (foot == null || !TryGetGroundY(foot.position, out float groundY))
-                continue;
-
-            float targetY = groundY + Mathf.Max(0f, _footGroundPadding);
-            if (foot.position.y < targetY)
-                maxLift = Mathf.Max(maxLift, targetY - foot.position.y);
-        }
-
-        if (maxLift <= 0f)
-            return;
-
         Vector3 position = transform.position;
-        position.y += maxLift;
+        position.y = 0f;
         transform.position = position;
-    }
-
-    private Transform[] FindFootAnchors()
-    {
-        Transform leftFoot = null;
-        Transform rightFoot = null;
-        Transform leftToe = null;
-        Transform rightToe = null;
-        Transform[] children = GetComponentsInChildren<Transform>(true);
-
-        for (int i = 0; i < children.Length; i++)
-        {
-            Transform child = children[i];
-            string childName = child.name;
-            if (childName.Contains("LeftToe"))
-                leftToe = child;
-            else if (childName.Contains("RightToe"))
-                rightToe = child;
-            else if (childName.Contains("LeftFoot"))
-                leftFoot = child;
-            else if (childName.Contains("RightFoot"))
-                rightFoot = child;
-        }
-
-        if (leftToe != null || rightToe != null)
-            return new[] { leftToe != null ? leftToe : leftFoot, rightToe != null ? rightToe : rightFoot };
-
-        if (leftFoot != null || rightFoot != null)
-            return new[] { leftFoot, rightFoot };
-
-        return null;
-    }
-
-    private bool TryGetGroundY(Vector3 position, out float groundY)
-    {
-        groundY = position.y;
-        if (_groundLayerMask == 0)
-            return false;
-
-        Vector3 origin = position + Vector3.up * Mathf.Max(0f, _groundRaycastUpDistance);
-        float distance = Mathf.Max(0.1f, _groundRaycastUpDistance + _groundRaycastDownDistance);
-        if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, distance, _groundLayerMask, QueryTriggerInteraction.Ignore))
-            return false;
-
-        groundY = hit.point.y;
-        return true;
     }
 
     public void DisableCollision()
