@@ -1,18 +1,20 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PauseUI : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    public Text DescText;
+
+    private void OnEnable()
     {
-        
+        RefreshTip();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void RefreshTip()
     {
-        
+        if (DescText == null) return;
+
+        string tip = GameManager.Instance != null ? GameManager.Instance.GetRandomTip() : string.Empty;
+        DescText.text = string.IsNullOrEmpty(tip) ? string.Empty : $"小Tip：{tip}";
     }
 }

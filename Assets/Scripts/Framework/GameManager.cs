@@ -9,6 +9,9 @@ public class GameManager : LazySingleton<GameManager>
     [Header("Flow Field 设置")]
     [SerializeField] private FlowFieldAsset _flowFieldAsset;
 
+    [Header("Tip 设置")]
+    [SerializeField] private TipDatabase _tipDatabase;
+
     private Character _character;
     private bool _flowFieldInitialized;
     private Text _frameText;
@@ -16,6 +19,11 @@ public class GameManager : LazySingleton<GameManager>
     private int _fpsFrameCount;
 
     public Action<float> AttackAction;
+
+    public string GetRandomTip()
+    {
+        return _tipDatabase != null ? _tipDatabase.GetRandomTip() : string.Empty;
+    }
 
     private void Start()
     {
