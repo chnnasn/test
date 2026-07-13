@@ -9,7 +9,8 @@ public  enum AnimationState
     chase,
     dead,
     Attack,
-    GetHit
+    GetHit,
+    Boom
 }
 
 public class AnimatorTranslate : StateMachineBehaviour
