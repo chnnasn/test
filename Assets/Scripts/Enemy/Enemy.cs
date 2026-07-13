@@ -25,6 +25,9 @@ public class Enemy : MonoBehaviour,IDamage
     [SerializeField] private LayerMask _playerLayerMask = ~0;
     [SerializeField] private bool _boomAfterAttack;
 
+    [Header("Buff配置")]
+    [SerializeField] private EnemyBuffConfigAsset _buffConfigAsset;
+
     private float _currentHP;
     private Transform _target;
     private bool _isDying;
@@ -231,6 +234,7 @@ public class Enemy : MonoBehaviour,IDamage
         Movement = GetComponent<EnemyMovement>();
         AnimatorController = GetComponent<EnemyAnimator>();
         stateMachine = new EnemyStateMachine(this);
+        _enemyBuff.SetConfig(_buffConfigAsset);
         ResetEnemy();
     }
 
@@ -267,6 +271,7 @@ public class Enemy : MonoBehaviour,IDamage
 
     public void ResetEnemy()
     {
+        _enemyBuff.SetConfig(_buffConfigAsset);
         _enemyBuff.Reset();
         _currentHP = MaxHP;
         _isDying = false;

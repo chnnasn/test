@@ -2,10 +2,17 @@ using UnityEngine;
 
 public class EnemyBuff
 {
-    private const float MaxHPGrowthPerWave = 1.13f;
-    private const float ExperienceRewardGrowthPerWave = 1.10f;
-    private const float AttackDamageGrowthPerWave = 1.18f;
-    private const float MoveSpeedGrowthPerWave = 1.04f;
+    private const float DefaultMaxHPGrowthPerWave = 1.13f;
+    private const float DefaultExperienceRewardGrowthPerWave = 1.10f;
+    private const float DefaultAttackDamageGrowthPerWave = 1.18f;
+    private const float DefaultMoveSpeedGrowthPerWave = 1.04f;
+
+    private EnemyBuffConfigAsset _config;
+
+    private float MaxHPGrowthPerWave => _config != null ? _config.MaxHPGrowthPerWave : DefaultMaxHPGrowthPerWave;
+    private float ExperienceRewardGrowthPerWave => _config != null ? _config.ExperienceRewardGrowthPerWave : DefaultExperienceRewardGrowthPerWave;
+    private float AttackDamageGrowthPerWave => _config != null ? _config.AttackDamageGrowthPerWave : DefaultAttackDamageGrowthPerWave;
+    private float MoveSpeedGrowthPerWave => _config != null ? _config.MoveSpeedGrowthPerWave : DefaultMoveSpeedGrowthPerWave;
 
     public float MaxHPMultiplier { get; private set; } = 1f;
     public float ExperienceRewardMultiplier { get; private set; } = 1f;
@@ -22,6 +29,11 @@ public class EnemyBuff
     public float GetAttackInterval(float baseValue) => Mathf.Max(0.01f, baseValue * AttackIntervalMultiplier);
     public float GetAttackSphereRadius(float baseValue) => Mathf.Max(0f, baseValue * AttackSphereRadiusMultiplier);
     public float GetMoveSpeed(float baseValue) => Mathf.Max(0f, baseValue * MoveSpeedMultiplier);
+
+    public void SetConfig(EnemyBuffConfigAsset config)
+    {
+        _config = config;
+    }
 
     public void ApplyWaveGrowth(int waveNumber)
     {

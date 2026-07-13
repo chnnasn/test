@@ -144,8 +144,8 @@ GameObject:
   - component: {fileID: 2418332009739952952}
   - component: {fileID: 2463948159009774806}
   - component: {fileID: 3498124652387619041}
-  - component: {fileID: 8163849254627183921}
   - component: {fileID: 3498124652387619042}
+  - component: {fileID: 8163849254627183921}
   m_Layer: 3
   m_Name: Enemy_Zombie_Stand
   m_TagString: Untagged
@@ -216,6 +216,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1024
   _boomAfterAttack: 0
+  _buffConfigAsset: {fileID: 11400000, guid: 7e2d1c0b9a8f4e6d8123456789abcdef, type: 2}
   BloodParticle: {fileID: 2141668192137763278}
   _boomParticle: {fileID: 0}
   _visualRoot: {fileID: 0}
@@ -242,6 +243,18 @@ MonoBehaviour:
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 2048
+--- !u!114 &3498124652387619042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1159361799200795126}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!143 &8163849254627183921
 CharacterController:
   m_ObjectHideFlags: 0
@@ -268,18 +281,6 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.8, z: 0}
---- !u!114 &3498124652387619042
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1159361799200795126}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1464659764991309516
 GameObject:
   m_ObjectHideFlags: 0

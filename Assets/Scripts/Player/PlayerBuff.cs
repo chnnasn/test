@@ -5,10 +5,14 @@ using UnityEngine;
 
 public class PlayerBuff
 {
-    public const float MaxHPGrowthPerLevel = 5f;
-    private const float AttackMultiplierGrowthPerLevel = 1f;
+    private const float DefaultMaxHPGrowthPerLevel = 5f;
+    private const float DefaultAttackMultiplierGrowthPerLevel = 1f;
 
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
+    private PlayerBuffConfigAsset _config;
+
+    private float MaxHPGrowthPerLevel => _config != null ? _config.MaxHPGrowthPerLevel : DefaultMaxHPGrowthPerLevel;
+    private float AttackMultiplierGrowthPerLevel => _config != null ? _config.AttackMultiplierGrowthPerLevel : DefaultAttackMultiplierGrowthPerLevel;
 
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
@@ -25,6 +29,11 @@ public class PlayerBuff
     private int _addedMagazineCapacity;
     public int AddedMagazineCapacity => _addedMagazineCapacity;
     public GenericProperty<bool> SprintUnlocked { get; private set; } = new GenericProperty<bool>();
+
+    public void SetConfig(PlayerBuffConfigAsset config)
+    {
+        _config = config;
+    }
 
     public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out bool refreshWeaponSetup)
     {
@@ -100,6 +109,11 @@ public class PlayerBuff
     public void SetLevel(int level)
     {
         Level = Mathf.Max(1, level);
+    }
+
+    public float GetLevelMaxHPBonusForLevels(int levelCount)
+    {
+        return MaxHPGrowthPerLevel * Mathf.Max(0, levelCount);
     }
 
     private float GetLevelMaxHPBonus()

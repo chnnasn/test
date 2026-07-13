@@ -983,11 +983,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1634821126952427251}
-  - component: {fileID: 4080258098156848027}
-  - component: {fileID: 5963653317768413621}
+  - component: {fileID: 7745577523642423846}
   - component: {fileID: 5051600117730668745}
   - component: {fileID: 3429614965825895372}
-  - component: {fileID: 7745577523642423846}
+  - component: {fileID: 4080258098156848027}
+  - component: {fileID: 5963653317768413621}
   m_Layer: 0
   m_Name: Enemy_Zombie_Boom
   m_TagString: Untagged
@@ -1013,6 +1013,70 @@ Transform:
   - {fileID: 4892731580540988962}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7745577523642423846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7195785957534944849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a39f6d725988423aa5db67ba4a3a6f39, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHP: 100
+  _experienceReward: 60
+  _birthDuration: 1.5
+  _deadDestroyExtraDelay: 1.5
+  _attackRange: 1.5
+  _attackDamage: 20
+  _attackInterval: 1.2
+  _attackSphereRadius: 0.75
+  _attackCastOffset: {x: 0, y: 1, z: 0}
+  _playerLayerMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  _boomAfterAttack: 1
+  _buffConfigAsset: {fileID: 11400000, guid: 7e2d1c0b9a8f4e6d8123456789abcdef, type: 2}
+  BloodParticle: {fileID: 4068884377327676947}
+  _boomParticle: {fileID: 2077108939864280065}
+  _visualRoot: {fileID: 931679075806884735}
+--- !u!114 &5051600117730668745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7195785957534944849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db103ec48f9d6224db3d3f7782b032ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _moveSpeed: 1.5
+  _rotationSpeed: 10
+  _separationRadius: 2.5
+  _separationForce: 4
+  _hardPushDistance: 1
+  _hardPushForce: 6
+  _obstacleCheckDistance: 2
+  _obstacleAvoidForce: 5
+  _obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 2048
+--- !u!114 &3429614965825895372
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7195785957534944849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!95 &4080258098156848027
 Animator:
   serializedVersion: 5
@@ -1060,69 +1124,6 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.8, z: 0}
---- !u!114 &5051600117730668745
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7195785957534944849}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db103ec48f9d6224db3d3f7782b032ef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _moveSpeed: 1.5
-  _rotationSpeed: 10
-  _separationRadius: 2.5
-  _separationForce: 4
-  _hardPushDistance: 1
-  _hardPushForce: 6
-  _obstacleCheckDistance: 2
-  _obstacleAvoidForce: 5
-  _obstacleLayerMask:
-    serializedVersion: 2
-    m_Bits: 2048
---- !u!114 &3429614965825895372
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7195785957534944849}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &7745577523642423846
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7195785957534944849}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a39f6d725988423aa5db67ba4a3a6f39, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _maxHP: 100
-  _experienceReward: 60
-  _birthDuration: 1.5
-  _deadDestroyExtraDelay: 1.5
-  _attackRange: 1.5
-  _attackDamage: 20
-  _attackInterval: 1.2
-  _attackSphereRadius: 0.75
-  _attackCastOffset: {x: 0, y: 1, z: 0}
-  _playerLayerMask:
-    serializedVersion: 2
-    m_Bits: 1024
-  _boomAfterAttack: 1
-  BloodParticle: {fileID: 4068884377327676947}
-  _boomParticle: {fileID: 2077108939864280065}
-  _visualRoot: {fileID: 0}
 --- !u!1 &7714031276401815452
 GameObject:
   m_ObjectHideFlags: 0

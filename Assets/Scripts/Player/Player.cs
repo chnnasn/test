@@ -9,6 +9,7 @@ public class Player : MonoBehaviour, IDamage
     [SerializeField] private int _levelUpBuffChooseCount = 3;
     [SerializeField] private PlayerLevelExperienceAsset _levelExperienceAsset;
     [SerializeField] private PlayerBuffPoolAsset _buffPoolAsset;
+    [SerializeField] private PlayerBuffConfigAsset _buffConfigAsset;
 
     private float _experience;
     private int _pendingBuffChooseCount;
@@ -29,6 +30,7 @@ public class Player : MonoBehaviour, IDamage
     
     private void Awake()
     {
+        _playerBuff.SetConfig(_buffConfigAsset);
         _playerBuff.SetLevel(_level);
         CurrentHP.Value = MaxHP;
         Level.Value = _level;
@@ -83,7 +85,7 @@ public class Player : MonoBehaviour, IDamage
 
         int levelUpCount = _level - levelBefore;
         if (levelUpCount > 0)
-            HealFlat(PlayerBuff.MaxHPGrowthPerLevel * levelUpCount);
+            HealFlat(_playerBuff.GetLevelMaxHPBonusForLevels(levelUpCount));
 
         RefreshExperienceProgress();
         if (levelUpCount <= 0) return;
