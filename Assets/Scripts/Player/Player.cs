@@ -85,7 +85,7 @@ public class Player : MonoBehaviour, IDamage
 
         int levelUpCount = _level - levelBefore;
         if (levelUpCount > 0)
-            HealFlat(_playerBuff.GetLevelMaxHPBonusForLevels(levelUpCount));
+            HealFlat(_playerBuff.GetLevelMaxHPBonusForLevels(_maxHP, levelUpCount));
 
         RefreshExperienceProgress();
         if (levelUpCount <= 0) return;

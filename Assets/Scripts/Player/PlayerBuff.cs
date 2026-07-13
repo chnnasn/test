@@ -5,14 +5,16 @@ using UnityEngine;
 
 public class PlayerBuff
 {
-    private const float DefaultMaxHPGrowthPerLevel = 5f;
-    private const float DefaultAttackMultiplierGrowthPerLevel = 1f;
+    private const float DefaultMaxHPGrowthPercentPerLevel = 5f;
+    private const float DefaultAttackDamageGrowthPercentPerLevel = 10f;
+    private const float DefaultDamageReductionPercentPerLevel = 2f;
 
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
     private PlayerBuffConfigAsset _config;
 
-    private float MaxHPGrowthPerLevel => _config != null ? _config.MaxHPGrowthPerLevel : DefaultMaxHPGrowthPerLevel;
-    private float AttackMultiplierGrowthPerLevel => _config != null ? _config.AttackMultiplierGrowthPerLevel : DefaultAttackMultiplierGrowthPerLevel;
+    private float MaxHPGrowthPercentPerLevel => _config != null ? _config.MaxHPGrowthPercentPerLevel : DefaultMaxHPGrowthPercentPerLevel;
+    private float AttackDamageGrowthPercentPerLevel => _config != null ? _config.AttackDamageGrowthPercentPerLevel : DefaultAttackDamageGrowthPercentPerLevel;
+    private float DamageReductionPercentPerLevel => _config != null ? _config.DamageReductionPercentPerLevel : DefaultDamageReductionPercentPerLevel;
 
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
@@ -78,12 +80,12 @@ public class PlayerBuff
 
     public float GetReceivedDamage(float rawDamage)
     {
-        return Mathf.Max(0f, rawDamage * IncomingDamageMultiplier);
+        return Mathf.Max(0f, rawDamage * GetLevelIncomingDamageMultiplier() * IncomingDamageMultiplier);
     }
 
     public float GetMaxHP(float baseMaxHP)
     {
-        return Mathf.Max(0f, baseMaxHP + GetLevelMaxHPBonus() + AddedHp);
+        return Mathf.Max(0f, baseMaxHP * GetLevelMaxHPMultiplier() + AddedHp);
     }
 
     public float GetFireRate(float baseRateOfFire)
@@ -111,19 +113,31 @@ public class PlayerBuff
         Level = Mathf.Max(1, level);
     }
 
-    public float GetLevelMaxHPBonusForLevels(int levelCount)
+    public float GetLevelMaxHPBonusForLevels(float baseMaxHP, int levelCount)
     {
-        return MaxHPGrowthPerLevel * Mathf.Max(0, levelCount);
+        float multiplier = 1f + GetPercentValue(MaxHPGrowthPercentPerLevel) * Mathf.Max(0, levelCount);
+        return Mathf.Max(0f, baseMaxHP * (multiplier - 1f));
     }
 
-    private float GetLevelMaxHPBonus()
+    private float GetLevelMaxHPMultiplier()
     {
-        return MaxHPGrowthPerLevel * Mathf.Max(0, Level - 1);
+        return 1f + GetPercentValue(MaxHPGrowthPercentPerLevel) * Mathf.Max(0, Level - 1);
     }
 
     private float GetLevelAttackMultiplier()
     {
-        return 1f + AttackMultiplierGrowthPerLevel * Mathf.Max(0, Level - 1);
+        return 1f + GetPercentValue(AttackDamageGrowthPercentPerLevel) * Mathf.Max(0, Level - 1);
+    }
+
+    private float GetLevelIncomingDamageMultiplier()
+    {
+        float damageReduction = GetPercentValue(DamageReductionPercentPerLevel) * Mathf.Max(0, Level - 1);
+        return Mathf.Max(0f, 1f - damageReduction);
+    }
+
+    private float GetPercentValue(float percent)
+    {
+        return Mathf.Max(0f, percent) * 0.01f;
     }
 
     public bool IsSkillUnlocked(PlayerSkillKind skill)
