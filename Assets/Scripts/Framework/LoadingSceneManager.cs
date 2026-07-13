@@ -57,6 +57,7 @@ public class LoadingSceneManager : MonoBehaviour
         if (_isStarting) return;
 
         _isStarting = true;
+        RefreshTip();
         if (_loadingShow != null)
             _loadingShow.StartLoading(_progressSlider);
         StartCoroutine(StartGameRoutine(skipTitle));
@@ -121,6 +122,14 @@ public class LoadingSceneManager : MonoBehaviour
         return canvasGroup;
     }
 
+    private void RefreshTip()
+    {
+        if (Desc == null) return;
+
+        string tip = GameManager.Instance != null ? GameManager.Instance.GetRandomTip() : string.Empty;
+        Desc.text = string.IsNullOrEmpty(tip) ? string.Empty : $"小Tip：\n{tip}";
+    }
+
     private IEnumerator LoadRoutine()
     {
         Time.timeScale = 1f;
@@ -131,11 +140,6 @@ public class LoadingSceneManager : MonoBehaviour
             Debug.LogError("[LoadingSceneController] GameManager 不存在，无法执行 Loading 热机");
             yield break;
         }
-        
-        string tip = GameManager.Instance != null ? GameManager.Instance.GetRandomTip() : string.Empty;
-        
-        Desc.text = string.IsNullOrEmpty(tip) ? string.Empty : $"小Tip：\n{tip}";
-        
 
         bool warmupReady = gameManager.WarmupFlowField();
         if (!warmupReady)

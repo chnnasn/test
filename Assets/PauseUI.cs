@@ -17,4 +17,15 @@ public class PauseUI : MonoBehaviour
         string tip = GameManager.Instance != null ? GameManager.Instance.GetRandomTip() : string.Empty;
         DescText.text = string.IsNullOrEmpty(tip) ? string.Empty : $"小Tip：\n{tip}";
     }
+
+    public void ResumeGame()
+    {
+        EventManager.Instance.SetGameResume();
+        gameObject.SetActive(false);
+    }
+
+    public void quit()
+    {
+     Application.Quit();   
+    }
 }
