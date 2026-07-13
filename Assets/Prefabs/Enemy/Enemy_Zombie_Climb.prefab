@@ -196,7 +196,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db103ec48f9d6224db3d3f7782b032ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _moveSpeed: 1.5
+  _moveSpeed: 1.8
   _rotationSpeed: 10
   _separationRadius: 3
   _separationForce: 6
@@ -232,7 +232,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _maxHP: 60
-  _experienceReward: 80
+  _experienceReward: 70
   _birthDuration: 1.5
   _deadDestroyExtraDelay: 1.5
   _attackRange: 3
@@ -243,7 +243,10 @@ MonoBehaviour:
   _playerLayerMask:
     serializedVersion: 2
     m_Bits: 1024
+  _boomAfterAttack: 0
   BloodParticle: {fileID: 4353344321033538504}
+  _boomParticle: {fileID: 0}
+  _visualRoot: {fileID: 0}
 --- !u!1 &878838681382069067
 GameObject:
   m_ObjectHideFlags: 0

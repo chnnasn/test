@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7730196376525197798}
   - component: {fileID: 278875111475884485}
   m_Layer: 0
-  m_Name: Portal short
+  m_Name: Portal Stand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -46,8 +46,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _enemies:
   - {fileID: 1159361799200795126, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
-  _enemySpawnWeight: 08000000
-  _averageEnemyPerWave: 2
-  _timeBetweenEnemyWaves: 8
-  _waveNumber: 3
+  _enemySpawnWeight: 0a000000
   isLastPortal: 0
