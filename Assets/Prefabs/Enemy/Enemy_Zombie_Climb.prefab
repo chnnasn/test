@@ -196,14 +196,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db103ec48f9d6224db3d3f7782b032ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _moveSpeed: 2
+  _moveSpeed: 1.5
   _rotationSpeed: 10
-  _separationRadius: 2.5
-  _separationForce: 4
-  _hardPushDistance: 1
+  _separationRadius: 3
+  _separationForce: 6
+  _hardPushDistance: 2
   _hardPushForce: 6
   _obstacleCheckDistance: 2
-  _obstacleAvoidForce: 5
+  _obstacleAvoidForce: 3
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 2048
@@ -231,12 +231,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a39f6d725988423aa5db67ba4a3a6f39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHP: 70
+  _maxHP: 60
   _experienceReward: 80
   _birthDuration: 1.5
   _deadDestroyExtraDelay: 1.5
   _attackRange: 3
-  _attackDamage: 10
+  _attackDamage: 15
   _attackInterval: 1.2
   _attackSphereRadius: 0.75
   _attackCastOffset: {x: 0, y: 1, z: 0}
