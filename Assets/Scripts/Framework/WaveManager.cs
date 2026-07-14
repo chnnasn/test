@@ -16,6 +16,9 @@ public class WaveManager : MonoBehaviour
 
     [Header("生成位置")]
     [SerializeField] private float _spawnRandomRadius = 2.5f;
+    [SerializeField] private float _playerMinSpawnDistance = 15f;
+    [SerializeField] private float _playerMaxSpawnDistance = 30f;
+    [SerializeField] private float _playerFrontBlockAngle = 60f;
     [SerializeField] private float _spawnCheckRadius = 0.35f;
     [SerializeField] private float _spawnCheckHeight = 1.7f;
     [SerializeField] private int _spawnPositionTryCount = 24;
@@ -201,22 +204,76 @@ public class WaveManager : MonoBehaviour
 
     private Vector3 GetRandomSpawnPosition(SpawnPoint spawnPoint)
     {
-        if (spawnPoint == null)
-            return transform.position;
+        Transform player = RunTimeContext.Instance.Player != null
+            ? RunTimeContext.Instance.Player.transform
+            : null;
 
-        Vector3 center = spawnPoint.transform.position;
-        float radius = Mathf.Max(0f, _spawnRandomRadius);
+        if (player == null)
+            return spawnPoint != null ? FindFallbackSpawnPosition(spawnPoint.transform.position, _spawnRandomRadius) : transform.position;
+
         int tryCount = Mathf.Max(1, _spawnPositionTryCount);
+        float minDistance = Mathf.Max(0f, _playerMinSpawnDistance);
+        float maxDistance = Mathf.Max(minDistance, _playerMaxSpawnDistance);
 
         for (int i = 0; i < tryCount; i++)
         {
-            Vector2 offset = UnityEngine.Random.insideUnitCircle * radius;
-            Vector3 candidate = SnapSpawnPositionToGround(center + new Vector3(offset.x, 0f, offset.y));
+            Vector2 direction2D = UnityEngine.Random.insideUnitCircle.normalized;
+            if (direction2D.sqrMagnitude <= 0.0001f)
+                direction2D = Vector2.right;
+
+            float distance = UnityEngine.Random.Range(minDistance, maxDistance);
+            Vector3 offset = new Vector3(direction2D.x, 0f, direction2D.y) * distance;
+            Vector3 candidate = SnapSpawnPositionToGround(player.position + offset);
+
+            if (IsInPlayerFrontBlockAngle(player, candidate)) continue;
             if (IsValidSpawnPosition(candidate))
                 return candidate;
         }
 
-        return FindFallbackSpawnPosition(center, radius);
+        SpawnPoint nearestSpawnPoint = GetNearestSpawnPoint(player.position);
+        Vector3 fallbackCenter = nearestSpawnPoint != null
+            ? nearestSpawnPoint.transform.position
+            : (spawnPoint != null ? spawnPoint.transform.position : player.position);
+        return FindFallbackSpawnPosition(fallbackCenter, _spawnRandomRadius);
+    }
+
+    private bool IsInPlayerFrontBlockAngle(Transform player, Vector3 position)
+    {
+        if (player == null || _playerFrontBlockAngle <= 0f) return false;
+
+        Vector3 toPosition = position - player.position;
+        toPosition.y = 0f;
+        if (toPosition.sqrMagnitude <= 0.0001f) return false;
+
+        Vector3 forward = player.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.0001f) return false;
+
+        float halfAngle = _playerFrontBlockAngle * 0.5f;
+        float dot = Vector3.Dot(forward.normalized, toPosition.normalized);
+        float limitDot = Mathf.Cos(halfAngle * Mathf.Deg2Rad);
+        return dot >= limitDot;
+    }
+
+    private SpawnPoint GetNearestSpawnPoint(Vector3 position)
+    {
+        if (_spawnPoints == null || _spawnPoints.Length == 0) return null;
+
+        SpawnPoint nearest = null;
+        float nearestSqrDistance = float.MaxValue;
+        for (int i = 0; i < _spawnPoints.Length; i++)
+        {
+            SpawnPoint spawnPoint = _spawnPoints[i];
+            if (spawnPoint == null) continue;
+
+            float sqrDistance = (spawnPoint.transform.position - position).sqrMagnitude;
+            if (sqrDistance >= nearestSqrDistance) continue;
+
+            nearestSqrDistance = sqrDistance;
+            nearest = spawnPoint;
+        }
+
+        return nearest;
     }
 
     private Vector3 FindFallbackSpawnPosition(Vector3 center, float radius)
