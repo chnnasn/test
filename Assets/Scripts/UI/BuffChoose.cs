@@ -265,6 +265,9 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     public void TriggerGambling()
     {
         if (!_canChoose) return;
+        if (_selectedTarget != null)
+            UIButtonOpenAnimator.Play(_selectedTarget.transform);
+
         _canChoose = false;
         EventManager.Instance.SetRequestGambling();
     }

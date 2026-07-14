@@ -284,9 +284,15 @@ public class UIManager : MonoBehaviour
 
         if (BuffChoose != null)
         {
-            BuffChoose.gameObject.SetActive(hasBuffs);
             if (hasBuffs)
+            {
+                UIPanelAnimator.PlayOpen(BuffChoose);
                 BuffChoose.SetBuffs(names, descs);
+            }
+            else
+            {
+                BuffChoose.gameObject.SetActive(false);
+            }
         }
 
         if (hasBuffs)
@@ -299,10 +305,10 @@ public class UIManager : MonoBehaviour
 
     private void SetSettle(string  settle)
     {
-        
-        SettleUI.gameObject.SetActive(true);
-        
+        if (SettleUI == null) return;
+
         SettleUI.SetTittle(settle);
+        UIPanelAnimator.PlayOpen(SettleUI);
 
         EventManager.Instance.SetGamePause();
     }
@@ -320,7 +326,7 @@ public class UIManager : MonoBehaviour
 
         if (Gambling != null)
         {
-            Gambling.gameObject.SetActive(true);
+            UIPanelAnimator.PlayOpen(Gambling);
             Gambling.PlayAnimation(nums, desc, detailDesc, callback);
         }
     }
