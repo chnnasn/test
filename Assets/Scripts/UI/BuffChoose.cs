@@ -43,9 +43,11 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         _originalColorMap = new Dictionary<Image, Color>();
         _validTargets = new HashSet<GameObject>();
 
-        for (int i = 0; i < transform.childCount-1; i++)
+        for (int i = 0; i < _texts.Length; i++)
         {
-            GameObject child = transform.GetChild(i).gameObject;
+            if (_texts[i] == null) continue;
+
+            GameObject child = _texts[i].gameObject;
             _childIndexMap[child] = i;
             _originalScaleMap[child] = child.transform.localScale;
             _validTargets.Add(child);

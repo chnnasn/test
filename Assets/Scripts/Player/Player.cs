@@ -136,15 +136,27 @@ public class Player : MonoBehaviour, IDamage
         if (!isActiveAndEnabled || !IsAlive) return;
         if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
 
-        _droneTimerId = TimeManager.Instance.AddTimer(_playerBuff.GetDroneInterval(), OnDroneTimerElapsed);
+        float interval = _playerBuff.GetDroneInterval();
+        _droneTimerId = TimeManager.Instance.AddTimer(interval, OnDroneTimerElapsed);
+        Debug.Log($"[Drone] 定时器已调度, interval={interval}s, timerId={_droneTimerId}");
     }
 
     private void OnDroneTimerElapsed()
     {
         _droneTimerId = -1;
 
-        if (!isActiveAndEnabled || !IsAlive) return;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
+        Debug.Log("[Drone] 定时器触发");
+
+        if (!isActiveAndEnabled || !IsAlive)
+        {
+            Debug.LogWarning("[Drone] 玩家未激活或已死亡，跳过");
+            return;
+        }
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone))
+        {
+            Debug.LogWarning("[Drone] 技能未解锁，跳过");
+            return;
+        }
 
         TryTriggerDroneSkill();
         ScheduleDroneTimer();
@@ -172,15 +184,27 @@ public class Player : MonoBehaviour, IDamage
         if (!isActiveAndEnabled || !IsAlive) return;
         if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
 
-        _iceBombTimerId = TimeManager.Instance.AddTimer(_playerBuff.GetIceBombInterval(), OnIceBombTimerElapsed);
+        float interval = _playerBuff.GetIceBombInterval();
+        _iceBombTimerId = TimeManager.Instance.AddTimer(interval, OnIceBombTimerElapsed);
+        Debug.Log($"[IceBomb] 定时器已调度, interval={interval}s, timerId={_iceBombTimerId}");
     }
 
     private void OnIceBombTimerElapsed()
     {
         _iceBombTimerId = -1;
 
-        if (!isActiveAndEnabled || !IsAlive) return;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
+        Debug.Log("[IceBomb] 定时器触发");
+
+        if (!isActiveAndEnabled || !IsAlive)
+        {
+            Debug.LogWarning("[IceBomb] 玩家未激活或已死亡，跳过");
+            return;
+        }
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb))
+        {
+            Debug.LogWarning("[IceBomb] 技能未解锁，跳过");
+            return;
+        }
 
         TryTriggerIceBombSkill();
         ScheduleIceBombTimer();
@@ -319,20 +343,40 @@ public class Player : MonoBehaviour, IDamage
 
     private bool TryTriggerDroneSkill()
     {
-        if (!isActiveAndEnabled || !IsAlive) return false;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return false;
+        if (!isActiveAndEnabled || !IsAlive)
+        {
+            Debug.LogWarning("[Drone] 玩家未激活或已死亡，无法触发");
+            return false;
+        }
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone))
+        {
+            Debug.LogWarning("[Drone] 技能未解锁，无法触发");
+            return false;
+        }
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
         float range = _playerBuff.GetDroneRange();
         float acquireRadius = _playerBuff.GetDroneAcquireRadius();
         float aoeRadius = _playerBuff.GetDroneAoeRadius();
 
-        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
-        if (!scan.HasTarget) return false;
+        Debug.Log($"[Drone] 开始扫描敌人: range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
 
-        AreaDamageSkill drone = _dronePrefab != null
-            ? Instantiate(_dronePrefab, spawnPoint.position, spawnPoint.rotation)
-            : new GameObject("Drone Skill").AddComponent<AreaDamageSkill>();
+        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
+        if (!scan.HasTarget)
+        {
+            Debug.LogWarning("[Drone] 扫描未找到敌人目标，不实例化");
+            return false;
+        }
+
+        Debug.Log($"[Drone] 找到目标! 方向={scan.Direction}, 位置={scan.TargetPosition}, 覆盖敌人数={scan.EnemyCount}");
+
+        if (_dronePrefab == null)
+        {
+            Debug.LogError("[Drone] _dronePrefab 为空，请检查 Inspector 中的预制体引用!");
+            return false;
+        }
+
+        AreaDamageSkill drone = Instantiate(_dronePrefab, spawnPoint.position, spawnPoint.rotation);
         drone.transform.SetPositionAndRotation(spawnPoint.position, Quaternion.LookRotation(scan.Direction));
         drone.Initialize(
             AreaDamageSkillKind.Drone, spawnPoint,
@@ -340,25 +384,46 @@ public class Player : MonoBehaviour, IDamage
             aoeRadius, _playerBuff.GetDroneDamage(),
             _enemyLayerMask);
 
+        Debug.Log($"[Drone] 实例化成功! 伤害={_playerBuff.GetDroneDamage()}");
         return true;
     }
 
     private bool TryTriggerIceBombSkill()
     {
-        if (!isActiveAndEnabled || !IsAlive) return false;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return false;
+        if (!isActiveAndEnabled || !IsAlive)
+        {
+            Debug.LogWarning("[IceBomb] 玩家未激活或已死亡，无法触发");
+            return false;
+        }
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb))
+        {
+            Debug.LogWarning("[IceBomb] 技能未解锁，无法触发");
+            return false;
+        }
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
         float range = _playerBuff.GetIceBombRange();
         float acquireRadius = _playerBuff.GetIceBombAcquireRadius();
         float aoeRadius = _playerBuff.GetIceBombAoeRadius();
 
-        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
-        if (!scan.HasTarget) return false;
+        Debug.Log($"[IceBomb] 开始扫描敌人: range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
 
-        AreaDamageSkill iceBomb = _iceBombPrefab != null
-            ? Instantiate(_iceBombPrefab, spawnPoint.position, spawnPoint.rotation)
-            : new GameObject("IceBomb Skill").AddComponent<AreaDamageSkill>();
+        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
+        if (!scan.HasTarget)
+        {
+            Debug.LogWarning("[IceBomb] 扫描未找到敌人目标，不实例化");
+            return false;
+        }
+
+        Debug.Log($"[IceBomb] 找到目标! 方向={scan.Direction}, 位置={scan.TargetPosition}, 覆盖敌人数={scan.EnemyCount}");
+
+        if (_iceBombPrefab == null)
+        {
+            Debug.LogError("[IceBomb] _iceBombPrefab 为空，请检查 Inspector 中的预制体引用!");
+            return false;
+        }
+
+        AreaDamageSkill iceBomb = Instantiate(_iceBombPrefab, spawnPoint.position, spawnPoint.rotation);
         iceBomb.transform.SetPositionAndRotation(spawnPoint.position, Quaternion.LookRotation(scan.Direction));
         iceBomb.Initialize(
             AreaDamageSkillKind.IceBomb, spawnPoint,
@@ -368,6 +433,7 @@ public class Player : MonoBehaviour, IDamage
             slowMultiplier: _playerBuff.GetIceBombSlowMultiplier(),
             slowDuration: _playerBuff.GetIceBombSlowDuration());
 
+        Debug.Log($"[IceBomb] 实例化成功! 伤害={_playerBuff.GetIceBombDamage()}, 减速={_playerBuff.GetIceBombSlowMultiplier()}, 持续={_playerBuff.GetIceBombSlowDuration()}s");
         return true;
     }
 
