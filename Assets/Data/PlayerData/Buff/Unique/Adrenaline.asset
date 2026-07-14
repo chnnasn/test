@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: Adrenaline
   m_EditorClassIdentifier: 
   _buffName: "\u80BE\u4E0A\u817A\u7D20"
-  _description: "\u751F\u547D\u503C\u4F4E\u4E8E30%\u65F6\u89E6\u53D1\uFF0C8\u79D2\u5185\u653B\u51FB\u529B\u548C\u4F24\u5BB3\u51CF\u514D\u63D0\u534715%"
+  _description: "\u751F\u547D\u503C\u4F4E\u4E8E30%\u65F6\u89E6\u53D1\uFF0C8\u79D2\u5185\u653B\u51FB\u529B\u548C\u4F24\u5BB3\u51CF\u514D\u63D0\u534710%"
   _kind: 11
   _unique: 0
-  _value: 15
+  _value: 10
   _valueMode: 1
   _operation: 0
   _skillKind: 0

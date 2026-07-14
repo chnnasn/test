@@ -629,10 +629,21 @@ public class Player : MonoBehaviour, IDamage
             }
 
             names[i] = buffs[i].BuffName;
-            descs[i] = buffs[i].Description ?? string.Empty;
+            descs[i] = GetBuffDescription(buffs[i]);
         }
 
         return (names, descs);
+    }
+
+    private string GetBuffDescription(PlayerBuffAsset buff)
+    {
+        if (buff == null) return string.Empty;
+
+        string description = buff.Description ?? string.Empty;
+        if (!buff.Unique) return description;
+
+        const string uniqueTip = "唯一Buff：选择后不会再次出现";
+        return string.IsNullOrEmpty(description) ? uniqueTip : $"{description}\n{uniqueTip}";
     }
 
     public PlayerBuffAsset GetCurrentLevelUpBuff(int index)
