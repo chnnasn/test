@@ -113,7 +113,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
             }
         }else if (_type == ButtonType.pause)
         {
-            transform.GetChild(0).gameObject.SetActive(true);
+            transform.parent.GetChild(1).gameObject.SetActive(true);
             EventManager.Instance.SetGamePause();
         }
     }
