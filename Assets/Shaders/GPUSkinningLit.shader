@@ -34,7 +34,10 @@ Shader "Enemy/GPUSkinningLit"
             #pragma fragment frag
             #pragma target 4.5
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _SHADOWS_SOFT
+            #pragma multi_compile _ LIGHTMAP_ON
+            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -72,15 +75,16 @@ Shader "Enemy/GPUSkinningLit"
                 float2 uv         : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float3 positionWS : TEXCOORD2;
-                float4 shadowCoord : TEXCOORD3;
-                float  fogFactor  : TEXCOORD4;
+                float3 viewDirWS  : TEXCOORD3;
+                float4 shadowCoord : TEXCOORD4;
+                float  fogFactor  : TEXCOORD5;
             };
 
             Varyings vert(Attributes input)
             {
                 uint bufferIdx = input.instanceID * _VertexCount + input.vertexID;
 
-                // 从 GPU Buffer 读取蒙皮后数据（Mesh 原始顶点被忽略）
+                // 从 GPU Buffer 读取蒙皮后数据
                 float3 positionOS = _SkinnedPositions[bufferIdx];
                 float3 normalOS   = _SkinnedNormals[bufferIdx];
                 float2 uv         = _SkinnedUVs[bufferIdx];
@@ -90,6 +94,7 @@ Shader "Enemy/GPUSkinningLit"
                 output.positionCS = TransformWorldToHClip(output.positionWS);
                 output.normalWS   = TransformObjectToWorldNormal(normalOS);
                 output.uv         = uv;
+                output.viewDirWS  = GetWorldSpaceNormalizeViewDir(output.positionWS);
                 output.shadowCoord = TransformWorldToShadowCoord(output.positionWS);
                 output.fogFactor   = ComputeFogFactor(output.positionCS.z);
                 return output;
@@ -100,20 +105,28 @@ Shader "Enemy/GPUSkinningLit"
                 float2 uv = input.uv * _BaseMap_ST.xy + _BaseMap_ST.zw;
                 float4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
                 float3 albedo  = baseMap.rgb * _BaseColor.rgb;
-
                 float3 normalWS = normalize(input.normalWS);
 
+                // GI：球谐环境光 + Shadow Mask
+                half3 bakedGI = SampleSH(normalWS);
+
                 InputData inputData = (InputData)0;
-                inputData.positionWS   = input.positionWS;
-                inputData.normalWS     = normalWS;
-                inputData.shadowCoord  = input.shadowCoord;
-                inputData.fogCoord     = input.fogFactor;
+                inputData.positionWS  = input.positionWS;
+                inputData.normalWS    = normalWS;
+                inputData.viewDirectionWS = normalize(input.viewDirWS);
+                inputData.shadowCoord = input.shadowCoord;
+                inputData.fogCoord    = input.fogFactor;
+                inputData.vertexLighting = half3(0, 0, 0);
+                inputData.bakedGI     = bakedGI;
+                inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
+                inputData.shadowMask  = half4(1, 1, 1, 1);
 
                 SurfaceData surfaceData = (SurfaceData)0;
                 surfaceData.albedo     = albedo;
                 surfaceData.smoothness = _Smoothness;
                 surfaceData.metallic   = _Metallic;
                 surfaceData.alpha      = baseMap.a * _BaseColor.a;
+                surfaceData.occlusion   = 1;
 
                 float4 color = UniversalFragmentPBR(inputData, surfaceData);
                 color.rgb = MixFog(color.rgb, inputData.fogCoord);
