@@ -15,3 +15,15 @@ MonoBehaviour:
   _maxHPGrowthPercentPerLevel: 5
   _attackDamageGrowthPercentPerLevel: 10
   _damageReductionPercentPerLevel: 2
+  _droneInterval: 5
+  _droneRange: 20
+  _droneAcquireRadius: 0.75
+  _droneAoeRadius: 3
+  _droneDamage: 20
+  _iceBombInterval: 7
+  _iceBombRange: 20
+  _iceBombAcquireRadius: 0.75
+  _iceBombAoeRadius: 3
+  _iceBombDamage: 8
+  _iceBombSlowMultiplier: 0.5
+  _iceBombSlowDuration: 2

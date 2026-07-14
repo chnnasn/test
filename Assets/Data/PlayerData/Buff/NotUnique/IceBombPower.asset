@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
-  m_Name: IceBomb
-  m_EditorClassIdentifier: 
-  _buffName: IceBomb
-  _description: "\u89E3\u9501\u51B0\u5F39\uFF0C\u5B9A\u65F6\u5BF9\u654C\u4EBA\u9020\u6210\u5C11\u91CF\u4F24\u5BB3\u5E76\u51CF\u901F"
-  _kind: 7
-  _unique: 1
-  _value: 1
-  _valueMode: 0
+  m_Name: IceBombPower
+  m_EditorClassIdentifier:
+  _buffName: "寒冰弹强化"
+  _description: "需要先解锁寒冰弹，提高寒冰弹范围伤害数值"
+  _kind: 9
+  _unique: 0
+  _value: 20
+  _valueMode: 1
   _operation: 0
-  _skillKind: 3
+  _skillKind: 0

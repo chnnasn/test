@@ -12078,6 +12078,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6538121703238688371, guid: adbcb7934c72e0748b44d4ab9b9ade6e, type: 3}
+      propertyPath: _dronePrefab
+      value: 
+      objectReference: {fileID: 6267021334766678561, guid: 99891cb9a504b8144b18d33163337c7f, type: 3}
+    - target: {fileID: 6538121703238688371, guid: adbcb7934c72e0748b44d4ab9b9ade6e, type: 3}
+      propertyPath: _iceBombPrefab
+      value: 
+      objectReference: {fileID: 6736923132522498974, guid: f004a50ec0fdbc04595d5c641d52dab4, type: 3}
     - target: {fileID: 7419149742796458124, guid: adbcb7934c72e0748b44d4ab9b9ade6e, type: 3}
       propertyPath: m_IsActive
       value: 1

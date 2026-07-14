@@ -9,7 +9,7 @@ public class PlayerBuffPoolAsset : ScriptableObject
 
     public PlayerBuffAsset[] Buffs => _buffs;
 
-    public PlayerBuffAsset[] GetRandomDifferentBuffs(int count, IReadOnlyCollection<PlayerBuffAsset> excludedBuffs = null)
+    public PlayerBuffAsset[] GetRandomDifferentBuffs(int count, IReadOnlyCollection<PlayerBuffAsset> excludedBuffs = null, PlayerBuff playerBuff = null)
     {
         if (_buffs == null || _buffs.Length == 0 || count <= 0)
             return new PlayerBuffAsset[0];
@@ -19,6 +19,7 @@ public class PlayerBuffPoolAsset : ScriptableObject
         {
             if (buff == null) continue;
             if (excludedBuffs != null && excludedBuffs.Contains(buff)) continue;
+            if (!CanDrawBuff(buff, playerBuff)) continue;
 
             candidates.Add(buff);
         }
@@ -42,5 +43,17 @@ public class PlayerBuffPoolAsset : ScriptableObject
         }
 
         return result;
+    }
+
+    private bool CanDrawBuff(PlayerBuffAsset buff, PlayerBuff playerBuff)
+    {
+        if (playerBuff == null) return true;
+
+        return buff.Kind switch
+        {
+            PlayerBuffKind.DroneSkillPower => playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone),
+            PlayerBuffKind.IceBombSkillPower => playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb),
+            _ => true
+        };
     }
 }

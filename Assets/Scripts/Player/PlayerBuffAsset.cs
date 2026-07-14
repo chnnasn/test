@@ -9,7 +9,9 @@ public enum PlayerBuffKind
     Hp,
     AttackMultiplier,
     DamageReduction,
-    SkillUnlock
+    SkillUnlock,
+    DroneSkillPower,
+    IceBombSkillPower
 }
 
 public enum PlayerSkillKind

@@ -8,6 +8,18 @@ public class PlayerBuff
     private const float DefaultMaxHPGrowthPercentPerLevel = 5f;
     private const float DefaultAttackDamageGrowthPercentPerLevel = 10f;
     private const float DefaultDamageReductionPercentPerLevel = 2f;
+    private const float DefaultDroneInterval = 5f;
+    private const float DefaultDroneRange = 20f;
+    private const float DefaultDroneAcquireRadius = 0.75f;
+    private const float DefaultDroneAoeRadius = 3f;
+    private const float DefaultDroneDamage = 20f;
+    private const float DefaultIceBombInterval = 7f;
+    private const float DefaultIceBombRange = 20f;
+    private const float DefaultIceBombAcquireRadius = 0.75f;
+    private const float DefaultIceBombAoeRadius = 3f;
+    private const float DefaultIceBombDamage = 8f;
+    private const float DefaultIceBombSlowMultiplier = 0.5f;
+    private const float DefaultIceBombSlowDuration = 2f;
 
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
     private PlayerBuffConfigAsset _config;
@@ -15,6 +27,18 @@ public class PlayerBuff
     private float MaxHPGrowthPercentPerLevel => _config != null ? _config.MaxHPGrowthPercentPerLevel : DefaultMaxHPGrowthPercentPerLevel;
     private float AttackDamageGrowthPercentPerLevel => _config != null ? _config.AttackDamageGrowthPercentPerLevel : DefaultAttackDamageGrowthPercentPerLevel;
     private float DamageReductionPercentPerLevel => _config != null ? _config.DamageReductionPercentPerLevel : DefaultDamageReductionPercentPerLevel;
+    private float ConfigDroneInterval => _config != null ? _config.DroneInterval : DefaultDroneInterval;
+    private float ConfigDroneRange => _config != null ? _config.DroneRange : DefaultDroneRange;
+    private float ConfigDroneAcquireRadius => _config != null ? _config.DroneAcquireRadius : DefaultDroneAcquireRadius;
+    private float ConfigDroneAoeRadius => _config != null ? _config.DroneAoeRadius : DefaultDroneAoeRadius;
+    private float ConfigDroneDamage => _config != null ? _config.DroneDamage : DefaultDroneDamage;
+    private float ConfigIceBombInterval => _config != null ? _config.IceBombInterval : DefaultIceBombInterval;
+    private float ConfigIceBombRange => _config != null ? _config.IceBombRange : DefaultIceBombRange;
+    private float ConfigIceBombAcquireRadius => _config != null ? _config.IceBombAcquireRadius : DefaultIceBombAcquireRadius;
+    private float ConfigIceBombAoeRadius => _config != null ? _config.IceBombAoeRadius : DefaultIceBombAoeRadius;
+    private float ConfigIceBombDamage => _config != null ? _config.IceBombDamage : DefaultIceBombDamage;
+    private float ConfigIceBombSlowMultiplier => _config != null ? _config.IceBombSlowMultiplier : DefaultIceBombSlowMultiplier;
+    private float ConfigIceBombSlowDuration => _config != null ? _config.IceBombSlowDuration : DefaultIceBombSlowDuration;
 
     public float AttackMultiplier { get; private set; } = 1f;
     public float IncomingDamageMultiplier { get; private set; } = 1f;
@@ -28,6 +52,8 @@ public class PlayerBuff
     public float SwayMultiplier { get; private set; } = 1f;
     public float RecoilMultiplier { get; private set; } = 1f;
     public float FireRateMultiplier { get; private set; } = 1f;
+    public float DroneSkillPowerMultiplier { get; private set; } = 1f;
+    public float IceBombSkillPowerMultiplier { get; private set; } = 1f;
     private int _addedMagazineCapacity;
     public int AddedMagazineCapacity => _addedMagazineCapacity;
     public GenericProperty<bool> SprintUnlocked { get; private set; } = new GenericProperty<bool>();
@@ -70,6 +96,10 @@ public class PlayerBuff
                 return true;
             case PlayerBuffKind.SkillUnlock:
                 return UnlockSkill(buff.SkillKind);
+            case PlayerBuffKind.DroneSkillPower:
+                return ApplyDroneSkillPowerBuff(buff);
+            case PlayerBuffKind.IceBombSkillPower:
+                return ApplyIceBombSkillPowerBuff(buff);
             default:
                 return false;
         }
@@ -94,6 +124,19 @@ public class PlayerBuff
     {
         return Mathf.Max(1f, baseRateOfFire * FireRateMultiplier);
     }
+
+    public float GetDroneInterval() => ConfigDroneInterval;
+    public float GetDroneRange() => ConfigDroneRange;
+    public float GetDroneAcquireRadius() => ConfigDroneAcquireRadius;
+    public float GetDroneAoeRadius() => ConfigDroneAoeRadius;
+    public float GetDroneDamage() => Mathf.Max(0f, ConfigDroneDamage * DroneSkillPowerMultiplier);
+    public float GetIceBombInterval() => ConfigIceBombInterval;
+    public float GetIceBombRange() => ConfigIceBombRange;
+    public float GetIceBombAcquireRadius() => ConfigIceBombAcquireRadius;
+    public float GetIceBombAoeRadius() => ConfigIceBombAoeRadius;
+    public float GetIceBombDamage() => Mathf.Max(0f, ConfigIceBombDamage * IceBombSkillPowerMultiplier);
+    public float GetIceBombSlowMultiplier() => ConfigIceBombSlowMultiplier;
+    public float GetIceBombSlowDuration() => ConfigIceBombSlowDuration;
 
     public float GetSwayMultiplier(float baseMultiplier)
     {
@@ -264,6 +307,22 @@ public class PlayerBuff
 
         int signedAmount = Mathf.FloorToInt(amount);
         return buff.Operation == PlayerBuffOperation.Decrease ? -signedAmount : signedAmount;
+    }
+
+    private bool ApplyDroneSkillPowerBuff(PlayerBuffAsset buff)
+    {
+        if (!IsSkillUnlocked(PlayerSkillKind.Drone)) return false;
+
+        DroneSkillPowerMultiplier = ApplyBuffToMultiplier(DroneSkillPowerMultiplier, buff);
+        return true;
+    }
+
+    private bool ApplyIceBombSkillPowerBuff(PlayerBuffAsset buff)
+    {
+        if (!IsSkillUnlocked(PlayerSkillKind.IceBomb)) return false;
+
+        IceBombSkillPowerMultiplier = ApplyBuffToMultiplier(IceBombSkillPowerMultiplier, buff);
+        return true;
     }
 
     private bool UnlockSkill(PlayerSkillKind skill)

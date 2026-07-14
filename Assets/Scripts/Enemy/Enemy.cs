@@ -365,7 +365,13 @@ public class Enemy : MonoBehaviour,IDamage
             return;
         }
 
-        _slowTimerId = TimeManager.Instance.AddTimer(duration, ClearTemporarySlow);
+        _slowTimerId = TimeManager.Instance.AddTimer(duration, OnTemporarySlowFinished);
+    }
+
+    private void OnTemporarySlowFinished()
+    {
+        _slowTimerId = -1;
+        _enemyBuff.ClearTemporaryMoveSpeedMultiplier();
     }
 
     private void ClearTemporarySlow()
