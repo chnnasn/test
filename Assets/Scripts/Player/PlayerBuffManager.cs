@@ -434,7 +434,8 @@ public class PlayerBuffManager
         return kind == PlayerBuffKind.AttackMultiplier ||
                kind == PlayerBuffKind.DamageReduction ||
                kind == PlayerBuffKind.DroneSkillPower ||
-               kind == PlayerBuffKind.IceBombSkillPower;
+               kind == PlayerBuffKind.IceBombSkillPower ||
+               kind == PlayerBuffKind.LifeSteal;
     }
 
     private bool ApplyTemporaryBuff(PlayerBuffAsset buff, out PlayerBuffApplyResult result)
@@ -449,6 +450,14 @@ public class PlayerBuffManager
         if (buff.Kind == PlayerBuffKind.DroneSkillPower && !IsSkillUnlocked(PlayerSkillKind.Drone)) return false;
         if (buff.Kind == PlayerBuffKind.IceBombSkillPower && !IsSkillUnlocked(PlayerSkillKind.IceBomb)) return false;
 
+        if (buff.Kind == PlayerBuffKind.LifeSteal)
+        {
+            LifeStealPercent += GetNormalizedBuffValue(buff);
+            result.IsTemporary = true;
+            result.TemporaryEffectId = AddTemporaryEffect(buff.Kind, GetNormalizedBuffValue(buff));
+            return true;
+        }
+
         float multiplier = GetBuffMultiplier(buff);
         int effectId = AddTemporaryEffect(buff.Kind, multiplier);
 
@@ -460,6 +469,11 @@ public class PlayerBuffManager
     public bool RemoveTemporaryBuff(int effectId, out bool refreshWeaponSetup)
     {
         refreshWeaponSetup = false;
+        if (!_temporaryEffects.TryGetValue(effectId, out TemporaryBuffEffect effect)) return false;
+
+        if (effect.Kind == PlayerBuffKind.LifeSteal)
+            LifeStealPercent = Mathf.Max(0f, LifeStealPercent - effect.Multiplier);
+
         return _temporaryEffects.Remove(effectId);
     }
 
@@ -468,6 +482,7 @@ public class PlayerBuffManager
         refreshWeaponSetup = false;
         if (_temporaryEffects.Count <= 0) return false;
 
+        LifeStealPercent = 0f;
         _temporaryEffects.Clear();
         return true;
     }
