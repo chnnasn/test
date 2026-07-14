@@ -48,15 +48,11 @@ public class AreaDamageSkill : MonoBehaviour
 
         Vector3 origin = owner.position;
         Vector3 direction = owner.forward;
-        if (!TryGetTarget(origin, direction, range, acquireRadius, enemyLayerMask, out Enemy target))
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         _kind = kind;
         _startPosition = transform.position;
-        _targetPosition = target.transform.position;
+        _targetPosition = TryGetTarget(origin, direction, range, acquireRadius, enemyLayerMask, out Enemy target)
+            ? target.transform.position
+            : origin + direction.normalized * Mathf.Max(0f, range);
         _aoeRadius = aoeRadius;
         _damage = damage;
         _enemyLayerMask = enemyLayerMask;

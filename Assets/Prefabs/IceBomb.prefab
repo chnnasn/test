@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5810541347018440995}
   - component: {fileID: 7216150510543295488}
   - component: {fileID: 6575617728370737966}
-  - component: {fileID: 6736923132522498974}
+  - component: {fileID: 2033480852302054196}
   m_Layer: 0
   m_Name: IceBomb
   m_TagString: Untagged
@@ -106,7 +106,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &6736923132522498974
+--- !u!114 &2033480852302054196
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -115,7 +115,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 974953181825516786}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2113537ad8a80424cab4c615fedec8d4, type: 3}
+  m_Script: {fileID: 11500000, guid: 5f4f5f2c9cfb41e2a7b9d21c6e01c9d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _flyDuration: 0.6

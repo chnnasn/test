@@ -115,6 +115,7 @@ public class Player : MonoBehaviour, IDamage
     {
         if (_droneTimerId >= 0) return;
 
+        TriggerDroneSkill();
         _droneTimerId = TimeManager.Instance.AddLoopTimer(_playerBuff.GetDroneInterval(), TriggerDroneSkill);
     }
 
@@ -132,6 +133,7 @@ public class Player : MonoBehaviour, IDamage
     {
         if (_iceBombTimerId >= 0) return;
 
+        TriggerIceBombSkill();
         _iceBombTimerId = TimeManager.Instance.AddLoopTimer(_playerBuff.GetIceBombInterval(), TriggerIceBombSkill);
     }
 
