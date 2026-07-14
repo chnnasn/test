@@ -37,6 +37,7 @@ public class Enemy : MonoBehaviour,IDamage
     private Action<Enemy> _poolReleaseCallback;
     private Action<Enemy, float> _poolReleaseDelayCallback;
     private Coroutine _boomParticleReleaseCoroutine;
+    private int _slowTimerId = -1;
 
     public EnemyStateMachine stateMachine { get; private set; }
     public EnemyMovement Movement { get; private set; }
@@ -247,6 +248,7 @@ public class Enemy : MonoBehaviour,IDamage
     {
         SpatialGrid.Unregister(this);
         _attackDetectCallback = null;
+        ClearTemporarySlow();
     }
 
     private void Start()
@@ -271,6 +273,7 @@ public class Enemy : MonoBehaviour,IDamage
 
     public void ResetEnemy()
     {
+        ClearTemporarySlow();
         _enemyBuff.SetConfig(_buffConfigAsset);
         _enemyBuff.Reset();
         _currentHP = MaxHP;
@@ -342,6 +345,36 @@ public class Enemy : MonoBehaviour,IDamage
     public void SetTarget(Transform target)
     {
         _target = target;
+    }
+
+    public void ApplyTemporarySlow(float multiplier, float duration)
+    {
+        if (!IsAlive || _isDying) return;
+
+        multiplier = Mathf.Clamp01(multiplier);
+        duration = Mathf.Max(0f, duration);
+        _enemyBuff.SetTemporaryMoveSpeedMultiplier(multiplier);
+
+        if (_slowTimerId >= 0 && TimeManager.TryGetExistingInstance(out TimeManager existingTimeManager))
+            existingTimeManager.RemoveTimer(_slowTimerId);
+        _slowTimerId = -1;
+
+        if (duration <= 0f)
+        {
+            ClearTemporarySlow();
+            return;
+        }
+
+        _slowTimerId = TimeManager.Instance.AddTimer(duration, ClearTemporarySlow);
+    }
+
+    private void ClearTemporarySlow()
+    {
+        if (_slowTimerId >= 0 && TimeManager.TryGetExistingInstance(out TimeManager timeManager))
+            timeManager.RemoveTimer(_slowTimerId);
+
+        _slowTimerId = -1;
+        _enemyBuff.ClearTemporaryMoveSpeedMultiplier();
     }
 
     /// <summary>

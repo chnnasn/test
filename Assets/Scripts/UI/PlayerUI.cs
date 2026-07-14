@@ -10,6 +10,8 @@ public class PlayerUI : MonoBehaviour
     public Text LVText;
     public GunDisplay GunDisplay;
     public Image sprint;
+    public Image Drone;
+    public Image IceBomb;
 
     private void OnEnable()
     {
@@ -56,11 +58,17 @@ public class PlayerUI : MonoBehaviour
         player.ExperienceProgress.OnValueChanged += SetExperienceProgress;
         player.Buff.SprintUnlocked.OnValueChanged -= SetSprintVisible;
         player.Buff.SprintUnlocked.OnValueChanged += SetSprintVisible;
+        player.Buff.DroneUnlocked.OnValueChanged -= SetDroneVisible;
+        player.Buff.DroneUnlocked.OnValueChanged += SetDroneVisible;
+        player.Buff.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
+        player.Buff.IceBombUnlocked.OnValueChanged += SetIceBombVisible;
 
         SetHp(player.CurrentHP.Value, player.MaxHP);
         SetLevel(player.Level.Value);
         SetExperienceProgress(player.ExperienceProgress.Value);
         SetSprintVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint));
+        SetDroneVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.Drone));
+        SetIceBombVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.IceBomb));
     }
 
     private void UnbindPlayer(Player player)
@@ -71,6 +79,8 @@ public class PlayerUI : MonoBehaviour
         player.Level.OnValueChanged -= SetLevel;
         player.ExperienceProgress.OnValueChanged -= SetExperienceProgress;
         player.Buff.SprintUnlocked.OnValueChanged -= SetSprintVisible;
+        player.Buff.DroneUnlocked.OnValueChanged -= SetDroneVisible;
+        player.Buff.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
     }
 
     private void BindCharacter(Character character)
@@ -131,6 +141,18 @@ public class PlayerUI : MonoBehaviour
     {
         if (sprint != null)
             sprint.gameObject.SetActive(visible);
+    }
+
+    private void SetDroneVisible(bool visible)
+    {
+        if (Drone != null)
+            Drone.gameObject.SetActive(visible);
+    }
+
+    private void SetIceBombVisible(bool visible)
+    {
+        if (IceBomb != null)
+            IceBomb.gameObject.SetActive(visible);
     }
 
     public void SetBulletCount(int currentAmmo)

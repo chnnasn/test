@@ -31,6 +31,8 @@ public class PlayerBuff
     private int _addedMagazineCapacity;
     public int AddedMagazineCapacity => _addedMagazineCapacity;
     public GenericProperty<bool> SprintUnlocked { get; private set; } = new GenericProperty<bool>();
+    public GenericProperty<bool> DroneUnlocked { get; private set; } = new GenericProperty<bool>();
+    public GenericProperty<bool> IceBombUnlocked { get; private set; } = new GenericProperty<bool>();
 
     public void SetConfig(PlayerBuffConfigAsset config)
     {
@@ -269,8 +271,18 @@ public class PlayerBuff
         if (skill == PlayerSkillKind.None) return false;
 
         _unlockedSkills.Add(skill);
-        if (skill == PlayerSkillKind.sprint)
-            SprintUnlocked.Value = true;
+        switch (skill)
+        {
+            case PlayerSkillKind.sprint:
+                SprintUnlocked.Value = true;
+                break;
+            case PlayerSkillKind.Drone:
+                DroneUnlocked.Value = true;
+                break;
+            case PlayerSkillKind.IceBomb:
+                IceBombUnlocked.Value = true;
+                break;
+        }
 
         return true;
     }

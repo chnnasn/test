@@ -21,6 +21,7 @@ public class EnemyBuff
     public float AttackIntervalMultiplier { get; private set; } = 1f;
     public float AttackSphereRadiusMultiplier { get; private set; } = 1f;
     public float MoveSpeedMultiplier { get; private set; } = 1f;
+    public float TemporaryMoveSpeedMultiplier { get; private set; } = 1f;
 
     public float GetMaxHP(float baseValue) => Mathf.Max(0f, baseValue * MaxHPMultiplier);
     public float GetExperienceReward(float baseValue) => Mathf.Max(0f, baseValue * ExperienceRewardMultiplier);
@@ -28,7 +29,7 @@ public class EnemyBuff
     public float GetAttackRange(float baseValue) => Mathf.Max(0f, baseValue * AttackRangeMultiplier);
     public float GetAttackInterval(float baseValue) => Mathf.Max(0.01f, baseValue * AttackIntervalMultiplier);
     public float GetAttackSphereRadius(float baseValue) => Mathf.Max(0f, baseValue * AttackSphereRadiusMultiplier);
-    public float GetMoveSpeed(float baseValue) => Mathf.Max(0f, baseValue * MoveSpeedMultiplier);
+    public float GetMoveSpeed(float baseValue) => Mathf.Max(0f, baseValue * MoveSpeedMultiplier * TemporaryMoveSpeedMultiplier);
 
     public void SetConfig(EnemyBuffConfigAsset config)
     {
@@ -44,6 +45,16 @@ public class EnemyBuff
         MoveSpeedMultiplier *= Mathf.Pow(MoveSpeedGrowthPerWave, waveIndex);
     }
 
+    public void SetTemporaryMoveSpeedMultiplier(float multiplier)
+    {
+        TemporaryMoveSpeedMultiplier = Mathf.Max(0f, multiplier);
+    }
+
+    public void ClearTemporaryMoveSpeedMultiplier()
+    {
+        TemporaryMoveSpeedMultiplier = 1f;
+    }
+
     public void Reset()
     {
         MaxHPMultiplier = 1f;
@@ -53,5 +64,6 @@ public class EnemyBuff
         AttackIntervalMultiplier = 1f;
         AttackSphereRadiusMultiplier = 1f;
         MoveSpeedMultiplier = 1f;
+        TemporaryMoveSpeedMultiplier = 1f;
     }
 }

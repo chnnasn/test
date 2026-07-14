@@ -15,7 +15,9 @@ public enum PlayerBuffKind
 public enum PlayerSkillKind
 {
     None,
-    sprint
+    sprint,
+    Drone,
+    IceBomb
 }
 
 public enum PlayerBuffValueMode

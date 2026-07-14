@@ -11,11 +11,33 @@ public class Player : MonoBehaviour, IDamage
     [SerializeField] private PlayerBuffPoolAsset _buffPoolAsset;
     [SerializeField] private PlayerBuffConfigAsset _buffConfigAsset;
 
+    [Header("Drone Skill")]
+    [SerializeField] private AreaDamageSkill _dronePrefab;
+    [SerializeField] private Transform _skillSpawnPoint;
+    [SerializeField] private float _droneInterval = 5f;
+    [SerializeField] private float _droneRange = 20f;
+    [SerializeField] private float _droneAcquireRadius = 0.75f;
+    [SerializeField] private float _droneAoeRadius = 3f;
+    [SerializeField] private float _droneDamage = 20f;
+    [SerializeField] private LayerMask _enemyLayerMask = 1 << 3;
+
+    [Header("IceBomb Skill")]
+    [SerializeField] private AreaDamageSkill _iceBombPrefab;
+    [SerializeField] private float _iceBombInterval = 7f;
+    [SerializeField] private float _iceBombRange = 20f;
+    [SerializeField] private float _iceBombAcquireRadius = 0.75f;
+    [SerializeField] private float _iceBombAoeRadius = 3f;
+    [SerializeField] private float _iceBombDamage = 8f;
+    [SerializeField] private float _iceBombSlowMultiplier = 0.5f;
+    [SerializeField] private float _iceBombSlowDuration = 2f;
+
     private float _experience;
     private int _pendingBuffChooseCount;
     private PlayerBuffAsset[] _currentLevelUpBuffs;
     private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
     private readonly PlayerBuff _playerBuff = new PlayerBuff();
+    private int _droneTimerId = -1;
+    private int _iceBombTimerId = -1;
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _playerBuff.GetMaxHP(_maxHP);
@@ -47,10 +69,19 @@ public class Player : MonoBehaviour, IDamage
         EventManager.Instance.OnAttackedAction += TakeDamage;
         EventManager.Instance.AddExper += AddExperience;
         EventManager.Instance.TriggerBuff += ApplySelectedBuff;
+        _playerBuff.DroneUnlocked.OnValueChanged += OnDroneUnlockedChanged;
+        _playerBuff.IceBombUnlocked.OnValueChanged += OnIceBombUnlockedChanged;
+        OnDroneUnlockedChanged(_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone));
+        OnIceBombUnlockedChanged(_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb));
     }
 
     private void OnDisable()
     {
+        _playerBuff.DroneUnlocked.OnValueChanged -= OnDroneUnlockedChanged;
+        _playerBuff.IceBombUnlocked.OnValueChanged -= OnIceBombUnlockedChanged;
+        StopDroneTimer();
+        StopIceBombTimer();
+
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
         {
             eventManager.OnAttackedAction -= TakeDamage;
@@ -60,6 +91,82 @@ public class Player : MonoBehaviour, IDamage
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
             context.UnregisterPlayer(this);
+    }
+
+    private void OnDroneUnlockedChanged(bool unlocked)
+    {
+        if (unlocked)
+            StartDroneTimer();
+        else
+            StopDroneTimer();
+    }
+
+    private void OnIceBombUnlockedChanged(bool unlocked)
+    {
+        if (unlocked)
+            StartIceBombTimer();
+        else
+            StopIceBombTimer();
+    }
+
+    private void StartDroneTimer()
+    {
+        if (_droneTimerId >= 0) return;
+
+        _droneTimerId = TimeManager.Instance.AddLoopTimer(_droneInterval, TriggerDroneSkill);
+    }
+
+    private void StopDroneTimer()
+    {
+        if (_droneTimerId < 0) return;
+
+        if (TimeManager.TryGetExistingInstance(out TimeManager timeManager))
+            timeManager.RemoveTimer(_droneTimerId);
+
+        _droneTimerId = -1;
+    }
+
+    private void StartIceBombTimer()
+    {
+        if (_iceBombTimerId >= 0) return;
+
+        _iceBombTimerId = TimeManager.Instance.AddLoopTimer(_iceBombInterval, TriggerIceBombSkill);
+    }
+
+    private void StopIceBombTimer()
+    {
+        if (_iceBombTimerId < 0) return;
+
+        if (TimeManager.TryGetExistingInstance(out TimeManager timeManager))
+            timeManager.RemoveTimer(_iceBombTimerId);
+
+        _iceBombTimerId = -1;
+    }
+
+    private void TriggerDroneSkill()
+    {
+        if (!isActiveAndEnabled || !IsAlive) return;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
+
+        Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
+        AreaDamageSkill drone = _dronePrefab != null
+            ? Instantiate(_dronePrefab, spawnPoint.position, spawnPoint.rotation)
+            : new GameObject("Drone Skill").AddComponent<AreaDamageSkill>();
+        drone.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
+        drone.Initialize(AreaDamageSkillKind.Drone, spawnPoint, _droneRange, _droneAcquireRadius, _droneAoeRadius, _droneDamage, _enemyLayerMask);
+    }
+
+    private void TriggerIceBombSkill()
+    {
+        if (!isActiveAndEnabled || !IsAlive) return;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
+
+        Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
+        AreaDamageSkill iceBomb = _iceBombPrefab != null
+            ? Instantiate(_iceBombPrefab, spawnPoint.position, spawnPoint.rotation)
+            : new GameObject("IceBomb Skill").AddComponent<AreaDamageSkill>();
+        iceBomb.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
+        iceBomb.Initialize(AreaDamageSkillKind.IceBomb, spawnPoint, _iceBombRange, _iceBombAcquireRadius, _iceBombAoeRadius, _iceBombDamage, _enemyLayerMask, _iceBombSlowMultiplier, _iceBombSlowDuration);
     }
 
     private void AddExperience(float experience)
