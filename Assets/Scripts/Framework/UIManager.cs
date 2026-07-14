@@ -327,10 +327,7 @@ public class UIManager : MonoBehaviour
 
     private void OnGamblingFinished()
     {
-        if (Gambling != null)
-            Gambling.gameObject.SetActive(false);
-
-        EventManager.Instance.SetGameResume();
+        // 游戏恢复交由 GamblingRoundComplete → DrawLevelUpBuffs → OnLevelUpBuffsFinished 统一处理
     }
 
     private void OnGamblingGreatLuckEnded()

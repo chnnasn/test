@@ -87,6 +87,7 @@ public class Player : MonoBehaviour, IDamage
         EventManager.Instance.AddExper += AddExperience;
         EventManager.Instance.TriggerBuff += OnTriggerBuff;
         EventManager.Instance.RequestGambling += OnRequestGambling;
+        EventManager.Instance.GamblingRoundComplete += OnGamblingRoundComplete;
         CurrentHP.OnValueChanged += OnCurrentHpChanged;
         _playerBuffManager.DroneUnlocked.OnValueChanged += OnDroneUnlockedChanged;
         _playerBuffManager.IceBombUnlocked.OnValueChanged += OnIceBombUnlockedChanged;
@@ -109,6 +110,7 @@ public class Player : MonoBehaviour, IDamage
             eventManager.AddExper -= AddExperience;
             eventManager.TriggerBuff -= OnTriggerBuff;
             eventManager.RequestGambling -= OnRequestGambling;
+            eventManager.GamblingRoundComplete -= OnGamblingRoundComplete;
         }
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
@@ -627,7 +629,15 @@ public class Player : MonoBehaviour, IDamage
     {
         if (!IsAlive) return;
 
+        // 赌博本质是另一种 buff 选择，消耗一轮选择次数
+        _playerBuffManager.ConsumeBuffChoiceRoundForGambling();
+
         var result = _playerBuffManager.GetGamblingResult();
         EventManager.Instance.SetGamblingReady(result.nums, result.resultType, result.detailDesc, result.callback);
+    }
+
+    private void OnGamblingRoundComplete()
+    {
+        _playerBuffManager.DrawLevelUpBuffs();
     }
 }

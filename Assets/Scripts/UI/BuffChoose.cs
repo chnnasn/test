@@ -211,9 +211,12 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
 
     /// <summary>
     /// 外部触发赌博 Buff 的接口，不会被池子抽到，通过其他方式调用。
+    /// 赌博本质是另一种 buff 选择，触发后禁止继续选择 buff。
     /// </summary>
     public void TriggerGambling()
     {
+        if (!_canChoose) return;
+        _canChoose = false;
         EventManager.Instance.SetRequestGambling();
     }
 }

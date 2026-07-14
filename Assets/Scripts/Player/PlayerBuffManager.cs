@@ -676,6 +676,15 @@ public class PlayerBuffManager
             _pendingBuffChooseCount += count;
     }
 
+    /// <summary>
+    /// 玩家选择赌博而非 Buff 时，消耗一轮选择次数。
+    /// 赌博本质是 Buff 选择的一种代替方式。
+    /// </summary>
+    public void ConsumeBuffChoiceRoundForGambling()
+    {
+        _pendingBuffChooseCount = Mathf.Max(0, _pendingBuffChooseCount - 1);
+    }
+
     public void DrawLevelUpBuffs()
     {
         if (_pendingBuffChooseCount <= 0)

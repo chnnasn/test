@@ -29,6 +29,7 @@ public class EventManager : LazySingleton<EventManager>
     public Action RequestGambling;
     public Action<int[], string, string, System.Action> GamblingReady;
     public Action GamblingFinished;
+    public Action GamblingRoundComplete;
     public Action<float> GamblingGreatLuckStarted;
     public Action GamblingGreatLuckEnded;
 
@@ -119,6 +120,11 @@ public class EventManager : LazySingleton<EventManager>
     public void SetGamblingFinished()
     {
         GamblingFinished?.Invoke();
+    }
+
+    public void SetGamblingRoundComplete()
+    {
+        GamblingRoundComplete?.Invoke();
     }
 
     public void SetGamblingGreatLuckStarted(float duration)

@@ -123,6 +123,7 @@ public class Gambling : MonoBehaviour
 
             gameObject.SetActive(false);
             EventManager.Instance.SetGamblingFinished();
+            EventManager.Instance.SetGamblingRoundComplete();
         }
     }
 
@@ -144,6 +145,7 @@ public class Gambling : MonoBehaviour
         }
 
         gameObject.SetActive(false);
+        EventManager.Instance.SetGamblingRoundComplete();
     }
 
     private void SettleNumber(int index, int targetValue)
