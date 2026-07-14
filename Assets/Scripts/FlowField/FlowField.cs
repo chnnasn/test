@@ -221,7 +221,7 @@ public static class FlowField
 
     /// <summary>
     /// 脏矩阵部分重建：保留旧代价，仅 BFS 到代价真正变小的格子。
-    /// 流向只重算 BFS 访问过及其邻居的格子。
+    /// 流向做全量重算以保证与代价矩阵严格一致（O(N) 极轻量）。
     /// </summary>
     private static void PartialRebuild(Vector3 targetPos)
     {
@@ -273,14 +273,17 @@ public static class FlowField
             }
         }
 
-        // 只重算变化格子及其邻居的流向
-        for (int i = 0; i < _changedCellIndices.Count; i++)
+        // 重算流向：不仅限于代价变化的格子，因为邻居格子虽然自身代价不变，
+        // 但其最佳方向可能因相邻格代价变化而改变。方向计算本身 O(N) 极轻量。
+        // 此处做全量方向重算，确保整个流场方向与代价矩阵严格一致。
+        for (int y = 0; y < _height; y++)
         {
-            int idx = _changedCellIndices[i];
-            if (idx < 0 || _costs[idx] <= 0) continue;
-            int x = idx % _width;
-            int y = idx / _width;
-            _flowDirections[idx] = ComputeBestFlowDirection(x, y, idx);
+            for (int x = 0; x < _width; x++)
+            {
+                int idx = CellToIndex(new Vector2Int(x, y));
+                if (idx < 0 || _costs[idx] <= 0) continue;
+                _flowDirections[idx] = ComputeBestFlowDirection(x, y, idx);
+            }
         }
     }
 

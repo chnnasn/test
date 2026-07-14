@@ -278,6 +278,9 @@ public class EnemyManager : MonoBehaviour
         int batch = _navigationBatchCursor;
         _navigationBatchCursor = (_navigationBatchCursor + 1) % batchCount;
 
+        // 当前是第几轮遍历：每 batchCount 帧所有敌人各被访问一次，算一轮
+        int epoch = _navigationFrameCount / batchCount;
+
         // 玩家位置用于距离计算
         Vector3 playerPos = RunTimeContext.Instance.PlayerObject != null
             ? RunTimeContext.Instance.PlayerObject.transform.position
@@ -292,7 +295,7 @@ public class EnemyManager : MonoBehaviour
             // ── AI LOD：根据到玩家距离降低远敌寻路更新频率 ──
             float distToPlayer = Vector3.Distance(enemy.transform.position, playerPos);
             int skipFrames = GetLodSkipFrames(distToPlayer);
-            if (skipFrames > 1 && _navigationFrameCount % skipFrames != batch % skipFrames)
+            if (skipFrames > 1 && epoch % skipFrames != 0)
                 continue;
 
             enemy.TickNavigation();

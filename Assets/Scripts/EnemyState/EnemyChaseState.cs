@@ -115,9 +115,12 @@ public class EnemyChaseState : EnemyState
             _flipWindowTimer = 0f;
         }
 
-        // 移动仍然每帧执行，方向由WaveManager分批刷新，避免移动卡顿。
-        if (_hasCachedMoveDirection && _cachedMoveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-            movement.Move(_cachedMoveDirection);
+        // 移动仍然每帧执行。即使 NavigationUpdate 已设缓存方向，
+        // 也需要用实时流场做纠正：缓存方向可能在 LOD 跳帧期间过期，指向错误位置甚至墙壁。
+        // 近距离依赖缓存（含精确分离/避障），远距离靠实时流场拉回。
+        Vector3 moveDir = GetMovementDirection(target.position);
+        if (moveDir.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
+            movement.Move(moveDir);
         else
             movement.Stop();
     }
@@ -208,6 +211,57 @@ public class EnemyChaseState : EnemyState
         movement.Stop();
     }
 
+    /// <summary>
+    /// 轻量追击方向：仅查流场（O(1) 数组读取），不计算分离/避障等昂贵逻辑。
+    /// 用于 NavigationUpdate 跳帧期间保持敌人朝玩家持续靠近。
+    /// </summary>
+    private Vector3 GetLiveChaseDirection(Vector3 targetPos)
+    {
+        Vector3 pos = enemy.transform.position;
+
+        // 1. 优先流场方向（只需一次数组访问）
+        if (FlowField.TryGetFlowDirection(pos, out Vector3 flowDir) && flowDir.sqrMagnitude > 0.0001f)
+        {
+            // 做基本贴墙投影（同样是流场查表，无 Physics 开销）
+            return ConstrainByObstacle(flowDir);
+        }
+
+        // 2. 流场不可用（未初始化或格子在界外）→ 直接追玩家
+        Vector3 toTarget = targetPos - pos;
+        toTarget.y = 0;
+        return toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : Vector3.zero;
+    }
+
+    /// <summary>
+    /// 每帧真实移动方向：有缓存方向时用实时流场纠正过期偏差；
+    /// 无缓存方向时退化到纯流场追击。
+    /// 这保证了 NavigationUpdate 的频率只影响分离/避障精度，不影响"朝玩家靠近"这个基本行为。
+    /// </summary>
+    private Vector3 GetMovementDirection(Vector3 targetPos)
+    {
+        // 有缓存方向（NavigationUpdate 曾运行过）：混合实时流场纠正
+        if (_hasCachedMoveDirection && _cachedMoveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
+        {
+            Vector3 pos = enemy.transform.position;
+
+            // 取实时流场方向
+            if (FlowField.TryGetFlowDirection(pos, out Vector3 liveFlow) && liveFlow.sqrMagnitude > 0.0001f)
+            {
+                float distToTarget = Vector3.Distance(pos, targetPos);
+                // 近距离：保留缓存方向精确性（分离/避障），仅 15% 流场纠正
+                // 远距离：缓存方向可能已过期，50% 流场纠正拉回轨道
+                float flowBlend = Mathf.Lerp(0.15f, 0.50f, Mathf.InverseLerp(5f, 25f, distToTarget));
+                return Vector3.Lerp(_cachedMoveDirection, liveFlow, flowBlend).normalized;
+            }
+
+            // 流场不可用 → 保留缓存方向（已是当前最好选择）
+            return _cachedMoveDirection;
+        }
+
+        // 无缓存方向 → 纯流场追击
+        return GetLiveChaseDirection(targetPos);
+    }
+
     private void ClearCachedMoveDirection()
     {
         _cachedMoveDirection = Vector3.zero;
@@ -228,23 +282,15 @@ public class EnemyChaseState : EnemyState
 
         // ── 1. FlowField 全局方向（替代 Seek）──
         bool hasFlowDirection = FlowField.TryGetFlowDirection(pos, out Vector3 flowDir);
-        // 只有 FlowField 未初始化时才 fallback 直追；已初始化但不可达时避免直线穿墙
+        // 流场不可达时（界外 / 未初始化）：回退直追玩家，由后续 ConstrainByObstacle 处理贴墙
         if (!hasFlowDirection)
         {
-            if (!FlowField.IsInitialized)
-            {
-                Vector3 toTarget = targetPos - pos;
-                toTarget.y = 0;
-                float sqrMag = toTarget.sqrMagnitude;
-                if (sqrMag > 0.0001f)
-                    flowDir = toTarget.normalized;
-                else
-                    return Vector3.zero;
-            }
+            Vector3 toTarget = targetPos - pos;
+            toTarget.y = 0;
+            if (toTarget.sqrMagnitude > 0.0001f)
+                flowDir = toTarget.normalized;
             else
-            {
-                flowDir = _lastStableDirection.sqrMagnitude > 0.0001f ? _lastStableDirection : enemy.transform.forward;
-            }
+                return Vector3.zero;
         }
 
         // ── 2. Boids 分离力（空间分桶查询邻居）──
@@ -346,14 +392,17 @@ public class EnemyChaseState : EnemyState
 
     /// <summary>
     /// 贴墙滑动投影：用流场障碍格代替 Physics.SphereCast。
+    /// 检测距离至少覆盖一个格子（cellSize），确保能发现紧邻格子的墙壁。
     /// </summary>
     private Vector3 ConstrainByObstacle(Vector3 moveDirection)
     {
         float magnitude = moveDirection.magnitude;
         if (magnitude < 0.0001f) return moveDirection;
 
-        float checkDistance = Mathf.Max(movement.ColliderRadius + 0.05f,
-            movement.MoveSpeed * Time.deltaTime + movement.ColliderRadius);
+        // 确保检测距离至少覆盖一个格子 + collider，否则敌人会走进紧邻的墙格才触发投影
+        float checkDistance = movement.MoveSpeed * Time.deltaTime + movement.ColliderRadius;
+        if (FlowField.IsInitialized)
+            checkDistance = Mathf.Max(checkDistance, FlowField.CellSize + movement.ColliderRadius);
 
         Vector3 projected = FlowField.ProjectDirectionByObstacle(
             enemy.transform.position, moveDirection, checkDistance);
