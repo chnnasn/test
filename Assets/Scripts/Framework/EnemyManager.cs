@@ -9,10 +9,12 @@ public class EnemyManager : MonoBehaviour
     [SerializeField, Min(1)] private int _navigationBatchCount = 5;
 
     [Header("AI LOD 距离分级")]
-    [SerializeField] private float _lodNearDistance = 10f;   // 近距离：每帧/每批更新
-    [SerializeField] private float _lodMidDistance = 25f;    // 中距离：每 N 帧更新一次
-    [SerializeField] private int _lodMidSkipFrames = 2;      // 中距离跳过帧数（每 2 批更新一次）
-    [SerializeField] private int _lodFarSkipFrames = 5;      // 远距离跳过帧数（每 5 批更新一次）
+    [SerializeField] private float _lodNearDistance = 15f;
+    [SerializeField] private float _lodMidDistance = 30f;
+    [SerializeField] private float _lodFarDistance = 50f;
+    [SerializeField] private int _lodMidSkipFrames = 2;
+    [SerializeField] private int _lodFarSkipFrames = 4;
+    [SerializeField] private int _lodVeryFarSkipFrames = 8;
 
     private static readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
     private static readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
@@ -254,6 +256,13 @@ public class EnemyManager : MonoBehaviour
 
     private void TickActiveEnemies()
     {
+        // 复用 playerPos 给 LOD 距离判断
+        Vector3 playerPos = RunTimeContext.Instance.PlayerObject != null
+            ? RunTimeContext.Instance.PlayerObject.transform.position
+            : Vector3.zero;
+        bool playerExists = RunTimeContext.Instance.PlayerObject != null;
+        int frame = _navigationFrameCount;
+
         for (int i = _activeEnemies.Count - 1; i >= 0; i--)
         {
             Enemy enemy = _activeEnemies[i];
@@ -261,6 +270,32 @@ public class EnemyManager : MonoBehaviour
             {
                 RemoveActiveEnemyAt(i);
                 continue;
+            }
+
+            // 死亡中：跳过状态机（死亡动画由 Animator 自身播放）
+            if (enemy.IsDying) continue;
+
+            // ── 距离 LOD：远距离敌人状态机更新降频（适配 200 敌人）──
+            if (playerExists)
+            {
+                Vector3 ePos = enemy.transform.position;
+                float distSqr = (ePos.x - playerPos.x) * (ePos.x - playerPos.x)
+                              + (ePos.z - playerPos.z) * (ePos.z - playerPos.z);
+                if (distSqr > _lodFarDistance * _lodFarDistance)
+                {
+                    // >50m：每 8 帧一次
+                    if ((frame & 7) != 0) continue;
+                }
+                else if (distSqr > _lodMidDistance * _lodMidDistance)
+                {
+                    // 30-50m：每 4 帧一次
+                    if ((frame & 3) != 0) continue;
+                }
+                else if (distSqr > _lodNearDistance * _lodNearDistance)
+                {
+                    // 15-30m：每 2 帧一次
+                    if ((frame & 1) != 0) continue;
+                }
             }
 
             enemy.TickState();
@@ -309,7 +344,8 @@ public class EnemyManager : MonoBehaviour
     {
         if (distance <= _lodNearDistance) return 1;
         if (distance <= _lodMidDistance) return Mathf.Max(2, _lodMidSkipFrames);
-        return Mathf.Max(3, _lodFarSkipFrames);
+        if (distance <= _lodFarDistance) return Mathf.Max(3, _lodFarSkipFrames);
+        return Mathf.Max(5, _lodVeryFarSkipFrames);
     }
 
     private void AddActiveEnemy(Enemy enemy)

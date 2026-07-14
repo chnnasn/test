@@ -230,8 +230,9 @@ public class Enemy : MonoBehaviour,IDamage
     public bool IsTargetInAttackRange()
     {
         if (_target == null) return false;
-        float dist = Vector3.Distance(transform.position, _target.position);
-        return dist <= AttackRange;
+        float range = AttackRange;
+        // sqrMagnitude 比较省一次 sqrt，100 个敌人每帧节省可观开销
+        return (transform.position - _target.position).sqrMagnitude <= range * range;
     }
 
     private void Awake()
