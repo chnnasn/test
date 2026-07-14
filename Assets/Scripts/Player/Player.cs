@@ -513,7 +513,7 @@ public class Player : MonoBehaviour, IDamage
 
     private void AddExperience(float experience)
     {
-        _experience += experience;
+        _experience += Mathf.Max(0f, experience) * _playerBuffManager.ExperienceMultiplier;
         CheckExper();
     }
 
@@ -599,7 +599,7 @@ public class Player : MonoBehaviour, IDamage
 
     public void TakeDamage(float damage, Vector3 hitPoint)
     {
-        if (!IsAlive) return;
+        if (!IsAlive || _playerBuffManager.IsInvincible) return;
 
         float finalDamage = _playerBuffManager.GetReceivedDamage(damage);
         CurrentHP.Value = Mathf.Max(CurrentHP.Value - finalDamage, 0f);

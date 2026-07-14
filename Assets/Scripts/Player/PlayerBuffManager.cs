@@ -81,6 +81,8 @@ public class PlayerBuffManager
     public bool CanDrawAdrenaline => !HasAdrenalineBuff;
     public float LifeStealPercent { get; private set; }
     public float MaxHPMultiplier { get; private set; } = 1f;
+    public float ExperienceMultiplier { get; private set; } = 1f;
+    public bool IsInvincible { get; private set; }
 
     // ====== Buff flow state (moved from Player) ======
     private int _pendingBuffChooseCount;
@@ -92,6 +94,8 @@ public class PlayerBuffManager
 
     // ====== Temporary buff timer tracking ======
     private readonly Dictionary<int, int> _temporaryBuffTimerIds = new Dictionary<int, int>();
+    private readonly List<int> _gamblingGreatLuckTimerIds = new List<int>();
+    private int _gamblingGreatLuckStackCount;
 
     // ====== Adrenaline state ======
     private PlayerBuffAsset _adrenalineBuffAsset;
@@ -313,7 +317,7 @@ public class PlayerBuffManager
     {
         int roll = UnityEngine.Random.Range(0, 100);
 
-        if (roll > 50)
+        if (roll >= 50)
             return GenerateBuZhong();
         if (roll >= 20)
             return GenerateXiaoJi();
@@ -906,25 +910,21 @@ public class PlayerBuffManager
             case "大吉":
                 return () =>
                 {
-                    MultiplyAttackMultiplier(1.5f);
-                    _onHeal?.Invoke(maxHP * 0.5f);
-                    float hpBonus = _baseMaxHP * 0.2f;
-                    AddMaxHp(hpBonus);
-                    _onHeal?.Invoke(hpBonus);
-                    Debug.LogWarning("赌博大吉！攻击力x1.5，恢复50%HP，最大HP+20%");
+                    ApplyGamblingGreatLuck();
+                    Debug.LogWarning("赌博大吉！20秒内双倍经验并且无敌");
                 };
             case "吉":
                 return () =>
                 {
-                    MultiplyAttackMultiplier(1.2f);
-                    _onHeal?.Invoke(maxHP * 0.2f);
-                    Debug.LogWarning("赌博吉！攻击力x1.2，恢复20%HP");
+                    int effectId = AddTemporaryEffect(PlayerBuffKind.AttackMultiplier, 1.2f);
+                    StartTemporaryBuffTimer(effectId, 10f);
+                    Debug.LogWarning("赌博吉！10秒内攻击伤害+20%");
                 };
             case "小吉":
                 return () =>
                 {
-                    _onHeal?.Invoke(maxHP * 0.1f);
-                    Debug.LogWarning("赌博小吉！恢复10%HP");
+                    _onHeal?.Invoke(maxHP * 0.3f);
+                    Debug.LogWarning("赌博小吉！恢复30%HP");
                 };
             default:
                 return () =>
@@ -932,6 +932,27 @@ public class PlayerBuffManager
                     Debug.LogWarning("赌博不中...");
                 };
         }
+    }
+
+    private void ApplyGamblingGreatLuck()
+    {
+        _gamblingGreatLuckStackCount++;
+        ExperienceMultiplier = Mathf.Pow(2f, _gamblingGreatLuckStackCount);
+        IsInvincible = true;
+        int timerId = _onScheduleTimer?.Invoke(20f, ClearGamblingGreatLuck) ?? -1;
+        if (timerId >= 0)
+            _gamblingGreatLuckTimerIds.Add(timerId);
+    }
+
+    private void ClearGamblingGreatLuck()
+    {
+        if (_gamblingGreatLuckTimerIds.Count > 0)
+            _gamblingGreatLuckTimerIds.RemoveAt(0);
+
+        _gamblingGreatLuckStackCount = Mathf.Max(0, _gamblingGreatLuckStackCount - 1);
+        ExperienceMultiplier = Mathf.Pow(2f, _gamblingGreatLuckStackCount);
+        IsInvincible = _gamblingGreatLuckStackCount > 0;
+        Debug.LogWarning("赌博大吉效果结束");
     }
 
     #endregion
@@ -950,6 +971,13 @@ public class PlayerBuffManager
 
         // 取消肾上腺素
         ClearAdrenalineTimers();
+
+        ExperienceMultiplier = 1f;
+        IsInvincible = false;
+        _gamblingGreatLuckStackCount = 0;
+        foreach (int timerId in _gamblingGreatLuckTimerIds)
+            _onCancelTimer?.Invoke(timerId);
+        _gamblingGreatLuckTimerIds.Clear();
 
         // 清除临时 Buff 效果
         if (ClearTemporaryBuffs(out bool refreshWeaponSetup) && refreshWeaponSetup)
