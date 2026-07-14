@@ -13,11 +13,13 @@ public class Player : MonoBehaviour, IDamage
 
     [Header("Drone Skill")]
     [SerializeField] private AreaDamageSkill _dronePrefab;
+    [SerializeField] private int _dronePrewarmCount = 2;
     [SerializeField] private Transform _skillSpawnPoint;
     [SerializeField] private LayerMask _enemyLayerMask = 1 << 3;
 
     [Header("IceBomb Skill")]
     [SerializeField] private AreaDamageSkill _iceBombPrefab;
+    [SerializeField] private int _iceBombPrewarmCount = 2;
 
     [Header("Skill Scan (环形扫描敌人密度)")]
     [SerializeField] private int _scanRayCount = 16;
@@ -32,6 +34,8 @@ public class Player : MonoBehaviour, IDamage
     private readonly PlayerBuff _playerBuff = new PlayerBuff();
     private int _droneTimerId = -1;
     private int _iceBombTimerId = -1;
+    private bool _dronePrewarmed;
+    private bool _iceBombPrewarmed;
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _playerBuff.GetMaxHP(_maxHP);
@@ -103,17 +107,43 @@ public class Player : MonoBehaviour, IDamage
     private void OnDroneUnlockedChanged(bool unlocked)
     {
         if (unlocked)
+        {
+            PrewarmDronePool();
             StartDroneTimer();
+        }
         else
+        {
             StopDroneTimer();
+        }
     }
 
     private void OnIceBombUnlockedChanged(bool unlocked)
     {
         if (unlocked)
+        {
+            PrewarmIceBombPool();
             StartIceBombTimer();
+        }
         else
+        {
             StopIceBombTimer();
+        }
+    }
+
+    private void PrewarmDronePool()
+    {
+        if (_dronePrewarmed || _dronePrefab == null) return;
+
+        ProjectilePool.Prewarm(_dronePrefab.gameObject, Mathf.Max(0, _dronePrewarmCount));
+        _dronePrewarmed = true;
+    }
+
+    private void PrewarmIceBombPool()
+    {
+        if (_iceBombPrewarmed || _iceBombPrefab == null) return;
+
+        ProjectilePool.Prewarm(_iceBombPrefab.gameObject, Mathf.Max(0, _iceBombPrewarmCount));
+        _iceBombPrewarmed = true;
     }
 
     private struct SkillTargetScanResult
@@ -377,8 +407,16 @@ public class Player : MonoBehaviour, IDamage
             return false;
         }
 
-        AreaDamageSkill drone = Instantiate(_dronePrefab, spawnPoint.position, spawnPoint.rotation);
-        drone.transform.SetPositionAndRotation(spawnPoint.position, Quaternion.LookRotation(scan.Direction));
+        GameObject droneObject = ProjectilePool.Spawn(_dronePrefab.gameObject, spawnPoint.position, Quaternion.LookRotation(scan.Direction));
+        AreaDamageSkill drone = droneObject != null ? droneObject.GetComponent<AreaDamageSkill>() : null;
+        if (drone == null)
+        {
+            Debug.LogError("[Drone] 对象池生成的对象缺少 AreaDamageSkill 组件，请检查预制体!");
+            if (droneObject != null)
+                ProjectilePool.Release(droneObject);
+            return false;
+        }
+
         drone.Initialize(
             AreaDamageSkillKind.Drone, spawnPoint,
             scan.TargetPosition,
@@ -425,8 +463,16 @@ public class Player : MonoBehaviour, IDamage
             return false;
         }
 
-        AreaDamageSkill iceBomb = Instantiate(_iceBombPrefab, spawnPoint.position, spawnPoint.rotation);
-        iceBomb.transform.SetPositionAndRotation(spawnPoint.position, Quaternion.LookRotation(scan.Direction));
+        GameObject iceBombObject = ProjectilePool.Spawn(_iceBombPrefab.gameObject, spawnPoint.position, Quaternion.LookRotation(scan.Direction));
+        AreaDamageSkill iceBomb = iceBombObject != null ? iceBombObject.GetComponent<AreaDamageSkill>() : null;
+        if (iceBomb == null)
+        {
+            Debug.LogError("[IceBomb] 对象池生成的对象缺少 AreaDamageSkill 组件，请检查预制体!");
+            if (iceBombObject != null)
+                ProjectilePool.Release(iceBombObject);
+            return false;
+        }
+
         iceBomb.Initialize(
             AreaDamageSkillKind.IceBomb, spawnPoint,
             scan.TargetPosition,

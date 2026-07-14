@@ -9,7 +9,7 @@ public enum AreaDamageSkillKind
 
 /// <summary>
 /// 无人机 / 冰弹 范围技能弹体。
-/// 完整生命周期：发射 → 抛物线飞行 → 落地触发范围检测 → 伤害/减速 → 销毁。
+/// 完整生命周期：发射 → 抛物线飞行 → 落地触发范围检测 → 伤害/减速 → 回收到对象池。
 /// </summary>
 public class AreaDamageSkill : MonoBehaviour
 {
@@ -30,8 +30,11 @@ public class AreaDamageSkill : MonoBehaviour
     private float _slowMultiplier;
     private float _slowDuration;
     private float _elapsed;
+    private float _releaseTimer;
     private bool _flying;
     private bool _exploded;
+    private bool _waitingForRelease;
+    private bool _released;
 
     /// <summary>
     /// 初始化技能弹体。
@@ -54,9 +57,15 @@ public class AreaDamageSkill : MonoBehaviour
         float slowMultiplier = 1f,
         float slowDuration = 0f)
     {
+        _releaseTimer = 0f;
+        _flying = false;
+        _exploded = false;
+        _waitingForRelease = false;
+        _released = false;
+
         if (owner == null)
         {
-            Destroy(gameObject, _lifeTimeAfterExplode);
+            ReleaseToPool();
             return;
         }
 
@@ -70,13 +79,19 @@ public class AreaDamageSkill : MonoBehaviour
         _slowDuration = slowDuration;
         _elapsed = 0f;
         _flying = true;
-        _exploded = false;
     }
 
     private void Update()
     {
-        if (!_flying || _exploded) return;
+        if (_flying && !_exploded)
+            UpdateFly();
 
+        if (_waitingForRelease && !_released)
+            UpdateReleaseTimer();
+    }
+
+    private void UpdateFly()
+    {
         float duration = Mathf.Max(0.01f, _flyDuration);
         _elapsed += Time.deltaTime;
         float progress = Mathf.Clamp01(_elapsed / duration);
@@ -87,6 +102,13 @@ public class AreaDamageSkill : MonoBehaviour
         if (progress < 1f) return;
 
         Explode();
+    }
+
+    private void UpdateReleaseTimer()
+    {
+        _releaseTimer -= Time.deltaTime;
+        if (_releaseTimer <= 0f)
+            ReleaseToPool();
     }
 
     /// <summary>
@@ -100,7 +122,15 @@ public class AreaDamageSkill : MonoBehaviour
 
         ApplyAreaEffect(_targetPosition, _aoeRadius, _damage, _enemyLayerMask, _slowMultiplier, _slowDuration);
 
-        Destroy(gameObject, _lifeTimeAfterExplode);
+        float releaseDelay = Mathf.Max(0f, _lifeTimeAfterExplode);
+        if (releaseDelay <= 0f)
+        {
+            ReleaseToPool();
+            return;
+        }
+
+        _releaseTimer = releaseDelay;
+        _waitingForRelease = true;
     }
 
     private void ApplyAreaEffect(
@@ -127,5 +157,15 @@ public class AreaDamageSkill : MonoBehaviour
         }
 
         HitEnemies.Clear();
+    }
+
+    private void ReleaseToPool()
+    {
+        if (_released) return;
+
+        _released = true;
+        _flying = false;
+        _waitingForRelease = false;
+        ProjectilePool.Release(gameObject);
     }
 }
