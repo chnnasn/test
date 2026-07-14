@@ -29,11 +29,60 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         _index = -1;
         _selectedTarget = null;
         _canChoose = true;
+        ResetAllVisuals();
+    }
+
+    private void OnDisable()
+    {
+        KillAllTweens();
     }
 
     private void Start()
     {
         IniCache();
+    }
+
+    /// <summary>
+    /// 终止所有 DOTween 动画并重置子对象的视觉状态
+    /// </summary>
+    private void KillAllTweens()
+    {
+        if (_texts == null) return;
+
+        foreach (Transform t in _texts)
+        {
+            if (t == null) continue;
+
+            t.DOKill();
+
+            foreach (Image image in t.GetComponentsInChildren<Image>(true))
+            {
+                if (image != null)
+                    image.DOKill();
+            }
+        }
+    }
+
+    private void ResetAllVisuals()
+    {
+        if (_originalScaleMap == null || _originalColorMap == null) return;
+        if (_texts == null) return;
+
+        foreach (Transform t in _texts)
+        {
+            if (t == null) continue;
+
+            // 重置缩放
+            if (_originalScaleMap.TryGetValue(t.gameObject, out Vector3 originalScale))
+                t.localScale = originalScale;
+
+            // 重置所有子 Image 颜色
+            foreach (Image image in t.GetComponentsInChildren<Image>(true))
+            {
+                if (image != null && _originalColorMap.TryGetValue(image, out Color originalColor))
+                    image.color = originalColor;
+            }
+        }
     }
 
     private void IniCache()
