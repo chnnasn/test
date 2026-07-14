@@ -8,6 +8,12 @@ public class EnemyManager : MonoBehaviour
     [SerializeField] private int _enemyPoolMaxSize = 100;
     [SerializeField, Min(1)] private int _navigationBatchCount = 5;
 
+    [Header("AI LOD 距离分级")]
+    [SerializeField] private float _lodNearDistance = 10f;   // 近距离：每帧/每批更新
+    [SerializeField] private float _lodMidDistance = 25f;    // 中距离：每 N 帧更新一次
+    [SerializeField] private int _lodMidSkipFrames = 2;      // 中距离跳过帧数（每 2 批更新一次）
+    [SerializeField] private int _lodFarSkipFrames = 5;      // 远距离跳过帧数（每 5 批更新一次）
+
     private static readonly Dictionary<GameObject, Queue<Enemy>> _enemyPool = new Dictionary<GameObject, Queue<Enemy>>();
     private static readonly Dictionary<Enemy, GameObject> _enemyPrefabMap = new Dictionary<Enemy, GameObject>();
 
@@ -22,6 +28,7 @@ public class EnemyManager : MonoBehaviour
     private readonly List<Enemy> _releaseAllBuffer = new List<Enemy>(256);
 
     private int _navigationBatchCursor;
+    private int _navigationFrameCount;
     private Action _currentWaveClearedCallback;
     private bool _currentWaveClearedNotified;
     private int _currentWaveNumber = 1;
@@ -151,6 +158,7 @@ public class EnemyManager : MonoBehaviour
         _navigationEnemyIndices.Clear();
         _currentWaveEnemies.Clear();
         _navigationBatchCursor = 0;
+        _navigationFrameCount = 0;
         _currentWaveNumber = 1;
     }
 
@@ -264,9 +272,16 @@ public class EnemyManager : MonoBehaviour
         int count = _navigationEnemies.Count;
         if (count == 0) return;
 
+        _navigationFrameCount++;
+
         int batchCount = Mathf.Max(1, _navigationBatchCount);
         int batch = _navigationBatchCursor;
         _navigationBatchCursor = (_navigationBatchCursor + 1) % batchCount;
+
+        // 玩家位置用于距离计算
+        Vector3 playerPos = RunTimeContext.Instance.PlayerObject != null
+            ? RunTimeContext.Instance.PlayerObject.transform.position
+            : Vector3.zero;
 
         for (int i = batch; i < count && i < _navigationEnemies.Count; i += batchCount)
         {
@@ -274,8 +289,24 @@ public class EnemyManager : MonoBehaviour
             if (enemy == null || !enemy.isActiveAndEnabled || !enemy.IsAlive || enemy.IsDying)
                 continue;
 
+            // ── AI LOD：根据到玩家距离降低远敌寻路更新频率 ──
+            float distToPlayer = Vector3.Distance(enemy.transform.position, playerPos);
+            int skipFrames = GetLodSkipFrames(distToPlayer);
+            if (skipFrames > 1 && _navigationFrameCount % skipFrames != batch % skipFrames)
+                continue;
+
             enemy.TickNavigation();
         }
+    }
+
+    /// <summary>
+    /// 根据到玩家距离返回应跳过的帧数（1 = 不跳过，每批都更新）。
+    /// </summary>
+    private int GetLodSkipFrames(float distance)
+    {
+        if (distance <= _lodNearDistance) return 1;
+        if (distance <= _lodMidDistance) return Mathf.Max(2, _lodMidSkipFrames);
+        return Mathf.Max(3, _lodFarSkipFrames);
     }
 
     private void AddActiveEnemy(Enemy enemy)

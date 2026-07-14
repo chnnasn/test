@@ -250,7 +250,7 @@ public class EnemyChaseState : EnemyState
         // ── 2. Boids 分离力（空间分桶查询邻居）──
         Vector3 separation = LimitBackwardSeparation(ComputeSeparation(pos), flowDir);
 
-        // ── 3. 射线避障：使用实际移动方向替代 transform.forward，确保检测与移动一致 ──
+        // ── 3. 流场格子查表避障 ──
         Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
 
         // ── 4. 切向绕行：近玩家拥挤或振荡时，沿玩家周围切线侧滑，打破前后对冲 ──
@@ -343,37 +343,22 @@ public class EnemyChaseState : EnemyState
         return lateral + backward;
     }
 
-    private Vector3 GetCastOrigin(Vector3 pos)
-    {
-        Vector3 center = movement.ColliderCenter;
-        return pos + new Vector3(0f, Mathf.Max(center.y, 0.5f), 0f);
-    }
 
-    private bool SphereCheck(Vector3 origin, Vector3 direction, float distance, out RaycastHit hit)
-    {
-        hit = default(RaycastHit);
-        if (direction.sqrMagnitude < 0.0001f) return false;
-
-        float radius = Mathf.Max(0.1f, movement.ColliderRadius * 0.9f);
-        return Physics.SphereCast(origin, radius, direction.normalized, out hit, distance,
-            movement.ObstacleLayerMask, QueryTriggerInteraction.Ignore);
-    }
-
+    /// <summary>
+    /// 贴墙滑动投影：用流场障碍格代替 Physics.SphereCast。
+    /// </summary>
     private Vector3 ConstrainByObstacle(Vector3 moveDirection)
     {
         float magnitude = moveDirection.magnitude;
-        if (magnitude < 0.0001f || movement.ObstacleLayerMask == 0)
-            return moveDirection;
+        if (magnitude < 0.0001f) return moveDirection;
 
-        Vector3 dir = moveDirection / magnitude;
-        Vector3 origin = GetCastOrigin(enemy.transform.position);
-        float checkDistance = Mathf.Max(movement.ColliderRadius + 0.05f, movement.MoveSpeed * Time.deltaTime + movement.ColliderRadius);
-        if (!SphereCheck(origin, dir, checkDistance, out RaycastHit hit))
-            return moveDirection;
+        float checkDistance = Mathf.Max(movement.ColliderRadius + 0.05f,
+            movement.MoveSpeed * Time.deltaTime + movement.ColliderRadius);
 
-        Vector3 slide = Vector3.ProjectOnPlane(moveDirection, hit.normal);
-        slide.y = 0f;
-        return slide.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE ? slide.normalized * magnitude : Vector3.zero;
+        Vector3 projected = FlowField.ProjectDirectionByObstacle(
+            enemy.transform.position, moveDirection, checkDistance);
+
+        return projected;
     }
 
     /// <summary>
@@ -407,17 +392,16 @@ public class EnemyChaseState : EnemyState
     }
 
     /// <summary>
-    /// 选择稳定绕行方向：先避开侧向障碍，再顺着分离切向，最后用实例 ID 分流。
+    /// 选择稳定绕行方向：用流场格子查表检测侧向是否被阻挡，替代原来的 SphereCast。
     /// </summary>
     private int ChooseOrbitSide(Vector3 pos, Vector3 rightTangent, Vector3 separation)
     {
         float checkDist = Mathf.Max(movement.ObstacleCheckDistance, movement.SeparationRadius * 0.6f);
-        LayerMask mask = movement.ObstacleLayerMask;
 
-        if (checkDist > 0f && mask != 0)
+        if (checkDist > 0f)
         {
-            bool rightBlocked = SphereCheck(GetCastOrigin(pos), rightTangent, checkDist, out _);
-            bool leftBlocked = SphereCheck(GetCastOrigin(pos), -rightTangent, checkDist, out _);
+            bool rightBlocked = FlowField.IsDirectionBlocked(pos, rightTangent, checkDist);
+            bool leftBlocked = FlowField.IsDirectionBlocked(pos, -rightTangent, checkDist);
 
             if (rightBlocked && !leftBlocked) return -1;
             if (leftBlocked && !rightBlocked) return 1;
@@ -476,38 +460,22 @@ public class EnemyChaseState : EnemyState
     }
 
     /// <summary>
-    /// 简单避障：沿实际移动方向检测前方/左/右三条射线，遇障碍往远离方向偏转
+    /// 流场格子查表避障：通过 FlowField 检查前方/左前/右前是否有阻挡格，遇障碍往远离方向偏转。
+    /// 替代原来的 Physics.SphereCast 三向射线检测。
     /// </summary>
     private Vector3 ComputeObstacleAvoidance(Vector3 pos, Vector3 moveDirection)
     {
         float checkDist = movement.ObstacleCheckDistance;
-        LayerMask mask = movement.ObstacleLayerMask;
-        if (checkDist <= 0 || mask == 0) return Vector3.zero;
+        if (checkDist <= 0) return Vector3.zero;
 
-        // 使用实际移动方向替代 transform.forward，确保避障检测与移动方向一致
         Vector3 forward = moveDirection.normalized;
-        // 计算垂直方向（世界 Y 轴叉乘得到右侧）
         Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-        if (right.sqrMagnitude < 0.001f) return Vector3.zero; // forward 接近垂直时无法计算
+        if (right.sqrMagnitude < 0.001f) return Vector3.zero;
 
-        Vector3 avoidForce = Vector3.zero;
-        Vector3 origin = GetCastOrigin(pos);
+        float bias = FlowField.GetObstacleAvoidanceBias(pos, forward, checkDist);
+        if (Mathf.Abs(bias) < 0.001f) return Vector3.zero;
 
-        // 正前方检测
-        if (SphereCheck(origin, forward, checkDist, out _))
-            avoidForce += right;
-
-        // 左前方检测
-        Vector3 leftDir = (forward - right * 0.5f).normalized;
-        if (SphereCheck(origin, leftDir, checkDist * 0.8f, out _))
-            avoidForce += right * 1.5f;
-
-        // 右前方检测
-        Vector3 rightDir = (forward + right * 0.5f).normalized;
-        if (SphereCheck(origin, rightDir, checkDist * 0.8f, out _))
-            avoidForce -= right * 1.5f;
-
-        if (avoidForce == Vector3.zero) return Vector3.zero;
-        return avoidForce.normalized * movement.ObstacleAvoidForce;
+        // bias > 0 → 右侧有障碍，偏右；bias < 0 → 左侧有障碍，偏左
+        return (right * bias).normalized * movement.ObstacleAvoidForce;
     }
 }

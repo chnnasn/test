@@ -12,6 +12,7 @@ public static class FlowField
 {
     private const float DEFAULT_CELL_SIZE = 1f;
     private const float REBUILD_THRESHOLD = 1f;
+    private const int FULL_REBUILD_INTERVAL = 5;     // 每 N 次部分重建后执行一次全量重建
 
     private static int _width, _height;
     private static float _cellSize = DEFAULT_CELL_SIZE;
@@ -21,11 +22,16 @@ public static class FlowField
     private static int[] _costs;
     private static Vector2[] _flowDirections;
 
+    // 脏矩阵：标记哪些格子的代价在新目标下可能已过时
+    private static bool[] _dirtyCells;
+    private static int _partialRebuildCounter;
+
     private static Vector3 _lastTargetPos;
     private static bool _hasTarget;
     private static bool _initialized;
 
     private static readonly Queue<Vector2Int> _bfsQueue = new Queue<Vector2Int>(4096);
+    private static readonly List<int> _changedCellIndices = new List<int>(4096); // BFS 中代价变化的格子索引
 
     // 8 方向邻居（斜对角代价 14，正交 10）
     private static readonly Vector2Int[] _neighbors = new[]
@@ -72,10 +78,12 @@ public static class FlowField
         asset.BlockedCells.CopyTo(_blockedCells, 0);
         _costs = new int[total];
         _flowDirections = new Vector2[total];
+        _dirtyCells = new bool[total];
         ResetCosts();
 
         _hasTarget = false;
         _lastTargetPos = Vector3.zero;
+        _partialRebuildCounter = 0;
         _initialized = true;
     }
 
@@ -142,6 +150,23 @@ public static class FlowField
 
     private static void Rebuild(Vector3 targetPos)
     {
+        if (_partialRebuildCounter <= 0)
+        {
+            FullRebuild(targetPos);
+            _partialRebuildCounter = FULL_REBUILD_INTERVAL;
+        }
+        else
+        {
+            PartialRebuild(targetPos);
+            _partialRebuildCounter--;
+        }
+    }
+
+    /// <summary>
+    /// 全量重建：重置所有代价后 BFS，计算全部流向。
+    /// </summary>
+    private static void FullRebuild(Vector3 targetPos)
+    {
         ResetCosts();
 
         Vector2Int targetCell = WorldToCell(targetPos);
@@ -182,32 +207,105 @@ public static class FlowField
             }
         }
 
+        // 全量重建流向
         for (int y = 0; y < _height; y++)
         {
             for (int x = 0; x < _width; x++)
             {
                 int idx = CellToIndex(new Vector2Int(x, y));
                 if (idx < 0 || _costs[idx] <= 0) continue;
-
-                int bestCost = _costs[idx];
-                Vector2 bestDir = Vector2.zero;
-
-                for (int n = 0; n < _neighbors.Length; n++)
-                {
-                    Vector2Int nb = new Vector2Int(x, y) + _neighbors[n];
-                    int nIdx = CellToIndex(nb);
-                    if (nIdx < 0 || _costs[nIdx] < 0) continue;
-                    if (!CanMoveBetween(new Vector2Int(x, y), nb)) continue;
-                    if (_costs[nIdx] < bestCost)
-                    {
-                        bestCost = _costs[nIdx];
-                        bestDir = _neighbors[n];
-                    }
-                }
-
-                _flowDirections[idx] = bestDir.normalized;
+                _flowDirections[idx] = ComputeBestFlowDirection(x, y, idx);
             }
         }
+    }
+
+    /// <summary>
+    /// 脏矩阵部分重建：保留旧代价，仅 BFS 到代价真正变小的格子。
+    /// 流向只重算 BFS 访问过及其邻居的格子。
+    /// </summary>
+    private static void PartialRebuild(Vector3 targetPos)
+    {
+        Vector2Int newTargetCell = WorldToCell(targetPos);
+        int newTargetIdx = CellToIndex(newTargetCell);
+        if (newTargetIdx < 0 || newTargetIdx >= _costs.Length || _costs[newTargetIdx] == -2)
+        {
+            newTargetCell = FindNearestWalkable(newTargetCell);
+            newTargetIdx = CellToIndex(newTargetCell);
+            if (newTargetIdx < 0) return;
+        }
+
+        // 如果目标格没变，无需重建
+        if (_costs[newTargetIdx] == 0) return;
+
+        _bfsQueue.Clear();
+        _changedCellIndices.Clear();
+
+        // 更新目标格
+        _costs[newTargetIdx] = 0;
+        _flowDirections[newTargetIdx] = Vector2.zero;
+        _bfsQueue.Enqueue(newTargetCell);
+        _changedCellIndices.Add(newTargetIdx);
+
+        // BFS：只在旧代价大于新代价时扩展（代价真正减小的格子）
+        while (_bfsQueue.Count > 0)
+        {
+            Vector2Int current = _bfsQueue.Dequeue();
+            int curIdx = CellToIndex(current);
+            int curCost = _costs[curIdx];
+
+            for (int n = 0; n < _neighbors.Length; n++)
+            {
+                Vector2Int neighbor = current + _neighbors[n];
+                int nIdx = CellToIndex(neighbor);
+                if (nIdx < 0 || _costs[nIdx] == -2) continue;
+                if (!CanMoveBetween(current, neighbor)) continue;
+
+                int stepCost = (_neighbors[n].x != 0 && _neighbors[n].y != 0) ? 14 : 10;
+                int newCost = curCost + stepCost;
+
+                // 只有新代价严格更小时才更新并继续传播
+                if (_costs[nIdx] == -1 || newCost < _costs[nIdx])
+                {
+                    _costs[nIdx] = newCost;
+                    _bfsQueue.Enqueue(neighbor);
+                    _changedCellIndices.Add(nIdx);
+                }
+            }
+        }
+
+        // 只重算变化格子及其邻居的流向
+        for (int i = 0; i < _changedCellIndices.Count; i++)
+        {
+            int idx = _changedCellIndices[i];
+            if (idx < 0 || _costs[idx] <= 0) continue;
+            int x = idx % _width;
+            int y = idx / _width;
+            _flowDirections[idx] = ComputeBestFlowDirection(x, y, idx);
+        }
+    }
+
+    /// <summary>
+    /// 计算格子 (x,y) 的最佳流向（指向代价最低的邻居）。
+    /// </summary>
+    private static Vector2 ComputeBestFlowDirection(int x, int y, int idx)
+    {
+        int bestCost = _costs[idx];
+        Vector2 bestDir = Vector2.zero;
+
+        for (int n = 0; n < _neighbors.Length; n++)
+        {
+            Vector2Int nb = new Vector2Int(x, y) + _neighbors[n];
+            int nIdx = CellToIndex(nb);
+            if (nIdx < 0 || _costs[nIdx] < 0) continue;
+            if (!CanMoveBetween(new Vector2Int(x, y), nb)) continue;
+            if (_costs[nIdx] < bestCost)
+            {
+                bestCost = _costs[nIdx];
+                bestDir = _neighbors[n];
+            }
+        }
+
+        return bestDir.normalized;
     }
 
     public static Vector3 GetFlowDirection(Vector3 position)
@@ -222,6 +320,111 @@ public static class FlowField
         Vector2Int cell = WorldToCell(position);
         int idx = CellToIndex(cell);
         return idx >= 0 && _blockedCells != null && idx < _blockedCells.Length && !_blockedCells[idx];
+    }
+
+    /// <summary>
+    /// 检查从指定位置沿方向前进一定距离后是否碰到阻挡格。
+    /// 替代 Physics.SphereCast，直接查流场烘焙的静态障碍数据。
+    /// </summary>
+    public static bool IsDirectionBlocked(Vector3 position, Vector3 direction, float distance)
+    {
+        if (!_initialized || _blockedCells == null || distance <= 0f) return false;
+        if (direction.sqrMagnitude < 0.0001f) return false;
+
+        Vector3 dir = direction.normalized;
+        // 步进采样：沿方向每隔半个格子检查一次
+        float step = Mathf.Max(_cellSize * 0.5f, 0.2f);
+        int steps = Mathf.CeilToInt(distance / step);
+
+        Vector3 checkPos = position;
+        for (int i = 0; i <= steps; i++)
+        {
+            Vector2Int cell = WorldToCell(checkPos);
+            int idx = CellToIndex(cell);
+            if (idx >= 0 && idx < _blockedCells.Length && _blockedCells[idx])
+                return true;
+
+            checkPos += dir * step;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 流场查表避障：检测前方/左前/右前是否有阻挡格，返回偏转偏向（正值=右偏，负值=左偏，0=畅通）。
+    /// </summary>
+    public static float GetObstacleAvoidanceBias(Vector3 position, Vector3 forward, float checkDistance)
+    {
+        if (!_initialized || _blockedCells == null) return 0f;
+        if (forward.sqrMagnitude < 0.0001f) return 0f;
+
+        Vector3 fwd = forward.normalized;
+        Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
+        if (right.sqrMagnitude < 0.001f) return 0f;
+
+        float bias = 0f;
+
+        // 正前方被挡 → 右偏
+        if (IsDirectionBlocked(position, fwd, checkDistance))
+            bias += 1f;
+
+        // 左前方 45° 被挡 → 加大右偏
+        Vector3 leftFwd = (fwd - right * 0.5f).normalized;
+        if (IsDirectionBlocked(position, leftFwd, checkDistance * 0.8f))
+            bias += 1.5f;
+
+        // 右前方 45° 被挡 → 左偏
+        Vector3 rightFwd = (fwd + right * 0.5f).normalized;
+        if (IsDirectionBlocked(position, rightFwd, checkDistance * 0.8f))
+            bias -= 1.5f;
+
+        return bias;
+    }
+
+    /// <summary>
+    /// 贴墙滑动投影：沿方向检测是否撞墙，是则投影到障碍面法线方向。
+    /// 用流场障碍格代替 Physics.SphereCast。
+    /// </summary>
+    public static Vector3 ProjectDirectionByObstacle(Vector3 position, Vector3 moveDirection, float checkDistance)
+    {
+        if (!_initialized || moveDirection.sqrMagnitude < 0.0001f) return moveDirection;
+        if (checkDistance <= 0f) return moveDirection;
+
+        Vector3 dir = moveDirection.normalized;
+        Vector3 checkPos = position + dir * checkDistance;
+        Vector2Int cell = WorldToCell(checkPos);
+        int idx = CellToIndex(cell);
+
+        // 前方格子未被挡 → 原样返回
+        if (idx < 0 || idx >= _blockedCells.Length || !_blockedCells[idx])
+            return moveDirection;
+
+        // 前方被挡 → 尝试沿 X 或 Z 方向滑动
+        Vector3 worldCellCenter = CellToWorld(cell.x, cell.y);
+        Vector3 toCell = worldCellCenter - position;
+        toCell.y = 0f;
+
+        float dotX = Mathf.Abs(Vector3.Dot(dir, Vector3.right));
+        float dotZ = Mathf.Abs(Vector3.Dot(dir, Vector3.forward));
+
+        // 取主运动轴的反方向作为滑动法线
+        Vector3 wallNormal = dotX > dotZ ? Vector3.right * Mathf.Sign(Vector3.Dot(dir, Vector3.right))
+                                         : Vector3.forward * Mathf.Sign(Vector3.Dot(dir, Vector3.forward));
+
+        Vector3 slide = Vector3.ProjectOnPlane(moveDirection, wallNormal);
+        slide.y = 0f;
+        return slide.sqrMagnitude > 0.0001f ? slide.normalized * moveDirection.magnitude : Vector3.zero;
+    }
+
+    /// <summary>
+    /// 获取指定位置的流场格子是否可达（cost >= 0）。
+    /// </summary>
+    public static bool IsCellReachable(Vector3 position)
+    {
+        if (!_initialized || _costs == null) return false;
+        Vector2Int cell = WorldToCell(position);
+        int idx = CellToIndex(cell);
+        return idx >= 0 && idx < _costs.Length && _costs[idx] >= 0;
     }
 
     public static bool TryGetFlowDirection(Vector3 position, out Vector3 direction)
