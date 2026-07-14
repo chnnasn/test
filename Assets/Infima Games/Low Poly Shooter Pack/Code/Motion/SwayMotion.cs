@@ -139,7 +139,7 @@ namespace InfimaGames.LowPolyShooterPack
 
             float swayMultiplier = scopeBehaviour.GetSwayMultiplier();
             if (global::RunTimeContext.TryGetExistingInstance(out global::RunTimeContext context) && context.Player != null)
-                swayMultiplier = context.Player.Buff.GetSwayMultiplier(swayMultiplier);
+                swayMultiplier = context.Player.BuffManager.GetSwayMultiplier(swayMultiplier);
 
             //更新位置弹簧目标值：水平+垂直摇摆分量合并后乘以瞄准镜和玩家Buff摇摆倍率。
             springLocation.UpdateEndValue(swayMultiplier * (horizontalLocation + verticalLocation));
@@ -178,4 +178,4 @@ namespace InfimaGames.LowPolyShooterPack
 
         #endregion
     }
-}
+}

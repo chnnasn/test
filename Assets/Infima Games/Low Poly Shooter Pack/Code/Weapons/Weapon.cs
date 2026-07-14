@@ -520,7 +520,7 @@ namespace InfimaGames.LowPolyShooterPack
                 if (player == null)
                     player = global::RunTimeContext.Instance.Player;
                 if (player != null)
-                    finalProjectileDamage = player.Buff.GetAttackDamage(projectileDamage);
+                    finalProjectileDamage = player.BuffManager.GetAttackDamage(projectileDamage);
 
                 ApplyRayDamage(shotDirection, finalProjectileDamage);
 
@@ -559,7 +559,7 @@ namespace InfimaGames.LowPolyShooterPack
             if (player == null && global::RunTimeContext.TryGetExistingInstance(out global::RunTimeContext context))
                 player = context.Player;
 
-            return player != null ? player.Buff.GetMagazineCapacity(baseCapacity) : baseCapacity;
+            return player != null ? player.BuffManager.GetMagazineCapacity(baseCapacity) : baseCapacity;
         }
 
         private void ApplyRayDamage(Vector3 direction, float damage)

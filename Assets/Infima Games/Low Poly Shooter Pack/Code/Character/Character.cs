@@ -340,11 +340,11 @@ namespace InfimaGames.LowPolyShooterPack
 			return visible;
 
 		Player player = GetComponent<Player>();
-		PlayerBuff buff = player?.Buff;
-		visible[0] = buff != null && buff.HasMagazineBuff;
-		visible[1] = buff != null && buff.HasLaserBuff;
-		visible[2] = buff != null && buff.HasScopeBuff;
-		visible[3] = buff != null && buff.HasGripBuff;
+		PlayerBuffManager buffManager = player?.BuffManager;
+		visible[0] = buffManager != null && buffManager.HasMagazineBuff;
+		visible[1] = buffManager != null && buffManager.HasLaserBuff;
+		visible[2] = buffManager != null && buffManager.HasScopeBuff;
+		visible[3] = buffManager != null && buffManager.HasGripBuff;
 		return visible;
 	}
 
@@ -367,7 +367,7 @@ namespace InfimaGames.LowPolyShooterPack
 			float rateOfFire = equippedWeapon != null ? equippedWeapon.GetRateOfFire() : 200f;
 
 			if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context) && context.Player != null)
-				rateOfFire = context.Player.Buff.GetFireRate(rateOfFire);
+				rateOfFire = context.Player.BuffManager.GetFireRate(rateOfFire);
 
 			return Mathf.Max(1f, rateOfFire);
 		}
@@ -397,7 +397,7 @@ namespace InfimaGames.LowPolyShooterPack
 		{
 			if (!RunTimeContext.TryGetExistingInstance(out RunTimeContext context) ||
 			    context.Player == null ||
-			    !context.Player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint))
+			    !context.Player.BuffManager.IsSkillUnlocked(PlayerSkillKind.sprint))
 			{
 				return;
 			}

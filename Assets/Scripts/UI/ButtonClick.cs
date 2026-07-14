@@ -107,7 +107,7 @@ public class ButtonClick : MonoBehaviour, IPointerClickHandler, IPointerDownHand
         {
             if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context) &&
                 context.Player != null &&
-                context.Player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint))
+                context.Player.BuffManager.IsSkillUnlocked(PlayerSkillKind.sprint))
             {
                 EventManager.Instance.TriggerExternalSprint();
             }

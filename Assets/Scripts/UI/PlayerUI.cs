@@ -56,19 +56,19 @@ public class PlayerUI : MonoBehaviour
         player.Level.OnValueChanged += SetLevel;
         player.ExperienceProgress.OnValueChanged -= SetExperienceProgress;
         player.ExperienceProgress.OnValueChanged += SetExperienceProgress;
-        player.Buff.SprintUnlocked.OnValueChanged -= SetSprintVisible;
-        player.Buff.SprintUnlocked.OnValueChanged += SetSprintVisible;
-        player.Buff.DroneUnlocked.OnValueChanged -= SetDroneVisible;
-        player.Buff.DroneUnlocked.OnValueChanged += SetDroneVisible;
-        player.Buff.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
-        player.Buff.IceBombUnlocked.OnValueChanged += SetIceBombVisible;
+        player.BuffManager.SprintUnlocked.OnValueChanged -= SetSprintVisible;
+        player.BuffManager.SprintUnlocked.OnValueChanged += SetSprintVisible;
+        player.BuffManager.DroneUnlocked.OnValueChanged -= SetDroneVisible;
+        player.BuffManager.DroneUnlocked.OnValueChanged += SetDroneVisible;
+        player.BuffManager.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
+        player.BuffManager.IceBombUnlocked.OnValueChanged += SetIceBombVisible;
 
         SetHp(player.CurrentHP.Value, player.MaxHP);
         SetLevel(player.Level.Value);
         SetExperienceProgress(player.ExperienceProgress.Value);
-        SetSprintVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.sprint));
-        SetDroneVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.Drone));
-        SetIceBombVisible(player.Buff.IsSkillUnlocked(PlayerSkillKind.IceBomb));
+        SetSprintVisible(player.BuffManager.IsSkillUnlocked(PlayerSkillKind.sprint));
+        SetDroneVisible(player.BuffManager.IsSkillUnlocked(PlayerSkillKind.Drone));
+        SetIceBombVisible(player.BuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb));
     }
 
     private void UnbindPlayer(Player player)
@@ -78,9 +78,9 @@ public class PlayerUI : MonoBehaviour
         player.CurrentHP.OnValueChanged -= OnPlayerHpChanged;
         player.Level.OnValueChanged -= SetLevel;
         player.ExperienceProgress.OnValueChanged -= SetExperienceProgress;
-        player.Buff.SprintUnlocked.OnValueChanged -= SetSprintVisible;
-        player.Buff.DroneUnlocked.OnValueChanged -= SetDroneVisible;
-        player.Buff.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
+        player.BuffManager.SprintUnlocked.OnValueChanged -= SetSprintVisible;
+        player.BuffManager.DroneUnlocked.OnValueChanged -= SetDroneVisible;
+        player.BuffManager.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
     }
 
     private void BindCharacter(Character character)

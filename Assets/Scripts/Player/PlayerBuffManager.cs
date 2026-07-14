@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using InfimaGames.LowPolyShooterPack;
 using UnityEngine;
 
-public class PlayerBuff
+public class PlayerBuffManager
 {
     private const float DefaultMaxHPGrowthPercentPerLevel = 5f;
     private const float DefaultAttackDamageGrowthPercentPerLevel = 10f;
@@ -80,6 +80,64 @@ public class PlayerBuff
     public bool HasAdrenalineTriggered { get; private set; }
     public bool CanDrawAdrenaline => !HasAdrenalineBuff;
 
+    // ====== Buff flow state (moved from Player) ======
+    private int _pendingBuffChooseCount;
+    private PlayerBuffAsset[] _currentLevelUpBuffs;
+    private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
+    private PlayerBuffPoolAsset _buffPoolAsset;
+    private int _levelUpBuffChooseCount = 3;
+    private float _baseMaxHP;
+
+    // ====== Temporary buff timer tracking ======
+    private readonly Dictionary<int, int> _temporaryBuffTimerIds = new Dictionary<int, int>();
+
+    // ====== Adrenaline state ======
+    private PlayerBuffAsset _adrenalineBuffAsset;
+    private int _adrenalineAttackEffectId = -1;
+    private int _adrenalineDamageReductionEffectId = -1;
+    private int _adrenalineTimerId = -1;
+
+    // ====== External callbacks (set by Player) ======
+    private Action<float> _onHeal;
+    private Action _onRefreshWeapon;
+    private Func<float, Action, int> _onScheduleTimer;
+    private Action<int> _onCancelTimer;
+    private Func<float> _onGetCurrentHP;
+    private Func<WeaponAttachmentManagerBehaviour> _onGetAttachmentManager;
+
+    // ====== UI notification events (subscribed by Player, forwarded to EventManager) ======
+    public event Action<string[], string[]> OnLevelUpBuffsReady;
+    public event Action OnLevelUpBuffsFinished;
+
+    public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
+
+    /// <summary>
+    /// 由 Player 在 Awake 调用，注册所有外部依赖回调。
+    /// </summary>
+    public void Initialize(
+        PlayerBuffConfigAsset config,
+        PlayerBuffPoolAsset poolAsset,
+        int levelUpBuffChooseCount,
+        float baseMaxHP,
+        Action<float> onHeal,
+        Action onRefreshWeapon,
+        Func<float, Action, int> onScheduleTimer,
+        Action<int> onCancelTimer,
+        Func<float> onGetCurrentHP,
+        Func<WeaponAttachmentManagerBehaviour> onGetAttachmentManager)
+    {
+        SetConfig(config);
+        _buffPoolAsset = poolAsset;
+        _levelUpBuffChooseCount = levelUpBuffChooseCount;
+        _baseMaxHP = baseMaxHP;
+        _onHeal = onHeal;
+        _onRefreshWeapon = onRefreshWeapon;
+        _onScheduleTimer = onScheduleTimer;
+        _onCancelTimer = onCancelTimer;
+        _onGetCurrentHP = onGetCurrentHP;
+        _onGetAttachmentManager = onGetAttachmentManager;
+    }
+
     public void SetConfig(PlayerBuffConfigAsset config)
     {
         _config = config;
@@ -95,7 +153,7 @@ public class PlayerBuff
         AddedHp += Mathf.Max(0f, amount);
     }
 
-    public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out PlayerBuffApplyResult result)
+    private bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, out PlayerBuffApplyResult result)
     {
         result = default;
         if (buff == null) return false;
@@ -122,8 +180,9 @@ public class PlayerBuff
             case PlayerBuffKind.Hp:
             {
                 float normalizedValue = GetNormalizedBuffValue(buff);
-                if (normalizedValue <= 0f || addHpCallback == null) return false;
-                addHpCallback.Invoke(normalizedValue);
+                if (normalizedValue <= 0f) return false;
+                float healAmount = GetMaxHP(_baseMaxHP) * normalizedValue;
+                _onHeal?.Invoke(healAmount);
                 return true;
             }
             case PlayerBuffKind.AttackMultiplier:
@@ -562,4 +621,313 @@ public class PlayerBuff
 
         return true;
     }
+
+    #region Buff Flow (moved from Player)
+
+    public PlayerBuffAsset GetCurrentLevelUpBuff(int index)
+    {
+        if (_currentLevelUpBuffs == null || index < 0 || index >= _currentLevelUpBuffs.Length)
+            return null;
+        return _currentLevelUpBuffs[index];
+    }
+
+    public void AddPendingBuffChoices(int count)
+    {
+        if (count > 0)
+            _pendingBuffChooseCount += count;
+    }
+
+    public void DrawLevelUpBuffs()
+    {
+        if (_pendingBuffChooseCount <= 0)
+        {
+            _currentLevelUpBuffs = null;
+            OnLevelUpBuffsFinished?.Invoke();
+            return;
+        }
+
+        if (_buffPoolAsset == null)
+        {
+            _pendingBuffChooseCount = 0;
+            _currentLevelUpBuffs = null;
+            OnLevelUpBuffsFinished?.Invoke();
+            return;
+        }
+
+        _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs, this);
+        _currentLevelUpBuffs = SanitizeDrawnBuffs(_currentLevelUpBuffs, _levelUpBuffChooseCount);
+
+        if (_currentLevelUpBuffs == null || _currentLevelUpBuffs.Length == 0)
+        {
+            Debug.LogWarning("[BuffChoose] 抽不出有效 Buff，跳过本轮选择");
+            _pendingBuffChooseCount = 0;
+            OnLevelUpBuffsFinished?.Invoke();
+            return;
+        }
+
+        (string[] names, string[] descs) = GetBuffNamesAndDescs(_currentLevelUpBuffs);
+        OnLevelUpBuffsReady?.Invoke(names, descs);
+    }
+
+    private PlayerBuffAsset[] SanitizeDrawnBuffs(PlayerBuffAsset[] buffs, int expectedCount)
+    {
+        if (buffs == null || buffs.Length == 0) return new PlayerBuffAsset[0];
+
+        var seen = new HashSet<PlayerBuffAsset>();
+        int writeIndex = 0;
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            if (buffs[i] != null && seen.Add(buffs[i]))
+            {
+                buffs[writeIndex] = buffs[i];
+                writeIndex++;
+            }
+        }
+
+        int finalCount = Mathf.Min(writeIndex, Mathf.Max(0, expectedCount));
+        if (finalCount == writeIndex)
+        {
+            if (writeIndex < buffs.Length)
+                System.Array.Resize(ref buffs, finalCount);
+            return buffs;
+        }
+
+        PlayerBuffAsset[] trimmed = new PlayerBuffAsset[finalCount];
+        for (int i = 0; i < finalCount; i++)
+            trimmed[i] = buffs[i];
+        return trimmed;
+    }
+
+    private (string[] names, string[] descs) GetBuffNamesAndDescs(PlayerBuffAsset[] buffs)
+    {
+        if (buffs == null) return (null, null);
+
+        string[] names = new string[buffs.Length];
+        string[] descs = new string[buffs.Length];
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            if (buffs[i] == null)
+            {
+                names[i] = string.Empty;
+                descs[i] = string.Empty;
+                continue;
+            }
+
+            names[i] = buffs[i].BuffName;
+            descs[i] = GetBuffDescription(buffs[i]);
+        }
+
+        return (names, descs);
+    }
+
+    private string GetBuffDescription(PlayerBuffAsset buff)
+    {
+        if (buff == null) return string.Empty;
+
+        string description = buff.Description ?? string.Empty;
+        if (!buff.Unique) return description;
+
+        const string uniqueTip = "唯一Buff：选择后不会再次出现";
+        return string.IsNullOrEmpty(description) ? uniqueTip : $"{description}\n{uniqueTip}";
+    }
+
+    public bool TryApplySelectedBuff(int index)
+    {
+        if (_pendingBuffChooseCount <= 0 || _currentLevelUpBuffs == null) return false;
+
+        PlayerBuffAsset buff = GetCurrentLevelUpBuff(index);
+        if (buff == null) return false;
+
+        if (buff.Unique && _usedUniqueBuffs.Contains(buff))
+        {
+            Debug.LogWarning($"[BuffChoose] Buff '{buff.BuffName}' 已被应用过，跳过重复选择");
+            return false;
+        }
+
+        if (!ApplyBuff(buff)) return false;
+
+        _pendingBuffChooseCount = Mathf.Max(0, _pendingBuffChooseCount - 1);
+        DrawLevelUpBuffs();
+        return true;
+    }
+
+    private bool ApplyBuff(PlayerBuffAsset buff)
+    {
+        if (buff == null) return false;
+
+        WeaponAttachmentManagerBehaviour attachmentManager = _onGetAttachmentManager?.Invoke();
+        if (!TriggerBuff(buff, attachmentManager, out PlayerBuffApplyResult result))
+            return false;
+
+        if (result.RefreshWeaponSetup)
+            _onRefreshWeapon?.Invoke();
+
+        if (buff.Unique)
+            _usedUniqueBuffs.Add(buff);
+
+        if (result.IsTemporary)
+            StartTemporaryBuffTimer(result.TemporaryEffectId, buff.Duration);
+
+        if (buff.Kind == PlayerBuffKind.Adrenaline)
+        {
+            _adrenalineBuffAsset = buff;
+            float currentHP = _onGetCurrentHP?.Invoke() ?? 0f;
+            CheckAdrenaline(currentHP);
+        }
+
+        Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
+        return true;
+    }
+
+    #endregion
+
+    #region Temporary Buff Timers
+
+    private void StartTemporaryBuffTimer(int effectId, float duration)
+    {
+        duration = Mathf.Max(0f, duration);
+        if (duration <= 0f)
+        {
+            OnTemporaryBuffExpired(effectId);
+            return;
+        }
+
+        int timerId = _onScheduleTimer(duration, () => OnTemporaryBuffExpired(effectId));
+        _temporaryBuffTimerIds[effectId] = timerId;
+    }
+
+    private void OnTemporaryBuffExpired(int effectId)
+    {
+        _temporaryBuffTimerIds.Remove(effectId);
+
+        if (!RemoveTemporaryBuff(effectId, out bool refreshWeaponSetup)) return;
+
+        if (refreshWeaponSetup)
+            _onRefreshWeapon?.Invoke();
+    }
+
+    #endregion
+
+    #region Adrenaline Management
+
+    public void CheckAdrenaline(float currentHP)
+    {
+        if (_adrenalineBuffAsset == null) return;
+
+        float maxHP = GetMaxHP(_baseMaxHP);
+        if (maxHP <= 0f || currentHP / maxHP > 0.3f) return;
+
+        if (!TriggerAdrenaline(_adrenalineBuffAsset, out int attackEffectId, out int damageReductionEffectId))
+            return;
+
+        _adrenalineAttackEffectId = attackEffectId;
+        _adrenalineDamageReductionEffectId = damageReductionEffectId;
+        _adrenalineTimerId = _onScheduleTimer(_adrenalineBuffAsset.Duration, OnAdrenalineExpired);
+        Debug.LogWarning("[Adrenaline] 肾上腺素触发：攻击力提升10%，受到伤害降低10%");
+    }
+
+    private void OnAdrenalineExpired()
+    {
+        _adrenalineTimerId = -1;
+        RemoveAdrenalineEffects();
+        DeactivateAdrenaline();
+        Debug.LogWarning("[Adrenaline] 肾上腺素效果结束");
+    }
+
+    private void RemoveAdrenalineEffects()
+    {
+        if (_adrenalineAttackEffectId >= 0)
+            RemoveTemporaryBuff(_adrenalineAttackEffectId, out _);
+        if (_adrenalineDamageReductionEffectId >= 0)
+            RemoveTemporaryBuff(_adrenalineDamageReductionEffectId, out _);
+
+        _adrenalineAttackEffectId = -1;
+        _adrenalineDamageReductionEffectId = -1;
+    }
+
+    private void ClearAdrenalineTimers()
+    {
+        if (_adrenalineTimerId >= 0)
+            _onCancelTimer?.Invoke(_adrenalineTimerId);
+
+        _adrenalineTimerId = -1;
+        RemoveAdrenalineEffects();
+        DeactivateAdrenaline();
+    }
+
+    #endregion
+
+    #region Gambling
+
+    public (int[] nums, string resultType, System.Action callback) GetGamblingResult()
+    {
+        (int[] nums, string resultType) = CalculateGambling();
+        System.Action callback = BuildGamblingCallback(resultType);
+        return (nums, resultType, callback);
+    }
+
+    private System.Action BuildGamblingCallback(string resultType)
+    {
+        float maxHP = GetMaxHP(_baseMaxHP);
+
+        switch (resultType)
+        {
+            case "大吉":
+                return () =>
+                {
+                    MultiplyAttackMultiplier(1.5f);
+                    _onHeal?.Invoke(maxHP * 0.5f);
+                    float hpBonus = _baseMaxHP * 0.2f;
+                    AddMaxHp(hpBonus);
+                    _onHeal?.Invoke(hpBonus);
+                    Debug.LogWarning("赌博大吉！攻击力x1.5，恢复50%HP，最大HP+20%");
+                };
+            case "吉":
+                return () =>
+                {
+                    MultiplyAttackMultiplier(1.2f);
+                    _onHeal?.Invoke(maxHP * 0.2f);
+                    Debug.LogWarning("赌博吉！攻击力x1.2，恢复20%HP");
+                };
+            case "小吉":
+                return () =>
+                {
+                    _onHeal?.Invoke(maxHP * 0.1f);
+                    Debug.LogWarning("赌博小吉！恢复10%HP");
+                };
+            default:
+                return () =>
+                {
+                    Debug.LogWarning("赌博不中...");
+                };
+        }
+    }
+
+    #endregion
+
+    #region Cleanup
+
+    /// <summary>
+    /// 清除所有临时 Buff、肾上腺素及其计时器。由 Player 在 OnDisable / Die 时调用。
+    /// </summary>
+    public void ClearAll()
+    {
+        // 取消所有临时 Buff 计时器
+        foreach (int timerId in _temporaryBuffTimerIds.Values)
+            _onCancelTimer?.Invoke(timerId);
+        _temporaryBuffTimerIds.Clear();
+
+        // 取消肾上腺素
+        ClearAdrenalineTimers();
+
+        // 清除临时 Buff 效果
+        if (ClearTemporaryBuffs(out bool refreshWeaponSetup) && refreshWeaponSetup)
+            _onRefreshWeapon?.Invoke();
+
+        // 重置状态
+        _pendingBuffChooseCount = 0;
+        _currentLevelUpBuffs = null;
+    }
+
+    #endregion
 }

@@ -11,7 +11,7 @@ public class PlayerBuffPoolAsset : ScriptableObject
     public PlayerBuffAsset[] GetRandomDifferentBuffs(
         int count, 
         ICollection<PlayerBuffAsset> excludedBuffs = null, 
-        PlayerBuff playerBuff = null)
+        PlayerBuffManager playerBuffManager = null)
     {
         if (_buffs == null || _buffs.Length == 0 || count <= 0)
             return new PlayerBuffAsset[0];
@@ -22,7 +22,7 @@ public class PlayerBuffPoolAsset : ScriptableObject
         {
             if (buff == null) continue;
             if (excludedBuffs != null && excludedBuffs.Contains(buff)) continue;
-            if (!CanDrawBuff(buff, playerBuff)) continue;
+            if (!CanDrawBuff(buff, playerBuffManager)) continue;
             candidatesSet.Add(buff);
         }
 
@@ -50,15 +50,15 @@ public class PlayerBuffPoolAsset : ScriptableObject
         return result;
     }
 
-    private bool CanDrawBuff(PlayerBuffAsset buff, PlayerBuff playerBuff)
+    private bool CanDrawBuff(PlayerBuffAsset buff, PlayerBuffManager playerBuffManager)
     {
-        if (playerBuff == null) return true;
+        if (playerBuffManager == null) return true;
 
         return buff.Kind switch
         {
-            PlayerBuffKind.DroneSkillPower => playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone),
-            PlayerBuffKind.IceBombSkillPower => playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb),
-            PlayerBuffKind.Adrenaline => playerBuff.CanDrawAdrenaline,
+            PlayerBuffKind.DroneSkillPower => playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone),
+            PlayerBuffKind.IceBombSkillPower => playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb),
+            PlayerBuffKind.Adrenaline => playerBuffManager.CanDrawAdrenaline,
             PlayerBuffKind.Gambling => false,
             _ => true
         };

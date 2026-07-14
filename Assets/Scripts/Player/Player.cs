@@ -28,24 +28,16 @@ public class Player : MonoBehaviour, IDamage
     [SerializeField] private float _spaceExperienceAmount = 50f;
 
     private float _experience;
-    private int _pendingBuffChooseCount;
-    private PlayerBuffAsset[] _currentLevelUpBuffs;
-    private readonly HashSet<PlayerBuffAsset> _usedUniqueBuffs = new HashSet<PlayerBuffAsset>();
-    private readonly PlayerBuff _playerBuff = new PlayerBuff();
+    private readonly PlayerBuffManager _playerBuffManager = new PlayerBuffManager();
     private int _droneTimerId = -1;
     private int _iceBombTimerId = -1;
     private bool _dronePrewarmed;
     private bool _iceBombPrewarmed;
-    private readonly Dictionary<int, int> _temporaryBuffTimerIds = new Dictionary<int, int>();
-    private PlayerBuffAsset _adrenalineBuffAsset;
-    private int _adrenalineAttackEffectId = -1;
-    private int _adrenalineDamageReductionEffectId = -1;
-    private int _adrenalineTimerId = -1;
 
     public bool IsAlive => CurrentHP.Value > 0f;
-    public float MaxHP => _playerBuff.GetMaxHP(_maxHP);
-    public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
-    public PlayerBuff Buff => _playerBuff;
+    public float MaxHP => _playerBuffManager.GetMaxHP(_maxHP);
+    public PlayerBuffAsset[] CurrentLevelUpBuffs => _playerBuffManager.CurrentLevelUpBuffs;
+    public PlayerBuffManager BuffManager => _playerBuffManager;
 
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<int> Level { get; private set; } = new GenericProperty<int>();
@@ -55,8 +47,25 @@ public class Player : MonoBehaviour, IDamage
     
     private void Awake()
     {
-        _playerBuff.SetConfig(_buffConfigAsset);
-        _playerBuff.SetLevel(_level);
+        _playerBuffManager.Initialize(
+            _buffConfigAsset, _buffPoolAsset, _levelUpBuffChooseCount, _maxHP,
+            onHeal: HealFlat,
+            onRefreshWeapon: () => character.RefreshCurrentWeaponSetup(),
+            onScheduleTimer: (duration, callback) => TimeManager.Instance.AddTimer(duration, callback),
+            onCancelTimer: timerId =>
+            {
+                if (TimeManager.TryGetExistingInstance(out TimeManager tm))
+                    tm.RemoveTimer(timerId);
+            },
+            onGetCurrentHP: () => CurrentHP.Value,
+            onGetAttachmentManager: GetCurrentAttachmentManager);
+
+        _playerBuffManager.OnLevelUpBuffsReady += (names, descs) =>
+            EventManager.Instance.SetLevelUpBuffs(names, descs);
+        _playerBuffManager.OnLevelUpBuffsFinished += () =>
+            EventManager.Instance.SetLevelUpBuffsFinished();
+
+        _playerBuffManager.SetLevel(_level);
         CurrentHP.Value = MaxHP;
         Level.Value = _level;
         RefreshExperienceProgress();
@@ -71,34 +80,42 @@ public class Player : MonoBehaviour, IDamage
     {
         EventManager.Instance.OnAttackedAction += TakeDamage;
         EventManager.Instance.AddExper += AddExperience;
-        EventManager.Instance.TriggerBuff += ApplySelectedBuff;
+        EventManager.Instance.TriggerBuff += OnTriggerBuff;
         EventManager.Instance.RequestGambling += OnRequestGambling;
         CurrentHP.OnValueChanged += OnCurrentHpChanged;
-        _playerBuff.DroneUnlocked.OnValueChanged += OnDroneUnlockedChanged;
-        _playerBuff.IceBombUnlocked.OnValueChanged += OnIceBombUnlockedChanged;
-        OnDroneUnlockedChanged(_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone));
-        OnIceBombUnlockedChanged(_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb));
+        _playerBuffManager.DroneUnlocked.OnValueChanged += OnDroneUnlockedChanged;
+        _playerBuffManager.IceBombUnlocked.OnValueChanged += OnIceBombUnlockedChanged;
+        OnDroneUnlockedChanged(_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone));
+        OnIceBombUnlockedChanged(_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb));
     }
 
     private void OnDisable()
     {
         CurrentHP.OnValueChanged -= OnCurrentHpChanged;
-        _playerBuff.DroneUnlocked.OnValueChanged -= OnDroneUnlockedChanged;
-        _playerBuff.IceBombUnlocked.OnValueChanged -= OnIceBombUnlockedChanged;
+        _playerBuffManager.DroneUnlocked.OnValueChanged -= OnDroneUnlockedChanged;
+        _playerBuffManager.IceBombUnlocked.OnValueChanged -= OnIceBombUnlockedChanged;
         StopDroneTimer();
         StopIceBombTimer();
-        ClearTemporaryBuffs();
+        _playerBuffManager.ClearAll();
 
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
         {
             eventManager.OnAttackedAction -= TakeDamage;
             eventManager.AddExper -= AddExperience;
-            eventManager.TriggerBuff -= ApplySelectedBuff;
+            eventManager.TriggerBuff -= OnTriggerBuff;
             eventManager.RequestGambling -= OnRequestGambling;
         }
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
             context.UnregisterPlayer(this);
+    }
+
+    /// <summary>
+    /// 接收 EventManager.TriggerBuff 事件，委托给 PlayerBuff 处理 Buff 选择。
+    /// </summary>
+    private void OnTriggerBuff(int index)
+    {
+        _playerBuffManager.TryApplySelectedBuff(index);
     }
 
     public void AddDebugExperience()
@@ -172,9 +189,9 @@ public class Player : MonoBehaviour, IDamage
     private void ScheduleDroneTimer()
     {
         if (!isActiveAndEnabled || !IsAlive) return;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
+        if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
 
-        float interval = _playerBuff.GetDroneInterval();
+        float interval = _playerBuffManager.GetDroneInterval();
         _droneTimerId = TimeManager.Instance.AddTimer(interval, OnDroneTimerElapsed);
         Debug.Log($"[Drone] 定时器已调度, interval={interval}s, timerId={_droneTimerId}");
     }
@@ -190,7 +207,7 @@ public class Player : MonoBehaviour, IDamage
             Debug.LogWarning("[Drone] 玩家未激活或已死亡，跳过");
             return;
         }
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone))
+        if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone))
         {
             Debug.LogWarning("[Drone] 技能未解锁，跳过");
             return;
@@ -220,9 +237,9 @@ public class Player : MonoBehaviour, IDamage
     private void ScheduleIceBombTimer()
     {
         if (!isActiveAndEnabled || !IsAlive) return;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
+        if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
 
-        float interval = _playerBuff.GetIceBombInterval();
+        float interval = _playerBuffManager.GetIceBombInterval();
         _iceBombTimerId = TimeManager.Instance.AddTimer(interval, OnIceBombTimerElapsed);
         Debug.Log($"[IceBomb] 定时器已调度, interval={interval}s, timerId={_iceBombTimerId}");
     }
@@ -238,7 +255,7 @@ public class Player : MonoBehaviour, IDamage
             Debug.LogWarning("[IceBomb] 玩家未激活或已死亡，跳过");
             return;
         }
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb))
+        if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb))
         {
             Debug.LogWarning("[IceBomb] 技能未解锁，跳过");
             return;
@@ -386,7 +403,7 @@ public class Player : MonoBehaviour, IDamage
             Debug.LogWarning("[Drone] 玩家未激活或已死亡，无法触发");
             return false;
         }
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone))
+        if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone))
         {
             Debug.LogWarning("[Drone] 技能未解锁，无法触发");
             return false;
@@ -394,9 +411,9 @@ public class Player : MonoBehaviour, IDamage
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
         Transform scanOrigin = transform;
-        float range = _playerBuff.GetDroneRange();
-        float acquireRadius = _playerBuff.GetDroneAcquireRadius();
-        float aoeRadius = _playerBuff.GetDroneAoeRadius();
+        float range = _playerBuffManager.GetDroneRange();
+        float acquireRadius = _playerBuffManager.GetDroneAcquireRadius();
+        float aoeRadius = _playerBuffManager.GetDroneAoeRadius();
 
         Debug.Log($"[Drone] 开始扫描敌人: origin={scanOrigin.position}, range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
 
@@ -428,10 +445,10 @@ public class Player : MonoBehaviour, IDamage
         drone.Initialize(
             AreaDamageSkillKind.Drone, spawnPoint,
             scan.TargetPosition,
-            aoeRadius, _playerBuff.GetDroneDamage(),
+            aoeRadius, _playerBuffManager.GetDroneDamage(),
             _enemyLayerMask);
 
-        Debug.Log($"[Drone] 实例化成功! 伤害={_playerBuff.GetDroneDamage()}");
+        Debug.Log($"[Drone] 实例化成功! 伤害={_playerBuffManager.GetDroneDamage()}");
         return true;
     }
 
@@ -442,7 +459,7 @@ public class Player : MonoBehaviour, IDamage
             Debug.LogWarning("[IceBomb] 玩家未激活或已死亡，无法触发");
             return false;
         }
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb))
+        if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb))
         {
             Debug.LogWarning("[IceBomb] 技能未解锁，无法触发");
             return false;
@@ -450,9 +467,9 @@ public class Player : MonoBehaviour, IDamage
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
         Transform scanOrigin = transform;
-        float range = _playerBuff.GetIceBombRange();
-        float acquireRadius = _playerBuff.GetIceBombAcquireRadius();
-        float aoeRadius = _playerBuff.GetIceBombAoeRadius();
+        float range = _playerBuffManager.GetIceBombRange();
+        float acquireRadius = _playerBuffManager.GetIceBombAcquireRadius();
+        float aoeRadius = _playerBuffManager.GetIceBombAoeRadius();
 
         Debug.Log($"[IceBomb] 开始扫描敌人: origin={scanOrigin.position}, range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
 
@@ -484,12 +501,12 @@ public class Player : MonoBehaviour, IDamage
         iceBomb.Initialize(
             AreaDamageSkillKind.IceBomb, spawnPoint,
             scan.TargetPosition,
-            aoeRadius, _playerBuff.GetIceBombDamage(),
+            aoeRadius, _playerBuffManager.GetIceBombDamage(),
             _enemyLayerMask,
-            slowMultiplier: _playerBuff.GetIceBombSlowMultiplier(),
-            slowDuration: _playerBuff.GetIceBombSlowDuration());
+            slowMultiplier: _playerBuffManager.GetIceBombSlowMultiplier(),
+            slowDuration: _playerBuffManager.GetIceBombSlowDuration());
 
-        Debug.Log($"[IceBomb] 实例化成功! 伤害={_playerBuff.GetIceBombDamage()}, 减速={_playerBuff.GetIceBombSlowMultiplier()}, 持续={_playerBuff.GetIceBombSlowDuration()}s");
+        Debug.Log($"[IceBomb] 实例化成功! 伤害={_playerBuffManager.GetIceBombDamage()}, 减速={_playerBuffManager.GetIceBombSlowMultiplier()}, 持续={_playerBuffManager.GetIceBombSlowDuration()}s");
         return true;
     }
 
@@ -510,19 +527,19 @@ public class Player : MonoBehaviour, IDamage
         {
             _experience -= GetRequiredExperienceForCurrentLevel();
             _level++;
-            _playerBuff.SetLevel(_level);
+            _playerBuffManager.SetLevel(_level);
             Level.Value = _level;
         }
 
         int levelUpCount = _level - levelBefore;
         if (levelUpCount > 0)
-            HealFlat(_playerBuff.GetLevelMaxHPBonusForLevels(_maxHP, levelUpCount));
+            HealFlat(_playerBuffManager.GetLevelMaxHPBonusForLevels(_maxHP, levelUpCount));
 
         RefreshExperienceProgress();
         if (levelUpCount <= 0) return;
 
-        _pendingBuffChooseCount += levelUpCount;
-        DrawLevelUpBuffs();
+        _playerBuffManager.AddPendingBuffChoices(levelUpCount);
+        _playerBuffManager.DrawLevelUpBuffs();
     }
 
     private float GetExperienceProgress()
@@ -547,258 +564,20 @@ public class Player : MonoBehaviour, IDamage
         ExperienceProgress.Value = GetExperienceProgress();
     }
 
-    private void DrawLevelUpBuffs()
-    {
-        if (_pendingBuffChooseCount <= 0)
-        {
-            _currentLevelUpBuffs = null;
-            EventManager.Instance.SetLevelUpBuffsFinished();
-            return;
-        }
-
-        if (_buffPoolAsset == null)
-        {
-            _pendingBuffChooseCount = 0;
-            _currentLevelUpBuffs = null;
-            EventManager.Instance.SetLevelUpBuffsFinished();
-            return;
-        }
-
-        _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs, _playerBuff);
-
-        // 二次校验：剔除 null 与重复项，确保 UI 不会展示相同 Buff
-        _currentLevelUpBuffs = SanitizeDrawnBuffs(_currentLevelUpBuffs, _levelUpBuffChooseCount);
-
-        if (_currentLevelUpBuffs == null || _currentLevelUpBuffs.Length == 0)
-        {
-            Debug.LogWarning("[BuffChoose] 抽不出有效 Buff，跳过本轮选择");
-            _pendingBuffChooseCount = 0;
-            EventManager.Instance.SetLevelUpBuffsFinished();
-            return;
-        }
-
-        (string[] names, string[] descs) = GetBuffNamesAndDescs(_currentLevelUpBuffs);
-        EventManager.Instance.SetLevelUpBuffs(names, descs);
-    }
-
-    /// <summary>
-    /// 去重、去 null，若候选不足则缩小返回数量，避免 UI 展示相同的 Buff。
-    /// </summary>
-    private PlayerBuffAsset[] SanitizeDrawnBuffs(PlayerBuffAsset[] buffs, int expectedCount)
-    {
-        if (buffs == null || buffs.Length == 0) return new PlayerBuffAsset[0];
-
-        var seen = new HashSet<PlayerBuffAsset>();
-        int writeIndex = 0;
-        for (int i = 0; i < buffs.Length; i++)
-        {
-            if (buffs[i] != null && seen.Add(buffs[i]))
-            {
-                buffs[writeIndex] = buffs[i];
-                writeIndex++;
-            }
-        }
-
-        int finalCount = Mathf.Min(writeIndex, Mathf.Max(0, expectedCount));
-        if (finalCount == writeIndex)
-        {
-            if (writeIndex < buffs.Length)
-                System.Array.Resize(ref buffs, finalCount);
-            return buffs;
-        }
-
-        PlayerBuffAsset[] trimmed = new PlayerBuffAsset[finalCount];
-        for (int i = 0; i < finalCount; i++)
-            trimmed[i] = buffs[i];
-        return trimmed;
-    }
-
-    private (string[] names, string[] descs) GetBuffNamesAndDescs(PlayerBuffAsset[] buffs)
-    {
-        if (buffs == null) return (null, null);
-
-        string[] names = new string[buffs.Length];
-        string[] descs = new string[buffs.Length];
-        for (int i = 0; i < buffs.Length; i++)
-        {
-            if (buffs[i] == null)
-            {
-                names[i] = string.Empty;
-                descs[i] = string.Empty;
-                continue;
-            }
-
-            names[i] = buffs[i].BuffName;
-            descs[i] = GetBuffDescription(buffs[i]);
-        }
-
-        return (names, descs);
-    }
-
-    private string GetBuffDescription(PlayerBuffAsset buff)
-    {
-        if (buff == null) return string.Empty;
-
-        string description = buff.Description ?? string.Empty;
-        if (!buff.Unique) return description;
-
-        const string uniqueTip = "唯一Buff：选择后不会再次出现";
-        return string.IsNullOrEmpty(description) ? uniqueTip : $"{description}\n{uniqueTip}";
-    }
-
     public PlayerBuffAsset GetCurrentLevelUpBuff(int index)
     {
-        if (_currentLevelUpBuffs == null || index < 0 || index >= _currentLevelUpBuffs.Length)
-            return null;
-
-        return _currentLevelUpBuffs[index];
+        return _playerBuffManager.GetCurrentLevelUpBuff(index);
     }
 
-    private void ApplySelectedBuff(int index)
-    {
-        // 防止事件多次触发或越界调用
-        if (_pendingBuffChooseCount <= 0 || _currentLevelUpBuffs == null) return;
-
-        PlayerBuffAsset buff = GetCurrentLevelUpBuff(index);
-        if (buff == null) return;
-
-        // 防止重复应用同一个 Unique Buff
-        if (buff.Unique && _usedUniqueBuffs.Contains(buff))
-        {
-            Debug.LogWarning($"[BuffChoose] Buff '{buff.BuffName}' 已被应用过，跳过重复选择");
-            return;
-        }
-
-        if (!ApplyBuff(buff)) return;
-
-        _pendingBuffChooseCount = Mathf.Max(0, _pendingBuffChooseCount - 1);
-        DrawLevelUpBuffs();
-    }
-
-    private bool ApplyBuff(PlayerBuffAsset buff)
-    {
-        if (buff == null) return false;
-
-        WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
-        if (!_playerBuff.TriggerBuff(buff, attachmentManager, HealByPercent, out PlayerBuff.PlayerBuffApplyResult result))
-            return false;
-
-        if (result.RefreshWeaponSetup)
-           character.RefreshCurrentWeaponSetup();
-
-        if (buff.Unique)
-            _usedUniqueBuffs.Add(buff);
-
-        if (result.IsTemporary)
-            StartTemporaryBuffTimer(result.TemporaryEffectId, buff.Duration);
-
-        if (buff.Kind == PlayerBuffKind.Adrenaline)
-        {
-            _adrenalineBuffAsset = buff;
-            TryTriggerAdrenaline(CurrentHP.Value);
-        }
-
-        Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
-        return true;
-    }
     private void OnCurrentHpChanged(float currentHp)
     {
-        TryTriggerAdrenaline(currentHp);
+        _playerBuffManager.CheckAdrenaline(currentHp);
     }
-
-    private void TryTriggerAdrenaline(float currentHp)
-    {
-        if (_adrenalineBuffAsset == null || !IsAlive) return;
-        float maxHp = MaxHP;
-        if (maxHp <= 0f || currentHp / maxHp > 0.3f) return;
-
-        if (!_playerBuff.TriggerAdrenaline(_adrenalineBuffAsset, out int attackEffectId, out int damageReductionEffectId))
-            return;
-
-        _adrenalineAttackEffectId = attackEffectId;
-        _adrenalineDamageReductionEffectId = damageReductionEffectId;
-        _adrenalineTimerId = TimeManager.Instance.AddTimer(_adrenalineBuffAsset.Duration, OnAdrenalineExpired);
-        Debug.LogWarning("[Adrenaline] 肾上腺素触发：攻击力提升10%，受到伤害降低10%");
-    }
-
-    private void OnAdrenalineExpired()
-    {
-        _adrenalineTimerId = -1;
-        RemoveAdrenalineEffects();
-        _playerBuff.DeactivateAdrenaline();
-        Debug.LogWarning("[Adrenaline] 肾上腺素效果结束");
-    }
-
-    private void ClearAdrenaline()
-    {
-        if (_adrenalineTimerId >= 0 && TimeManager.TryGetExistingInstance(out TimeManager timeManager))
-            timeManager.RemoveTimer(_adrenalineTimerId);
-
-        _adrenalineTimerId = -1;
-        RemoveAdrenalineEffects();
-        _playerBuff.DeactivateAdrenaline();
-    }
-
-    private void RemoveAdrenalineEffects()
-    {
-        if (_adrenalineAttackEffectId >= 0)
-            _playerBuff.RemoveTemporaryBuff(_adrenalineAttackEffectId, out _);
-        if (_adrenalineDamageReductionEffectId >= 0)
-            _playerBuff.RemoveTemporaryBuff(_adrenalineDamageReductionEffectId, out _);
-
-        _adrenalineAttackEffectId = -1;
-        _adrenalineDamageReductionEffectId = -1;
-    }
-
-    private void StartTemporaryBuffTimer(int effectId, float duration)
-    {
-        duration = Mathf.Max(0f, duration);
-        if (duration <= 0f)
-        {
-            OnTemporaryBuffExpired(effectId);
-            return;
-        }
-
-        int timerId = TimeManager.Instance.AddTimer(duration, () => OnTemporaryBuffExpired(effectId));
-        _temporaryBuffTimerIds[effectId] = timerId;
-    }
-
-    private void OnTemporaryBuffExpired(int effectId)
-    {
-        _temporaryBuffTimerIds.Remove(effectId);
-
-        if (!_playerBuff.RemoveTemporaryBuff(effectId, out bool refreshWeaponSetup)) return;
-
-        if (refreshWeaponSetup)
-            character.RefreshCurrentWeaponSetup();
-    }
-
-    private void ClearTemporaryBuffs()
-    {
-        ClearAdrenaline();
-
-        if (TimeManager.TryGetExistingInstance(out TimeManager timeManager))
-        {
-            foreach (int timerId in _temporaryBuffTimerIds.Values)
-                timeManager.RemoveTimer(timerId);
-        }
-
-        _temporaryBuffTimerIds.Clear();
-        if (_playerBuff.ClearTemporaryBuffs(out bool refreshWeaponSetup) && refreshWeaponSetup)
-            character.RefreshCurrentWeaponSetup();
-    }
-
 
     private WeaponAttachmentManagerBehaviour GetCurrentAttachmentManager()
     {
         WeaponBehaviour weapon = character?.GetInventory()?.GetEquipped();
         return weapon?.GetAttachmentManager();
-    }
-
-    private void HealByPercent(float percent)
-    {
-        float healAmount = MaxHP * percent;
-        CurrentHP.Value = Mathf.Min(CurrentHP.Value + healAmount, MaxHP);
     }
 
     private void HealFlat(float amount)
@@ -815,7 +594,7 @@ public class Player : MonoBehaviour, IDamage
     {
         if (!IsAlive) return;
 
-        float finalDamage = _playerBuff.GetReceivedDamage(damage);
+        float finalDamage = _playerBuffManager.GetReceivedDamage(damage);
         CurrentHP.Value = Mathf.Max(CurrentHP.Value - finalDamage, 0f);
 
         if (CurrentHP.Value <= 0f)
@@ -828,7 +607,7 @@ public class Player : MonoBehaviour, IDamage
 
     private void Die()
     {
-        ClearTemporaryBuffs();
+        _playerBuffManager.ClearAll();
         EventManager.Instance.TriggerSettle("失败");
     }
 
@@ -836,46 +615,7 @@ public class Player : MonoBehaviour, IDamage
     {
         if (!IsAlive) return;
 
-        (int[] nums, string resultType) = _playerBuff.CalculateGambling();
-        System.Action callback = BuildGamblingCallback(resultType);
-        EventManager.Instance.SetGamblingReady(nums, resultType, callback);
-    }
-
-    private System.Action BuildGamblingCallback(string resultType)
-    {
-        switch (resultType)
-        {
-            case "大吉":
-                return () =>
-                {
-                    _playerBuff.MultiplyAttackMultiplier(1.5f);
-                    float healPercent = MaxHP * 0.5f;
-                    HealFlat(healPercent);
-                    float hpBonus = _maxHP * 0.2f;
-                    _playerBuff.AddMaxHp(hpBonus);
-                    HealFlat(hpBonus);
-                    Debug.LogWarning("赌博大吉！攻击力x1.5，恢复50%HP，最大HP+20%");
-                };
-            case "吉":
-                return () =>
-                {
-                    _playerBuff.MultiplyAttackMultiplier(1.2f);
-                    float healPercent = MaxHP * 0.2f;
-                    HealFlat(healPercent);
-                    Debug.LogWarning("赌博吉！攻击力x1.2，恢复20%HP");
-                };
-            case "小吉":
-                return () =>
-                {
-                    float healPercent = MaxHP * 0.1f;
-                    HealFlat(healPercent);
-                    Debug.LogWarning("赌博小吉！恢复10%HP");
-                };
-            default:
-                return () =>
-                {
-                    Debug.LogWarning("赌博不中...");
-                };
-        }
+        var result = _playerBuffManager.GetGamblingResult();
+        EventManager.Instance.SetGamblingReady(result.nums, result.resultType, result.callback);
     }
 }
