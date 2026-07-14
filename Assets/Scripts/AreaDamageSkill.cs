@@ -13,7 +13,21 @@ public class AreaDamageSkill : MonoBehaviour
     private static readonly Collider[] _aoeHits = new Collider[32];
     private static readonly HashSet<Enemy> _hitEnemies = new HashSet<Enemy>();
 
-    [SerializeField] private float _lifeTime = 1.5f;
+    [SerializeField] private float _flyDuration = 0.6f;
+    [SerializeField] private float _arcHeight = 2f;
+    [SerializeField] private float _lifeTimeAfterExplode = 1.5f;
+
+    private AreaDamageSkillKind _kind;
+    private Vector3 _startPosition;
+    private Vector3 _targetPosition;
+    private float _aoeRadius;
+    private float _damage;
+    private LayerMask _enemyLayerMask;
+    private float _slowMultiplier;
+    private float _slowDuration;
+    private float _elapsed;
+    private bool _flying;
+    private bool _exploded;
 
     public void Initialize(
         AreaDamageSkillKind kind,
@@ -28,25 +42,50 @@ public class AreaDamageSkill : MonoBehaviour
     {
         if (owner == null)
         {
-            Destroy(gameObject, _lifeTime);
+            Destroy(gameObject, _lifeTimeAfterExplode);
             return;
         }
 
         Vector3 origin = owner.position;
         Vector3 direction = owner.forward;
-        if (TryGetTarget(origin, direction, range, acquireRadius, enemyLayerMask, out Enemy target, out Vector3 hitPoint))
+        if (!TryGetTarget(origin, direction, range, acquireRadius, enemyLayerMask, out Enemy target))
         {
-            transform.position = hitPoint;
-            ApplyAreaEffect(kind, target.transform.position, aoeRadius, damage, enemyLayerMask, slowMultiplier, slowDuration);
+            Destroy(gameObject);
+            return;
         }
 
-        Destroy(gameObject, _lifeTime);
+        _kind = kind;
+        _startPosition = transform.position;
+        _targetPosition = target.transform.position;
+        _aoeRadius = aoeRadius;
+        _damage = damage;
+        _enemyLayerMask = enemyLayerMask;
+        _slowMultiplier = slowMultiplier;
+        _slowDuration = slowDuration;
+        _elapsed = 0f;
+        _flying = true;
+        _exploded = false;
     }
 
-    private bool TryGetTarget(Vector3 origin, Vector3 direction, float range, float acquireRadius, LayerMask enemyLayerMask, out Enemy target, out Vector3 hitPoint)
+    private void Update()
+    {
+        if (!_flying || _exploded) return;
+
+        float duration = Mathf.Max(0.01f, _flyDuration);
+        _elapsed += Time.deltaTime;
+        float progress = Mathf.Clamp01(_elapsed / duration);
+        Vector3 position = Vector3.Lerp(_startPosition, _targetPosition, progress);
+        position.y += Mathf.Sin(progress * Mathf.PI) * Mathf.Max(0f, _arcHeight);
+        transform.position = position;
+
+        if (progress < 1f) return;
+
+        Explode();
+    }
+
+    private bool TryGetTarget(Vector3 origin, Vector3 direction, float range, float acquireRadius, LayerMask enemyLayerMask, out Enemy target)
     {
         target = null;
-        hitPoint = origin;
 
         range = Mathf.Max(0f, range);
         acquireRadius = Mathf.Max(0.01f, acquireRadius);
@@ -66,13 +105,21 @@ public class AreaDamageSkill : MonoBehaviour
 
             bestDistance = distance;
             target = enemy;
-            hitPoint = _targetHits[i].point;
         }
 
         return target != null;
     }
 
-    private void ApplyAreaEffect(AreaDamageSkillKind kind, Vector3 center, float radius, float damage, LayerMask enemyLayerMask, float slowMultiplier, float slowDuration)
+    private void Explode()
+    {
+        _flying = false;
+        _exploded = true;
+        transform.position = _targetPosition;
+        ApplyAreaEffect(_targetPosition, _aoeRadius, _damage, _enemyLayerMask, _slowMultiplier, _slowDuration);
+        Destroy(gameObject, _lifeTimeAfterExplode);
+    }
+
+    private void ApplyAreaEffect(Vector3 center, float radius, float damage, LayerMask enemyLayerMask, float slowMultiplier, float slowDuration)
     {
         _hitEnemies.Clear();
         radius = Mathf.Max(0f, radius);
@@ -88,7 +135,7 @@ public class AreaDamageSkill : MonoBehaviour
             if (!_hitEnemies.Add(enemy)) continue;
 
             enemy.TakeDamage(damage, enemy.transform.position);
-            if (kind == AreaDamageSkillKind.IceBomb)
+            if (_kind == AreaDamageSkillKind.IceBomb)
                 enemy.ApplyTemporarySlow(slowMultiplier, slowDuration);
         }
 
