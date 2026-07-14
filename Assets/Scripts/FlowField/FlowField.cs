@@ -258,6 +258,94 @@ public static class FlowField
         return false;
     }
 
+    public static bool TryGetRandomReachablePosition(
+        Vector3 targetPosition,
+        Vector3 blockedForward,
+        float minDistance,
+        float maxDistance,
+        float frontBlockAngle,
+        int tryCount,
+        out Vector3 position)
+    {
+        position = Vector3.zero;
+        if (!_initialized || !_hasTarget || _costs == null) return false;
+
+        minDistance = Mathf.Max(0f, minDistance);
+        maxDistance = Mathf.Max(minDistance, maxDistance);
+        int minCost = Mathf.FloorToInt(minDistance / Mathf.Max(_cellSize, 0.01f) * 10f);
+        int maxCost = Mathf.CeilToInt(maxDistance / Mathf.Max(_cellSize, 0.01f) * 14f);
+        int attempts = Mathf.Max(1, tryCount) * 8;
+
+        for (int i = 0; i < attempts; i++)
+        {
+            int x = Random.Range(0, _width);
+            int y = Random.Range(0, _height);
+            int idx = CellToIndex(x, y);
+            if (idx < 0 || _costs[idx] < minCost || _costs[idx] > maxCost) continue;
+
+            Vector3 candidate = CellToWorld(x, y);
+            if (IsInFrontBlockAngle(targetPosition, blockedForward, candidate, frontBlockAngle)) continue;
+
+            position = candidate;
+            return true;
+        }
+
+        return TryFindNearestReachablePosition(targetPosition, blockedForward, minCost, maxCost, frontBlockAngle, out position);
+    }
+
+    private static bool TryFindNearestReachablePosition(
+        Vector3 targetPosition,
+        Vector3 blockedForward,
+        int minCost,
+        int maxCost,
+        float frontBlockAngle,
+        out Vector3 position)
+    {
+        position = Vector3.zero;
+        int bestIdx = -1;
+        int bestCostDelta = int.MaxValue;
+        int preferredCost = (minCost + maxCost) / 2;
+
+        for (int i = 0; i < _costs.Length; i++)
+        {
+            int cost = _costs[i];
+            if (cost < minCost || cost > maxCost) continue;
+
+            int x = i % _width;
+            int y = i / _width;
+            Vector3 candidate = CellToWorld(x, y);
+            if (IsInFrontBlockAngle(targetPosition, blockedForward, candidate, frontBlockAngle)) continue;
+
+            int costDelta = Mathf.Abs(cost - preferredCost);
+            if (costDelta >= bestCostDelta) continue;
+
+            bestCostDelta = costDelta;
+            bestIdx = i;
+        }
+
+        if (bestIdx < 0) return false;
+
+        position = CellToWorld(bestIdx % _width, bestIdx / _width);
+        return true;
+    }
+
+    private static bool IsInFrontBlockAngle(Vector3 targetPosition, Vector3 blockedForward, Vector3 position, float frontBlockAngle)
+    {
+        if (frontBlockAngle <= 0f) return false;
+
+        Vector3 toPosition = position - targetPosition;
+        toPosition.y = 0f;
+        if (toPosition.sqrMagnitude <= 0.0001f) return false;
+
+        blockedForward.y = 0f;
+        if (blockedForward.sqrMagnitude <= 0.0001f) return false;
+
+        float halfAngle = frontBlockAngle * 0.5f;
+        float dot = Vector3.Dot(blockedForward.normalized, toPosition.normalized);
+        float limitDot = Mathf.Cos(halfAngle * Mathf.Deg2Rad);
+        return dot >= limitDot;
+    }
+
     private static bool CanMoveBetween(Vector2Int from, Vector2Int to)
     {
         int dx = to.x - from.x;

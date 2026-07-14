@@ -217,16 +217,11 @@ public class WaveManager : MonoBehaviour
 
         for (int i = 0; i < tryCount; i++)
         {
-            Vector2 direction2D = UnityEngine.Random.insideUnitCircle.normalized;
-            if (direction2D.sqrMagnitude <= 0.0001f)
-                direction2D = Vector2.right;
-
-            float distance = UnityEngine.Random.Range(minDistance, maxDistance);
-            Vector3 offset = new Vector3(direction2D.x, 0f, direction2D.y) * distance;
-            Vector3 candidate = SnapSpawnPositionToGround(player.position + offset);
-
-            if (IsInPlayerFrontBlockAngle(player, candidate)) continue;
-            if (IsValidSpawnPosition(candidate))
+            if (FlowField.TryGetRandomReachablePosition(
+                    player.position, player.forward,
+                    minDistance, maxDistance,
+                    _playerFrontBlockAngle, tryCount,
+                    out Vector3 candidate) && IsValidSpawnPosition(candidate))
                 return candidate;
         }
 
@@ -235,24 +230,6 @@ public class WaveManager : MonoBehaviour
             ? nearestSpawnPoint.transform.position
             : (spawnPoint != null ? spawnPoint.transform.position : player.position);
         return FindFallbackSpawnPosition(fallbackCenter, _spawnRandomRadius);
-    }
-
-    private bool IsInPlayerFrontBlockAngle(Transform player, Vector3 position)
-    {
-        if (player == null || _playerFrontBlockAngle <= 0f) return false;
-
-        Vector3 toPosition = position - player.position;
-        toPosition.y = 0f;
-        if (toPosition.sqrMagnitude <= 0.0001f) return false;
-
-        Vector3 forward = player.forward;
-        forward.y = 0f;
-        if (forward.sqrMagnitude <= 0.0001f) return false;
-
-        float halfAngle = _playerFrontBlockAngle * 0.5f;
-        float dot = Vector3.Dot(forward.normalized, toPosition.normalized);
-        float limitDot = Mathf.Cos(halfAngle * Mathf.Deg2Rad);
-        return dot >= limitDot;
     }
 
     private SpawnPoint GetNearestSpawnPoint(Vector3 position)
