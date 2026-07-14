@@ -28,6 +28,10 @@ public class Player : MonoBehaviour, IDamage
     private readonly PlayerBuffManager _playerBuffManager = new PlayerBuffManager();
     private int _droneTimerId = -1;
     private int _iceBombTimerId = -1;
+    private float _droneCooldownStartTime;
+    private float _droneCooldownDuration;
+    private float _iceBombCooldownStartTime;
+    private float _iceBombCooldownDuration;
     private bool _dronePrewarmed;
     private bool _iceBombPrewarmed;
 
@@ -39,6 +43,8 @@ public class Player : MonoBehaviour, IDamage
     public GenericProperty<float> CurrentHP { get; private set; } = new GenericProperty<float>();
     public GenericProperty<int> Level { get; private set; } = new GenericProperty<int>();
     public GenericProperty<float> ExperienceProgress { get; private set; } = new GenericProperty<float>();
+    public GenericProperty<float> DroneCooldownProgress { get; private set; } = new GenericProperty<float>();
+    public GenericProperty<float> IceBombCooldownProgress { get; private set; } = new GenericProperty<float>();
 
     private Character character;
     
@@ -114,6 +120,11 @@ public class Player : MonoBehaviour, IDamage
             context.UnregisterPlayer(this);
     }
 
+    private void Update()
+    {
+        RefreshSkillCooldownProgress();
+    }
+
     /// <summary>
     /// 接收 EventManager.TriggerBuff 事件，委托给 PlayerBuff 处理 Buff 选择。
     /// </summary>
@@ -129,11 +140,13 @@ public class Player : MonoBehaviour, IDamage
         if (unlocked)
         {
             PrewarmDronePool();
+            DroneCooldownProgress.Value = 0f;
             StartDroneTimer();
         }
         else
         {
             StopDroneTimer();
+            DroneCooldownProgress.Value = 0f;
         }
     }
 
@@ -142,11 +155,13 @@ public class Player : MonoBehaviour, IDamage
         if (unlocked)
         {
             PrewarmIceBombPool();
+            IceBombCooldownProgress.Value = 0f;
             StartIceBombTimer();
         }
         else
         {
             StopIceBombTimer();
+            IceBombCooldownProgress.Value = 0f;
         }
     }
 
@@ -187,6 +202,9 @@ public class Player : MonoBehaviour, IDamage
         if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
 
         float interval = _playerBuffManager.GetDroneInterval();
+        _droneCooldownDuration = interval;
+        _droneCooldownStartTime = Time.time;
+        DroneCooldownProgress.Value = 0f;
         _droneTimerId = TimeManager.Instance.AddTimer(interval, OnDroneTimerElapsed);
     }
 
@@ -211,6 +229,8 @@ public class Player : MonoBehaviour, IDamage
             timeManager.RemoveTimer(_droneTimerId);
 
         _droneTimerId = -1;
+        _droneCooldownDuration = 0f;
+        DroneCooldownProgress.Value = 0f;
     }
 
     private void StartIceBombTimer()
@@ -226,6 +246,9 @@ public class Player : MonoBehaviour, IDamage
         if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
 
         float interval = _playerBuffManager.GetIceBombInterval();
+        _iceBombCooldownDuration = interval;
+        _iceBombCooldownStartTime = Time.time;
+        IceBombCooldownProgress.Value = 0f;
         _iceBombTimerId = TimeManager.Instance.AddTimer(interval, OnIceBombTimerElapsed);
     }
 
@@ -250,6 +273,23 @@ public class Player : MonoBehaviour, IDamage
             timeManager.RemoveTimer(_iceBombTimerId);
 
         _iceBombTimerId = -1;
+        _iceBombCooldownDuration = 0f;
+        IceBombCooldownProgress.Value = 0f;
+    }
+
+    private void RefreshSkillCooldownProgress()
+    {
+        if (_droneTimerId >= 0 && _droneCooldownDuration > 0f)
+        {
+            float progress = Mathf.Clamp01((Time.time - _droneCooldownStartTime) / _droneCooldownDuration);
+            DroneCooldownProgress.Value = progress;
+        }
+
+        if (_iceBombTimerId >= 0 && _iceBombCooldownDuration > 0f)
+        {
+            float progress = Mathf.Clamp01((Time.time - _iceBombCooldownStartTime) / _iceBombCooldownDuration);
+            IceBombCooldownProgress.Value = progress;
+        }
     }
 
     /// <summary>

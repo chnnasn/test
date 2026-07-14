@@ -24,6 +24,9 @@ public class AreaDamageSkill : MonoBehaviour
     [Header("命中特效")]
     [SerializeField] private ParticleSystem[] _hitParticles;
 
+    [Header("可视化模型")]
+    [SerializeField] private GameObject _modelRoot;
+
     private AreaDamageSkillKind _kind;
     private Vector3 _startPosition;
     private Vector3 _targetPosition;
@@ -66,6 +69,7 @@ public class AreaDamageSkill : MonoBehaviour
         _exploded = false;
         _waitingForRelease = false;
         _released = false;
+        SetModelVisible(true);
         StopHitParticles();
 
         if (owner == null)
@@ -126,6 +130,7 @@ public class AreaDamageSkill : MonoBehaviour
         _exploded = true;
         transform.position = _targetPosition;
 
+        SetModelVisible(false);
         PlayHitParticles();
         ApplyAreaEffect(_targetPosition, _aoeRadius, _damage, _enemyLayerMask, _slowMultiplier, _slowDuration);
 
@@ -138,6 +143,21 @@ public class AreaDamageSkill : MonoBehaviour
 
         _releaseTimer = releaseDelay;
         _waitingForRelease = true;
+    }
+
+    private void SetModelVisible(bool visible)
+    {
+        GameObject model = GetModelRoot();
+        if (model != null)
+            model.SetActive(visible);
+    }
+
+    private GameObject GetModelRoot()
+    {
+        if (_modelRoot != null) return _modelRoot;
+        if (transform.childCount > 1)
+            _modelRoot = transform.GetChild(1).gameObject;
+        return _modelRoot;
     }
 
     private void PlayHitParticles()
@@ -203,6 +223,7 @@ public class AreaDamageSkill : MonoBehaviour
         _flying = false;
         _waitingForRelease = false;
         StopHitParticles();
+        SetModelVisible(true);
         ProjectilePool.Release(gameObject);
     }
 }

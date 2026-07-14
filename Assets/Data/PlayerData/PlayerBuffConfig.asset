@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 29b040bd54ed1454eaf9ed7c725f0d6f, type: 3}
   m_Name: PlayerBuffConfig
   m_EditorClassIdentifier: 
-  _maxHPGrowthPercentPerLevel: 5
-  _attackDamageGrowthPercentPerLevel: 10
-  _damageReductionPercentPerLevel: 2
+  _maxHPGrowthPercentPerLevel: 8
+  _attackDamageGrowthPercentPerLevel: 13
+  _damageReductionPercentPerLevel: 5
   _droneInterval: 5
   _droneRange: 20
   _droneAcquireRadius: 0.75

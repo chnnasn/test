@@ -62,6 +62,10 @@ public class PlayerUI : MonoBehaviour
         player.BuffManager.DroneUnlocked.OnValueChanged += SetDroneVisible;
         player.BuffManager.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
         player.BuffManager.IceBombUnlocked.OnValueChanged += SetIceBombVisible;
+        player.DroneCooldownProgress.OnValueChanged -= SetDroneCooldownProgress;
+        player.DroneCooldownProgress.OnValueChanged += SetDroneCooldownProgress;
+        player.IceBombCooldownProgress.OnValueChanged -= SetIceBombCooldownProgress;
+        player.IceBombCooldownProgress.OnValueChanged += SetIceBombCooldownProgress;
 
         SetHp(player.CurrentHP.Value, player.MaxHP);
         SetLevel(player.Level.Value);
@@ -69,6 +73,8 @@ public class PlayerUI : MonoBehaviour
         SetSprintVisible(player.BuffManager.IsSkillUnlocked(PlayerSkillKind.sprint));
         SetDroneVisible(player.BuffManager.IsSkillUnlocked(PlayerSkillKind.Drone));
         SetIceBombVisible(player.BuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb));
+        SetDroneCooldownProgress(player.DroneCooldownProgress.Value);
+        SetIceBombCooldownProgress(player.IceBombCooldownProgress.Value);
     }
 
     private void UnbindPlayer(Player player)
@@ -81,6 +87,8 @@ public class PlayerUI : MonoBehaviour
         player.BuffManager.SprintUnlocked.OnValueChanged -= SetSprintVisible;
         player.BuffManager.DroneUnlocked.OnValueChanged -= SetDroneVisible;
         player.BuffManager.IceBombUnlocked.OnValueChanged -= SetIceBombVisible;
+        player.DroneCooldownProgress.OnValueChanged -= SetDroneCooldownProgress;
+        player.IceBombCooldownProgress.OnValueChanged -= SetIceBombCooldownProgress;
     }
 
     private void BindCharacter(Character character)
@@ -146,13 +154,33 @@ public class PlayerUI : MonoBehaviour
     private void SetDroneVisible(bool visible)
     {
         if (Drone != null)
+        {
             Drone.gameObject.SetActive(visible);
+            if (!visible)
+                Drone.fillAmount = 0f;
+        }
     }
 
     private void SetIceBombVisible(bool visible)
     {
         if (IceBomb != null)
+        {
             IceBomb.gameObject.SetActive(visible);
+            if (!visible)
+                IceBomb.fillAmount = 0f;
+        }
+    }
+
+    private void SetDroneCooldownProgress(float progress)
+    {
+        if (Drone != null)
+            Drone.fillAmount = Mathf.Clamp01(progress);
+    }
+
+    private void SetIceBombCooldownProgress(float progress)
+    {
+        if (IceBomb != null)
+            IceBomb.fillAmount = Mathf.Clamp01(progress);
     }
 
     public void SetBulletCount(int currentAmmo)
