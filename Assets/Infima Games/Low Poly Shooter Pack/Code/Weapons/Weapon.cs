@@ -542,6 +542,7 @@ namespace InfimaGames.LowPolyShooterPack
 
             fireAudioSource.volume = 0.2f;
             fireAudioSource.spatialBlend = 0.0f;
+            fireAudioSource.outputAudioMixerGroup = global::AudioManager.SFXGroup;
             fireAudioSource.Stop();
             fireAudioSource.clip = clip;
             fireAudioSource.Play();

@@ -199,6 +199,7 @@ namespace InfimaGames.LowPolyShooterPack
             newAudioSource.spatialBlend = settings.SpatialBlend;
             //设置剪辑并播放。使用Play便于isPlaying准确判断回收时机。
             newAudioSource.clip = clip;
+            newAudioSource.outputAudioMixerGroup = global::AudioManager.SFXGroup;
             newAudioSource.Play();
 
             //如果启用了自动清理，启动协程在播放完成后回收到对象池。

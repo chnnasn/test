@@ -112,6 +112,9 @@ public class AudioManager : MonoBehaviour
         slider.onValueChanged.AddListener(callback);
     }
 
+    public static AudioMixerGroup SFXGroup => instance != null ? instance.sfxGroup : null;
+    public static AudioMixerGroup BGMGroup => instance != null ? instance.bgmGroup : null;
+
     public static void PlayLoadingMusic()
     {
         if (instance == null) return;
@@ -131,6 +134,7 @@ public class AudioManager : MonoBehaviour
         audioSource.Stop();
         audioSource.clip = clip;
         audioSource.loop = false;
+        audioSource.outputAudioMixerGroup = bgmGroup;
         audioSource.Play();
     }
 
@@ -169,9 +173,9 @@ public class AudioManager : MonoBehaviour
 
     private void LoadVolumeSettings()
     {
-        masterVolume = PlayerPrefs.GetFloat(PrefsMaster, 1f);
-        bgmVolume = PlayerPrefs.GetFloat(PrefsBGM, 1f);
-        sfxVolume = PlayerPrefs.GetFloat(PrefsSFX, 1f);
+        masterVolume = 1f;
+        bgmVolume = 1f;
+        sfxVolume = 1f;
 
         SetMixerVolume(MasterVolumeParam, masterVolume);
         SetMixerVolume(BGMVolumeParam, bgmVolume);
