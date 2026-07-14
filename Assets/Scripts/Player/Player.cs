@@ -19,6 +19,9 @@ public class Player : MonoBehaviour, IDamage
     [Header("IceBomb Skill")]
     [SerializeField] private AreaDamageSkill _iceBombPrefab;
 
+    [Header("Debug")]
+    [SerializeField] private float _spaceExperienceAmount = 50f;
+
     private float _experience;
     private int _pendingBuffChooseCount;
     private PlayerBuffAsset[] _currentLevelUpBuffs;
@@ -79,6 +82,17 @@ public class Player : MonoBehaviour, IDamage
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
             context.UnregisterPlayer(this);
+    }
+
+    public void AddDebugExperience()
+    {
+        AddDebugExperience(_spaceExperienceAmount);
+    }
+
+    public void AddDebugExperience(float experience)
+    {
+        if (!IsAlive) return;
+        EventManager.Instance.SetAddExperience(Mathf.Max(0f, experience));
     }
 
     private void OnDroneUnlockedChanged(bool unlocked)

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Drone
   m_EditorClassIdentifier: 
-  _buffName: Drone
+  _buffName: "\u65E0\u4EBA\u673A"
   _description: "\u89E3\u9501\u65E0\u4EBA\u673A\uFF0C\u5B9A\u65F6\u5BF9\u654C\u4EBA\u9020\u6210\u8303\u56F4\u4F24\u5BB3"
   _kind: 7
   _unique: 1

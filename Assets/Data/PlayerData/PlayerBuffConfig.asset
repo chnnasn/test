@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 29b040bd54ed1454eaf9ed7c725f0d6f, type: 3}
   m_Name: PlayerBuffConfig
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   _maxHPGrowthPercentPerLevel: 5
   _attackDamageGrowthPercentPerLevel: 10
   _damageReductionPercentPerLevel: 2
