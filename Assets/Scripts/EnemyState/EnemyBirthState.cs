@@ -12,9 +12,6 @@ public class EnemyBirthState : EnemyState
 
     public override void Enter()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"{enemy.gameObject.name} 进入出生状态");
-#endif
         movement.SnapToGround();
     }
 
@@ -24,9 +21,6 @@ public class EnemyBirthState : EnemyState
 
     public override void Exit()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"{enemy.gameObject.name} 出生完成，准备追击");
-#endif
         movement.SnapToGround();
     }
     

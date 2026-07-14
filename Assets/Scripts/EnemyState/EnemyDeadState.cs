@@ -13,10 +13,6 @@ public class EnemyDeadState : EnemyState
         if (_destroyScheduled) return;
         _destroyScheduled = true;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"{enemy.gameObject.name} 进入死亡状态");
-#endif
-
         // 停止移动
         movement.Stop();
 

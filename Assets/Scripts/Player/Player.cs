@@ -24,9 +24,6 @@ public class Player : MonoBehaviour, IDamage
     [Header("Skill Scan (环形扫描敌人密度)")]
     [SerializeField] private int _scanRayCount = 16;
 
-    [Header("Debug")]
-    [SerializeField] private float _spaceExperienceAmount = 50f;
-
     private float _experience;
     private readonly PlayerBuffManager _playerBuffManager = new PlayerBuffManager();
     private int _droneTimerId = -1;
@@ -126,16 +123,6 @@ public class Player : MonoBehaviour, IDamage
             ClampCurrentHpToMax();
     }
 
-    public void AddDebugExperience()
-    {
-        AddDebugExperience(_spaceExperienceAmount);
-    }
-
-    public void AddDebugExperience(float experience)
-    {
-        if (!IsAlive) return;
-        EventManager.Instance.SetAddExperience(Mathf.Max(0f, experience));
-    }
 
     private void OnDroneUnlockedChanged(bool unlocked)
     {
@@ -201,25 +188,16 @@ public class Player : MonoBehaviour, IDamage
 
         float interval = _playerBuffManager.GetDroneInterval();
         _droneTimerId = TimeManager.Instance.AddTimer(interval, OnDroneTimerElapsed);
-        Debug.Log($"[Drone] 定时器已调度, interval={interval}s, timerId={_droneTimerId}");
     }
 
     private void OnDroneTimerElapsed()
     {
         _droneTimerId = -1;
 
-        Debug.Log("[Drone] 定时器触发");
-
         if (!isActiveAndEnabled || !IsAlive)
-        {
-            Debug.LogWarning("[Drone] 玩家未激活或已死亡，跳过");
             return;
-        }
         if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone))
-        {
-            Debug.LogWarning("[Drone] 技能未解锁，跳过");
             return;
-        }
 
         TryTriggerDroneSkill();
         ScheduleDroneTimer();
@@ -249,25 +227,16 @@ public class Player : MonoBehaviour, IDamage
 
         float interval = _playerBuffManager.GetIceBombInterval();
         _iceBombTimerId = TimeManager.Instance.AddTimer(interval, OnIceBombTimerElapsed);
-        Debug.Log($"[IceBomb] 定时器已调度, interval={interval}s, timerId={_iceBombTimerId}");
     }
 
     private void OnIceBombTimerElapsed()
     {
         _iceBombTimerId = -1;
 
-        Debug.Log("[IceBomb] 定时器触发");
-
         if (!isActiveAndEnabled || !IsAlive)
-        {
-            Debug.LogWarning("[IceBomb] 玩家未激活或已死亡，跳过");
             return;
-        }
         if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb))
-        {
-            Debug.LogWarning("[IceBomb] 技能未解锁，跳过");
             return;
-        }
 
         TryTriggerIceBombSkill();
         ScheduleIceBombTimer();
@@ -407,15 +376,9 @@ public class Player : MonoBehaviour, IDamage
     private bool TryTriggerDroneSkill()
     {
         if (!isActiveAndEnabled || !IsAlive)
-        {
-            Debug.LogWarning("[Drone] 玩家未激活或已死亡，无法触发");
             return false;
-        }
         if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.Drone))
-        {
-            Debug.LogWarning("[Drone] 技能未解锁，无法触发");
             return false;
-        }
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
         Transform scanOrigin = transform;
@@ -423,16 +386,9 @@ public class Player : MonoBehaviour, IDamage
         float acquireRadius = _playerBuffManager.GetDroneAcquireRadius();
         float aoeRadius = _playerBuffManager.GetDroneAoeRadius();
 
-        Debug.Log($"[Drone] 开始扫描敌人: origin={scanOrigin.position}, range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
-
         SkillTargetScanResult scan = ScanBestSkillTarget(scanOrigin, range, acquireRadius, aoeRadius);
         if (!scan.HasTarget)
-        {
-            Debug.LogWarning("[Drone] 扫描未找到敌人目标，不实例化");
             return false;
-        }
-
-        Debug.Log($"[Drone] 找到目标! 方向={scan.Direction}, 位置={scan.TargetPosition}, 覆盖敌人数={scan.EnemyCount}");
 
         if (_dronePrefab == null)
         {
@@ -456,22 +412,15 @@ public class Player : MonoBehaviour, IDamage
             aoeRadius, _playerBuffManager.GetDroneDamage(),
             _enemyLayerMask);
 
-        Debug.Log($"[Drone] 实例化成功! 伤害={_playerBuffManager.GetDroneDamage()}");
         return true;
     }
 
     private bool TryTriggerIceBombSkill()
     {
         if (!isActiveAndEnabled || !IsAlive)
-        {
-            Debug.LogWarning("[IceBomb] 玩家未激活或已死亡，无法触发");
             return false;
-        }
         if (!_playerBuffManager.IsSkillUnlocked(PlayerSkillKind.IceBomb))
-        {
-            Debug.LogWarning("[IceBomb] 技能未解锁，无法触发");
             return false;
-        }
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
         Transform scanOrigin = transform;
@@ -479,16 +428,9 @@ public class Player : MonoBehaviour, IDamage
         float acquireRadius = _playerBuffManager.GetIceBombAcquireRadius();
         float aoeRadius = _playerBuffManager.GetIceBombAoeRadius();
 
-        Debug.Log($"[IceBomb] 开始扫描敌人: origin={scanOrigin.position}, range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
-
         SkillTargetScanResult scan = ScanBestSkillTarget(scanOrigin, range, acquireRadius, aoeRadius);
         if (!scan.HasTarget)
-        {
-            Debug.LogWarning("[IceBomb] 扫描未找到敌人目标，不实例化");
             return false;
-        }
-
-        Debug.Log($"[IceBomb] 找到目标! 方向={scan.Direction}, 位置={scan.TargetPosition}, 覆盖敌人数={scan.EnemyCount}");
 
         if (_iceBombPrefab == null)
         {
@@ -514,7 +456,6 @@ public class Player : MonoBehaviour, IDamage
             slowMultiplier: _playerBuffManager.GetIceBombSlowMultiplier(),
             slowDuration: _playerBuffManager.GetIceBombSlowDuration());
 
-        Debug.Log($"[IceBomb] 实例化成功! 伤害={_playerBuffManager.GetIceBombDamage()}, 减速={_playerBuffManager.GetIceBombSlowMultiplier()}, 持续={_playerBuffManager.GetIceBombSlowDuration()}s");
         return true;
     }
 
@@ -613,10 +554,6 @@ public class Player : MonoBehaviour, IDamage
 
         if (CurrentHP.Value <= 0f)
             Die();
-        
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"Player 受到 {finalDamage} 点伤害，原始伤害：{damage}，剩余血量：{CurrentHP.Value}");
-#endif
     }
 
     private void Die()

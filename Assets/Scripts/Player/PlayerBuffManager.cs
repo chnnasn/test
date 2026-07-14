@@ -823,7 +823,6 @@ public class PlayerBuffManager
             CheckAdrenaline(currentHP);
         }
 
-        Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
         return true;
     }
 
@@ -871,7 +870,6 @@ public class PlayerBuffManager
         _adrenalineAttackEffectId = attackEffectId;
         _adrenalineDamageReductionEffectId = damageReductionEffectId;
         _adrenalineTimerId = _onScheduleTimer(_adrenalineBuffAsset.Duration, OnAdrenalineExpired);
-        Debug.LogWarning("[Adrenaline] 肾上腺素触发：攻击力提升10%，受到伤害降低10%");
     }
 
     private void OnAdrenalineExpired()
@@ -879,7 +877,6 @@ public class PlayerBuffManager
         _adrenalineTimerId = -1;
         RemoveAdrenalineEffects();
         DeactivateAdrenaline();
-        Debug.LogWarning("[Adrenaline] 肾上腺素效果结束");
     }
 
     private void RemoveAdrenalineEffects()
@@ -942,26 +939,20 @@ public class PlayerBuffManager
                 return () =>
                 {
                     ApplyGamblingGreatLuck();
-                    Debug.LogWarning("赌博大吉！20秒内双倍经验并且无敌");
                 };
             case "吉":
                 return () =>
                 {
                     int effectId = AddTemporaryEffect(PlayerBuffKind.AttackMultiplier, 1.2f);
                     StartTemporaryBuffTimer(effectId, 10f);
-                    Debug.LogWarning("赌博吉！10秒内攻击伤害+20%");
                 };
             case "小吉":
                 return () =>
                 {
                     _onHeal?.Invoke(maxHP * 0.3f);
-                    Debug.LogWarning("赌博小吉！恢复30%HP");
                 };
             default:
-                return () =>
-                {
-                    Debug.LogWarning("赌博不中...");
-                };
+                return () => { };
         }
     }
 
@@ -988,8 +979,6 @@ public class PlayerBuffManager
 
         if (_gamblingGreatLuckStackCount <= 0)
             OnGamblingGreatLuckEnded?.Invoke();
-
-        Debug.LogWarning("赌博大吉效果结束");
     }
 
     #endregion

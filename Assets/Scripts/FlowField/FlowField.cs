@@ -77,9 +77,6 @@ public static class FlowField
         _hasTarget = false;
         _lastTargetPos = Vector3.zero;
         _initialized = true;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[FlowField] 从资产初始化完成: {_width}x{_height} 格 ({total} 个), 格大小={_cellSize}m");
-#endif
     }
 
     /// <summary>
@@ -115,9 +112,6 @@ public static class FlowField
         _hasTarget = false;
         _lastTargetPos = Vector3.zero;
         _initialized = true;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.LogWarning($"[FlowField] 使用运行时扫描初始化: {_width}x{_height} 格 ({total} 个), 覆盖 {worldMin} ~ {worldMax}");
-#endif
     }
 
     /// <summary>

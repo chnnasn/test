@@ -147,7 +147,6 @@ public class PlayerEffect : MonoBehaviour
         }
 
         Volume.SetActive(true);
-        Debug.LogWarning("[PlayerEffect] 大吉 Volume 显示（金色）");
     }
 
     private void OnGamblingGreatLuckEnded()
@@ -163,8 +162,6 @@ public class PlayerEffect : MonoBehaviour
 
         if (Volume != null)
             Volume.SetActive(false);
-
-        Debug.LogWarning("[PlayerEffect] 大吉 Volume 恢复");
     }
 
     #endregion
