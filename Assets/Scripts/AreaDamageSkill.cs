@@ -9,7 +9,7 @@ public enum AreaDamageSkillKind
 
 /// <summary>
 /// 无人机 / 冰弹 范围技能弹体。
-/// 完整生命周期：发射 → 抛物线飞行 → 落地爆炸 (AOE 伤害) → 散射子子弹 (射线攻击) → 销毁。
+/// 完整生命周期：发射 → 抛物线飞行 → 落地触发范围检测 → 伤害/减速 → 销毁。
 /// </summary>
 public class AreaDamageSkill : MonoBehaviour
 {
@@ -20,13 +20,6 @@ public class AreaDamageSkill : MonoBehaviour
     [SerializeField] private float _flyDuration = 0.6f;
     [SerializeField] private float _arcHeight = 2f;
     [SerializeField] private float _lifeTimeAfterExplode = 1.5f;
-
-    [Header("子子弹 (落地后射线攻击)")]
-    [SerializeField] private SkillSubBullet _subBulletPrefab;
-    [SerializeField] private int _subBulletCount = 6;
-    [SerializeField] private float _subBulletRange = 5f;
-    [Range(0f, 1f)]
-    [SerializeField] private float _subBulletDamageMultiplier = 0.3f;
 
     private AreaDamageSkillKind _kind;
     private Vector3 _startPosition;
@@ -97,7 +90,7 @@ public class AreaDamageSkill : MonoBehaviour
     }
 
     /// <summary>
-    /// 落地爆炸：AOE 伤害 → 散射子子弹。
+    /// 落地触发范围效果：无人机造成伤害，冰弹造成伤害并减速。
     /// </summary>
     private void Explode()
     {
@@ -105,11 +98,7 @@ public class AreaDamageSkill : MonoBehaviour
         _exploded = true;
         transform.position = _targetPosition;
 
-        // 1. AOE 范围伤害
         ApplyAreaEffect(_targetPosition, _aoeRadius, _damage, _enemyLayerMask, _slowMultiplier, _slowDuration);
-
-        // 2. 散射子子弹 —— 落地后以爆炸点为中心做环形射线攻击
-        SpawnSubBullets();
 
         Destroy(gameObject, _lifeTimeAfterExplode);
     }
@@ -138,27 +127,5 @@ public class AreaDamageSkill : MonoBehaviour
         }
 
         HitEnemies.Clear();
-    }
-
-    /// <summary>
-    /// 在爆炸点周围均匀散射子子弹，每个子子弹沿径向发出一根射线攻击第一个命中敌人。
-    /// </summary>
-    private void SpawnSubBullets()
-    {
-        if (_subBulletPrefab == null || _subBulletCount <= 0) return;
-
-        float subDamage = _damage * Mathf.Clamp01(_subBulletDamageMultiplier);
-        float angleStep = 360f / _subBulletCount;
-
-        for (int i = 0; i < _subBulletCount; i++)
-        {
-            float angle = i * angleStep;
-            Vector3 direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
-
-            SkillSubBullet subBullet = Instantiate(
-                _subBulletPrefab, _targetPosition, Quaternion.LookRotation(direction));
-            subBullet.Initialize(
-                _targetPosition, direction, _subBulletRange, subDamage, _enemyLayerMask);
-        }
     }
 }

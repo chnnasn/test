@@ -229,7 +229,7 @@ public class Player : MonoBehaviour, IDamage
         {
             HasTarget = false,
             Direction = owner.forward,
-            TargetPosition = owner.position,
+            TargetPosition = new Vector3(owner.position.x, 0f, owner.position.z),
             EnemyCount = 0
         };
 
@@ -322,7 +322,7 @@ public class Player : MonoBehaviour, IDamage
         if (distance > Mathf.Max(0f, range))
             offset = offset.normalized * Mathf.Max(0f, range);
 
-        return new Vector3(origin.x + offset.x, origin.y, origin.z + offset.z);
+        return new Vector3(origin.x + offset.x, 0f, origin.z + offset.z);
     }
 
     private int CountEnemiesCovered(Vector3 center, List<Enemy> enemies, float aoeRadius)
@@ -355,13 +355,14 @@ public class Player : MonoBehaviour, IDamage
         }
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
+        Transform scanOrigin = transform;
         float range = _playerBuff.GetDroneRange();
         float acquireRadius = _playerBuff.GetDroneAcquireRadius();
         float aoeRadius = _playerBuff.GetDroneAoeRadius();
 
-        Debug.Log($"[Drone] 开始扫描敌人: range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
+        Debug.Log($"[Drone] 开始扫描敌人: origin={scanOrigin.position}, range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
 
-        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
+        SkillTargetScanResult scan = ScanBestSkillTarget(scanOrigin, range, acquireRadius, aoeRadius);
         if (!scan.HasTarget)
         {
             Debug.LogWarning("[Drone] 扫描未找到敌人目标，不实例化");
@@ -402,13 +403,14 @@ public class Player : MonoBehaviour, IDamage
         }
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
+        Transform scanOrigin = transform;
         float range = _playerBuff.GetIceBombRange();
         float acquireRadius = _playerBuff.GetIceBombAcquireRadius();
         float aoeRadius = _playerBuff.GetIceBombAoeRadius();
 
-        Debug.Log($"[IceBomb] 开始扫描敌人: range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
+        Debug.Log($"[IceBomb] 开始扫描敌人: origin={scanOrigin.position}, range={range}, acquireRadius={acquireRadius}, aoeRadius={aoeRadius}, layerMask={_enemyLayerMask.value}");
 
-        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
+        SkillTargetScanResult scan = ScanBestSkillTarget(scanOrigin, range, acquireRadius, aoeRadius);
         if (!scan.HasTarget)
         {
             Debug.LogWarning("[IceBomb] 扫描未找到敌人目标，不实例化");

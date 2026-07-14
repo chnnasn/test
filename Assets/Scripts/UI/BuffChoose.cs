@@ -43,6 +43,8 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         _originalColorMap = new Dictionary<Image, Color>();
         _validTargets = new HashSet<GameObject>();
 
+        if (_texts == null) return;
+
         for (int i = 0; i < _texts.Length; i++)
         {
             if (_texts[i] == null) continue;
