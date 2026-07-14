@@ -21,6 +21,9 @@ public class AreaDamageSkill : MonoBehaviour
     [SerializeField] private float _arcHeight = 2f;
     [SerializeField] private float _lifeTimeAfterExplode = 1.5f;
 
+    [Header("命中特效")]
+    [SerializeField] private ParticleSystem[] _hitParticles;
+
     private AreaDamageSkillKind _kind;
     private Vector3 _startPosition;
     private Vector3 _targetPosition;
@@ -63,6 +66,7 @@ public class AreaDamageSkill : MonoBehaviour
         _exploded = false;
         _waitingForRelease = false;
         _released = false;
+        StopHitParticles();
 
         if (owner == null)
         {
@@ -122,6 +126,7 @@ public class AreaDamageSkill : MonoBehaviour
         _exploded = true;
         transform.position = _targetPosition;
 
+        PlayHitParticles();
         ApplyAreaEffect(_targetPosition, _aoeRadius, _damage, _enemyLayerMask, _slowMultiplier, _slowDuration);
 
         float releaseDelay = Mathf.Max(0f, _lifeTimeAfterExplode);
@@ -133,6 +138,34 @@ public class AreaDamageSkill : MonoBehaviour
 
         _releaseTimer = releaseDelay;
         _waitingForRelease = true;
+    }
+
+    private void PlayHitParticles()
+    {
+        if (_hitParticles == null || _hitParticles.Length == 0) return;
+
+        for (int i = 0; i < _hitParticles.Length; i++)
+        {
+            ParticleSystem particle = _hitParticles[i];
+            if (particle == null) continue;
+
+            particle.transform.position = _targetPosition;
+            particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            particle.Play(true);
+        }
+    }
+
+    private void StopHitParticles()
+    {
+        if (_hitParticles == null || _hitParticles.Length == 0) return;
+
+        for (int i = 0; i < _hitParticles.Length; i++)
+        {
+            ParticleSystem particle = _hitParticles[i];
+            if (particle == null) continue;
+
+            particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
     }
 
     private void ApplyAreaEffect(
@@ -169,6 +202,7 @@ public class AreaDamageSkill : MonoBehaviour
         _released = true;
         _flying = false;
         _waitingForRelease = false;
+        StopHitParticles();
         ProjectilePool.Release(gameObject);
     }
 }
