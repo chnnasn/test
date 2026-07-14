@@ -1,9 +1,12 @@
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class AudioManager : MonoBehaviour
 {
+    private static AudioManager instance;
+
     [Header("Mixer Groups")]
     [SerializeField] private AudioMixerGroup masterGroup;
     [SerializeField] private AudioMixerGroup bgmGroup;
@@ -13,6 +16,12 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider bgmSlider;
     [SerializeField] private Slider sfxSlider;
+
+    [Header("Scene Music")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip loadingClip;
+    [SerializeField] private AudioClip demoClip;
+    [SerializeField] private string demoSceneName = "Demo";
 
     private AudioMixer mixer;
 
@@ -28,13 +37,31 @@ public class AudioManager : MonoBehaviour
     private const string PrefsBGM = "Audio_BGM";
     private const string PrefsSFX = "Audio_SFX";
 
-    
-    
     protected void Awake()
     {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+
         CacheMixer();
+        CacheAudioSource();
         LoadVolumeSettings();
         BindSliders();
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void CacheMixer()
@@ -55,6 +82,18 @@ public class AudioManager : MonoBehaviour
             mixer = sfxGroup.audioMixer;
     }
 
+    private void CacheAudioSource()
+    {
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        audioSource.loop = false;
+        audioSource.playOnAwake = false;
+        audioSource.outputAudioMixerGroup = bgmGroup;
+    }
+
     private void BindSliders()
     {
         SetupSlider(masterSlider, masterVolume, SetMasterVolume);
@@ -71,6 +110,28 @@ public class AudioManager : MonoBehaviour
         slider.SetValueWithoutNotify(value);
         slider.onValueChanged.RemoveListener(callback);
         slider.onValueChanged.AddListener(callback);
+    }
+
+    public static void PlayLoadingMusic()
+    {
+        if (instance == null) return;
+        instance.PlayMusic(instance.loadingClip);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name == demoSceneName)
+            PlayMusic(demoClip);
+    }
+
+    private void PlayMusic(AudioClip clip)
+    {
+        if (audioSource == null || clip == null) return;
+
+        audioSource.Stop();
+        audioSource.clip = clip;
+        audioSource.loop = false;
+        audioSource.Play();
     }
 
     private void SetMasterVolume(float value)
@@ -127,6 +188,9 @@ public class AudioManager : MonoBehaviour
 
     protected void OnDestroy()
     {
+        if (instance == this)
+            instance = null;
+
         if (masterSlider != null)
             masterSlider.onValueChanged.RemoveListener(SetMasterVolume);
         if (bgmSlider != null)
