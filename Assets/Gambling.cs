@@ -27,8 +27,9 @@ public class Gambling : MonoBehaviour
         _onCompleteCallback = onComplete;
         _isWaitingGreatLuckEnd = false;
 
+        // 动画播放期间清空 Desc
         if (Desc != null)
-            Desc.text = resultDesc;
+            Desc.text = string.Empty;
 
         // Restore Nums visibility
         for (int i = 0; i < Nums.Length; i++)
