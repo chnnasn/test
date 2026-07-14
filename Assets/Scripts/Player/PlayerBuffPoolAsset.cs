@@ -58,6 +58,7 @@ public class PlayerBuffPoolAsset : ScriptableObject
         {
             PlayerBuffKind.DroneSkillPower => playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone),
             PlayerBuffKind.IceBombSkillPower => playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb),
+            PlayerBuffKind.Adrenaline => playerBuff.CanDrawAdrenaline,
             PlayerBuffKind.Gambling => false,
             _ => true
         };

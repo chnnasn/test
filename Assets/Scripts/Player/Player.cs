@@ -36,6 +36,11 @@ public class Player : MonoBehaviour, IDamage
     private int _iceBombTimerId = -1;
     private bool _dronePrewarmed;
     private bool _iceBombPrewarmed;
+    private readonly Dictionary<int, int> _temporaryBuffTimerIds = new Dictionary<int, int>();
+    private PlayerBuffAsset _adrenalineBuffAsset;
+    private int _adrenalineAttackEffectId = -1;
+    private int _adrenalineDamageReductionEffectId = -1;
+    private int _adrenalineTimerId = -1;
 
     public bool IsAlive => CurrentHP.Value > 0f;
     public float MaxHP => _playerBuff.GetMaxHP(_maxHP);
@@ -68,6 +73,7 @@ public class Player : MonoBehaviour, IDamage
         EventManager.Instance.AddExper += AddExperience;
         EventManager.Instance.TriggerBuff += ApplySelectedBuff;
         EventManager.Instance.RequestGambling += OnRequestGambling;
+        CurrentHP.OnValueChanged += OnCurrentHpChanged;
         _playerBuff.DroneUnlocked.OnValueChanged += OnDroneUnlockedChanged;
         _playerBuff.IceBombUnlocked.OnValueChanged += OnIceBombUnlockedChanged;
         OnDroneUnlockedChanged(_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone));
@@ -76,10 +82,12 @@ public class Player : MonoBehaviour, IDamage
 
     private void OnDisable()
     {
+        CurrentHP.OnValueChanged -= OnCurrentHpChanged;
         _playerBuff.DroneUnlocked.OnValueChanged -= OnDroneUnlockedChanged;
         _playerBuff.IceBombUnlocked.OnValueChanged -= OnIceBombUnlockedChanged;
         StopDroneTimer();
         StopIceBombTimer();
+        ClearTemporaryBuffs();
 
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
         {
@@ -661,17 +669,112 @@ public class Player : MonoBehaviour, IDamage
         if (buff == null) return false;
 
         WeaponAttachmentManagerBehaviour attachmentManager = GetCurrentAttachmentManager();
-        if (!_playerBuff.TriggerBuff(buff, attachmentManager, HealByPercent, out bool refreshWeaponSetup))
+        if (!_playerBuff.TriggerBuff(buff, attachmentManager, HealByPercent, out PlayerBuff.PlayerBuffApplyResult result))
             return false;
 
-        if (refreshWeaponSetup)
+        if (result.RefreshWeaponSetup)
            character.RefreshCurrentWeaponSetup();
 
         if (buff.Unique)
             _usedUniqueBuffs.Add(buff);
 
+        if (result.IsTemporary)
+            StartTemporaryBuffTimer(result.TemporaryEffectId, buff.Duration);
+
+        if (buff.Kind == PlayerBuffKind.Adrenaline)
+        {
+            _adrenalineBuffAsset = buff;
+            TryTriggerAdrenaline(CurrentHP.Value);
+        }
+
         Debug.LogWarning($"实现{buff.BuffName} {buff.Description}");
         return true;
+    }
+    private void OnCurrentHpChanged(float currentHp)
+    {
+        TryTriggerAdrenaline(currentHp);
+    }
+
+    private void TryTriggerAdrenaline(float currentHp)
+    {
+        if (_adrenalineBuffAsset == null || !IsAlive) return;
+        float maxHp = MaxHP;
+        if (maxHp <= 0f || currentHp / maxHp > 0.3f) return;
+
+        if (!_playerBuff.TriggerAdrenaline(_adrenalineBuffAsset, out int attackEffectId, out int damageReductionEffectId))
+            return;
+
+        _adrenalineAttackEffectId = attackEffectId;
+        _adrenalineDamageReductionEffectId = damageReductionEffectId;
+        _adrenalineTimerId = TimeManager.Instance.AddTimer(_adrenalineBuffAsset.Duration, OnAdrenalineExpired);
+        Debug.LogWarning("[Adrenaline] 肾上腺素触发：攻击力提升10%，受到伤害降低10%");
+    }
+
+    private void OnAdrenalineExpired()
+    {
+        _adrenalineTimerId = -1;
+        RemoveAdrenalineEffects();
+        _playerBuff.DeactivateAdrenaline();
+        Debug.LogWarning("[Adrenaline] 肾上腺素效果结束");
+    }
+
+    private void ClearAdrenaline()
+    {
+        if (_adrenalineTimerId >= 0 && TimeManager.TryGetExistingInstance(out TimeManager timeManager))
+            timeManager.RemoveTimer(_adrenalineTimerId);
+
+        _adrenalineTimerId = -1;
+        RemoveAdrenalineEffects();
+        _playerBuff.DeactivateAdrenaline();
+    }
+
+    private void RemoveAdrenalineEffects()
+    {
+        if (_adrenalineAttackEffectId >= 0)
+            _playerBuff.RemoveTemporaryBuff(_adrenalineAttackEffectId, out _);
+        if (_adrenalineDamageReductionEffectId >= 0)
+            _playerBuff.RemoveTemporaryBuff(_adrenalineDamageReductionEffectId, out _);
+
+        _adrenalineAttackEffectId = -1;
+        _adrenalineDamageReductionEffectId = -1;
+    }
+
+    private void StartTemporaryBuffTimer(int effectId, float duration)
+    {
+        duration = Mathf.Max(0f, duration);
+        if (duration <= 0f)
+        {
+            OnTemporaryBuffExpired(effectId);
+            return;
+        }
+
+        int timerId = TimeManager.Instance.AddTimer(duration, () => OnTemporaryBuffExpired(effectId));
+        _temporaryBuffTimerIds[effectId] = timerId;
+    }
+
+    private void OnTemporaryBuffExpired(int effectId)
+    {
+        _temporaryBuffTimerIds.Remove(effectId);
+
+        if (!_playerBuff.RemoveTemporaryBuff(effectId, out bool refreshWeaponSetup)) return;
+
+        if (refreshWeaponSetup)
+            character.RefreshCurrentWeaponSetup();
+    }
+
+    private void ClearTemporaryBuffs()
+    {
+        ClearAdrenaline();
+
+        if (TimeManager.TryGetExistingInstance(out TimeManager timeManager))
+        {
+            foreach (int timerId in _temporaryBuffTimerIds.Values)
+                timeManager.RemoveTimer(timerId);
+        }
+
+        _temporaryBuffTimerIds.Clear();
+        if (_playerBuff.ClearTemporaryBuffs(out bool refreshWeaponSetup) && refreshWeaponSetup)
+            character.RefreshCurrentWeaponSetup();
     }
 
 
@@ -714,6 +817,7 @@ public class Player : MonoBehaviour, IDamage
 
     private void Die()
     {
+        ClearTemporaryBuffs();
         EventManager.Instance.TriggerSettle("失败");
     }
 

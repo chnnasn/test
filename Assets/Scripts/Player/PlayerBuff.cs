@@ -21,7 +21,23 @@ public class PlayerBuff
     private const float DefaultIceBombSlowMultiplier = 0.5f;
     private const float DefaultIceBombSlowDuration = 2f;
 
+    public struct PlayerBuffApplyResult
+    {
+        public bool RefreshWeaponSetup;
+        public bool IsTemporary;
+        public int TemporaryEffectId;
+    }
+
+    private struct TemporaryBuffEffect
+    {
+        public int Id;
+        public PlayerBuffKind Kind;
+        public float Multiplier;
+    }
+
     private readonly HashSet<PlayerSkillKind> _unlockedSkills = new HashSet<PlayerSkillKind>();
+    private readonly Dictionary<int, TemporaryBuffEffect> _temporaryEffects = new Dictionary<int, TemporaryBuffEffect>();
+    private int _nextTemporaryEffectId = 1;
     private PlayerBuffConfigAsset _config;
 
     private float MaxHPGrowthPercentPerLevel => _config != null ? _config.MaxHPGrowthPercentPerLevel : DefaultMaxHPGrowthPercentPerLevel;
@@ -59,6 +75,10 @@ public class PlayerBuff
     public GenericProperty<bool> SprintUnlocked { get; private set; } = new GenericProperty<bool>();
     public GenericProperty<bool> DroneUnlocked { get; private set; } = new GenericProperty<bool>();
     public GenericProperty<bool> IceBombUnlocked { get; private set; } = new GenericProperty<bool>();
+    public bool HasAdrenalineBuff { get; private set; }
+    public bool IsAdrenalineActive { get; private set; }
+    public bool HasAdrenalineTriggered { get; private set; }
+    public bool CanDrawAdrenaline => !HasAdrenalineBuff;
 
     public void SetConfig(PlayerBuffConfigAsset config)
     {
@@ -75,22 +95,30 @@ public class PlayerBuff
         AddedHp += Mathf.Max(0f, amount);
     }
 
-    public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out bool refreshWeaponSetup)
+    public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out PlayerBuffApplyResult result)
     {
-        refreshWeaponSetup = false;
+        result = default;
         if (buff == null) return false;
+        if (buff.Kind == PlayerBuffKind.Adrenaline)
+            return AcquireAdrenalineBuff();
+        if (buff.IsTemporary)
+            return ApplyTemporaryBuff(buff, out result);
         if (NeedsAttachmentManager(buff.Kind) && attachmentManager == null) return false;
 
         switch (buff.Kind)
         {
             case PlayerBuffKind.Scope:
-                return ApplyScopeBuff(buff, attachmentManager, out refreshWeaponSetup);
+                if (!ApplyScopeBuff(buff, attachmentManager, out result.RefreshWeaponSetup)) return false;
+                return true;
             case PlayerBuffKind.Laser:
-                return ApplyLaserBuff(buff, attachmentManager, out refreshWeaponSetup);
+                if (!ApplyLaserBuff(buff, attachmentManager, out result.RefreshWeaponSetup)) return false;
+                return true;
             case PlayerBuffKind.Grip:
-                return ApplyGripBuff(buff, attachmentManager, out refreshWeaponSetup);
+                if (!ApplyGripBuff(buff, attachmentManager, out result.RefreshWeaponSetup)) return false;
+                return true;
             case PlayerBuffKind.Magazine:
-                return AddMagazineCapacity(buff, attachmentManager, out refreshWeaponSetup);
+                if (!AddMagazineCapacity(buff, attachmentManager, out result.RefreshWeaponSetup)) return false;
+                return true;
             case PlayerBuffKind.Hp:
             {
                 float normalizedValue = GetNormalizedBuffValue(buff);
@@ -99,10 +127,10 @@ public class PlayerBuff
                 return true;
             }
             case PlayerBuffKind.AttackMultiplier:
-                AttackMultiplier *= buff.Value;
+                AttackMultiplier = ApplyBuffToMultiplier(AttackMultiplier, buff);
                 return true;
             case PlayerBuffKind.DamageReduction:
-                IncomingDamageMultiplier *= buff.Value;
+                IncomingDamageMultiplier = ApplyBuffToMultiplier(IncomingDamageMultiplier, buff);
                 return true;
             case PlayerBuffKind.SkillUnlock:
                 return UnlockSkill(buff.SkillKind);
@@ -110,6 +138,8 @@ public class PlayerBuff
                 return ApplyDroneSkillPowerBuff(buff);
             case PlayerBuffKind.IceBombSkillPower:
                 return ApplyIceBombSkillPowerBuff(buff);
+            case PlayerBuffKind.Adrenaline:
+                return AcquireAdrenalineBuff();
             default:
                 return false;
         }
@@ -117,12 +147,12 @@ public class PlayerBuff
 
     public float GetAttackDamage(float baseDamage)
     {
-        return Mathf.Max(0f, baseDamage * GetLevelAttackMultiplier() * AttackMultiplier);
+        return Mathf.Max(0f, baseDamage * GetLevelAttackMultiplier() * AttackMultiplier * GetTemporaryMultiplier(PlayerBuffKind.AttackMultiplier));
     }
 
     public float GetReceivedDamage(float rawDamage)
     {
-        return Mathf.Max(0f, rawDamage * GetLevelIncomingDamageMultiplier() * IncomingDamageMultiplier);
+        return Mathf.Max(0f, rawDamage * GetLevelIncomingDamageMultiplier() * IncomingDamageMultiplier * GetTemporaryMultiplier(PlayerBuffKind.DamageReduction));
     }
 
     public float GetMaxHP(float baseMaxHP)
@@ -139,12 +169,12 @@ public class PlayerBuff
     public float GetDroneRange() => ConfigDroneRange;
     public float GetDroneAcquireRadius() => ConfigDroneAcquireRadius;
     public float GetDroneAoeRadius() => ConfigDroneAoeRadius;
-    public float GetDroneDamage() => Mathf.Max(0f, ConfigDroneDamage * DroneSkillPowerMultiplier);
+    public float GetDroneDamage() => Mathf.Max(0f, ConfigDroneDamage * DroneSkillPowerMultiplier * GetTemporaryMultiplier(PlayerBuffKind.DroneSkillPower));
     public float GetIceBombInterval() => ConfigIceBombInterval;
     public float GetIceBombRange() => ConfigIceBombRange;
     public float GetIceBombAcquireRadius() => ConfigIceBombAcquireRadius;
     public float GetIceBombAoeRadius() => ConfigIceBombAoeRadius;
-    public float GetIceBombDamage() => Mathf.Max(0f, ConfigIceBombDamage * IceBombSkillPowerMultiplier);
+    public float GetIceBombDamage() => Mathf.Max(0f, ConfigIceBombDamage * IceBombSkillPowerMultiplier * GetTemporaryMultiplier(PlayerBuffKind.IceBombSkillPower));
     public float GetIceBombSlowMultiplier() => ConfigIceBombSlowMultiplier;
     public float GetIceBombSlowDuration() => ConfigIceBombSlowDuration;
 
@@ -264,6 +294,117 @@ public class PlayerBuff
         } while (sameValue == 7);
 
         return (new int[] { sameValue, sameValue, sameValue }, "吉");
+    }
+
+    public bool TriggerAdrenaline(PlayerBuffAsset buff, out int attackEffectId, out int damageReductionEffectId)
+    {
+        attackEffectId = -1;
+        damageReductionEffectId = -1;
+
+        if (buff == null || buff.Kind != PlayerBuffKind.Adrenaline) return false;
+        if (!HasAdrenalineBuff || IsAdrenalineActive) return false;
+
+        float percent = GetNormalizedBuffValue(buff);
+        float attackMultiplier = 1f + percent;
+        float damageReductionMultiplier = Mathf.Max(0f, 1f - percent);
+
+        attackEffectId = AddTemporaryEffect(PlayerBuffKind.AttackMultiplier, attackMultiplier);
+        damageReductionEffectId = AddTemporaryEffect(PlayerBuffKind.DamageReduction, damageReductionMultiplier);
+        IsAdrenalineActive = true;
+        HasAdrenalineTriggered = true;
+        return true;
+    }
+
+    public void DeactivateAdrenaline()
+    {
+        IsAdrenalineActive = false;
+        HasAdrenalineBuff = false;
+    }
+
+    private bool AcquireAdrenalineBuff()
+    {
+        if (HasAdrenalineBuff || HasAdrenalineTriggered) return false;
+
+        HasAdrenalineBuff = true;
+        return true;
+    }
+
+    private int AddTemporaryEffect(PlayerBuffKind kind, float multiplier)
+    {
+        int effectId = _nextTemporaryEffectId++;
+        _temporaryEffects[effectId] = new TemporaryBuffEffect
+        {
+            Id = effectId,
+            Kind = kind,
+            Multiplier = Mathf.Max(0f, multiplier)
+        };
+
+        return effectId;
+    }
+
+    private bool IsTemporaryBuffSupported(PlayerBuffKind kind)
+    {
+        return kind == PlayerBuffKind.AttackMultiplier ||
+               kind == PlayerBuffKind.DamageReduction ||
+               kind == PlayerBuffKind.DroneSkillPower ||
+               kind == PlayerBuffKind.IceBombSkillPower;
+    }
+
+    private bool ApplyTemporaryBuff(PlayerBuffAsset buff, out PlayerBuffApplyResult result)
+    {
+        result = default;
+        if (buff == null || !IsTemporaryBuffSupported(buff.Kind))
+        {
+            Debug.LogWarning($"[PlayerBuff] Buff '{buff?.BuffName}' 不支持持续时间，已跳过");
+            return false;
+        }
+
+        if (buff.Kind == PlayerBuffKind.DroneSkillPower && !IsSkillUnlocked(PlayerSkillKind.Drone)) return false;
+        if (buff.Kind == PlayerBuffKind.IceBombSkillPower && !IsSkillUnlocked(PlayerSkillKind.IceBomb)) return false;
+
+        float multiplier = GetBuffMultiplier(buff);
+        int effectId = AddTemporaryEffect(buff.Kind, multiplier);
+
+        result.IsTemporary = true;
+        result.TemporaryEffectId = effectId;
+        return true;
+    }
+
+    public bool RemoveTemporaryBuff(int effectId, out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+        return _temporaryEffects.Remove(effectId);
+    }
+
+    public bool ClearTemporaryBuffs(out bool refreshWeaponSetup)
+    {
+        refreshWeaponSetup = false;
+        if (_temporaryEffects.Count <= 0) return false;
+
+        _temporaryEffects.Clear();
+        return true;
+    }
+
+    private float GetTemporaryMultiplier(PlayerBuffKind kind)
+    {
+        float multiplier = 1f;
+        foreach (TemporaryBuffEffect effect in _temporaryEffects.Values)
+        {
+            if (effect.Kind == kind)
+                multiplier *= effect.Multiplier;
+        }
+
+        return Mathf.Max(0f, multiplier);
+    }
+
+    private float GetBuffMultiplier(PlayerBuffAsset buff)
+    {
+        if (buff == null) return 1f;
+
+        if (buff.ValueMode == PlayerBuffValueMode.Percent)
+            return Mathf.Max(0f, 1f + GetSignedBuffValue(buff));
+
+        return Mathf.Max(0f, buff.Value);
     }
 
     private bool NeedsAttachmentManager(PlayerBuffKind kind)

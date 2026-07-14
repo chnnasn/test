@@ -12,7 +12,8 @@ public enum PlayerBuffKind
     SkillUnlock,
     DroneSkillPower,
     IceBombSkillPower,
-    Gambling
+    Gambling,
+    Adrenaline
 }
 
 public enum PlayerSkillKind
@@ -39,14 +40,14 @@ public enum PlayerBuffOperation
 public class PlayerBuffAsset : ScriptableObject
 {
     [SerializeField] private string _buffName;
-    [TextArea]
-    [SerializeField] private string _description;
+    [TextArea] [SerializeField] private string _description;
     [SerializeField] private PlayerBuffKind _kind;
     [SerializeField] private bool _unique;
     [SerializeField] private float _value = 1f;
     [SerializeField] private PlayerBuffValueMode _valueMode = PlayerBuffValueMode.Flat;
     [SerializeField] private PlayerBuffOperation _operation = PlayerBuffOperation.Increase;
     [SerializeField] private PlayerSkillKind _skillKind;
+    [Header("持续时间")] [SerializeField] private float _duration;
 
     public string BuffName => _buffName;
     public string Description => _description;
@@ -56,4 +57,11 @@ public class PlayerBuffAsset : ScriptableObject
     public PlayerBuffValueMode ValueMode => _valueMode;
     public PlayerBuffOperation Operation => _operation;
     public PlayerSkillKind SkillKind => _skillKind;
+    public float Duration => Mathf.Max(0f, _duration);
+    public bool IsTemporary => Duration > 0f;
+
+    private void OnValidate()
+    {
+        _duration = Mathf.Max(0f, _duration);
+    }
 }
