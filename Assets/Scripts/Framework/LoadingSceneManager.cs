@@ -67,7 +67,6 @@ public class LoadingSceneManager : MonoBehaviour
         if (_isStarting) return;
 
         _isStarting = true;
-        AudioManager.PlayLoadingMusic();
         RefreshTip();
         if (_loadingShow != null)
             _loadingShow.StartLoading(_progressSlider);
@@ -90,6 +89,7 @@ public class LoadingSceneManager : MonoBehaviour
 
         if (_progressSlider != null)
         {
+            AudioManager.PlayLoadingMusic();
             _progressSlider.value = 0f;
             _loadingShow?.SetProgress(0f);
             _progressSlider.gameObject.SetActive(true);

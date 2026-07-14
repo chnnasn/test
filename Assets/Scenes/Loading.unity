@@ -3464,7 +3464,7 @@ MonoBehaviour:
   bgmSlider: {fileID: 1071955184}
   sfxSlider: {fileID: 538254423}
   audioSource: {fileID: 1773433782}
-  loadingClip: {fileID: 8300000, guid: 680b32175d449c445bd2a12bcbcc9c50, type: 3}
+  loadingClip: {fileID: 8300000, guid: 64f9fab80cd3dc54caadcf138d306195, type: 3}
   demoClip: {fileID: 8300000, guid: a58ab30a544fcfc4fb5ea8c7dff29fca, type: 3}
   demoSceneName: Demo
 --- !u!4 &1773433781
