@@ -202,12 +202,11 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
         if (!_canChoose || _index == -1) return;
         if (_buffs == null || _index >= _buffs.Length) return;
 
+        int selectedIndex = _index;
         ResetSelectedTarget();
         _canChoose = false;
-        EventManager.Instance.SetBuffIndex(_index);
-        _buffs = null;
-        _buffDescs = null;
         _index = -1;
+        EventManager.Instance.SetBuffIndex(selectedIndex);
     }
 
     /// <summary>
