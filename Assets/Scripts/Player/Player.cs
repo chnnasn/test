@@ -65,6 +65,11 @@ public class Player : MonoBehaviour, IDamage
         _playerBuffManager.OnLevelUpBuffsFinished += () =>
             EventManager.Instance.SetLevelUpBuffsFinished();
 
+        _playerBuffManager.OnGamblingGreatLuckStarted += (duration) =>
+            EventManager.Instance.SetGamblingGreatLuckStarted(duration);
+        _playerBuffManager.OnGamblingGreatLuckEnded += () =>
+            EventManager.Instance.SetGamblingGreatLuckEnded();
+
         _playerBuffManager.SetLevel(_level);
         CurrentHP.Value = MaxHP;
         Level.Value = _level;
@@ -623,6 +628,6 @@ public class Player : MonoBehaviour, IDamage
         if (!IsAlive) return;
 
         var result = _playerBuffManager.GetGamblingResult();
-        EventManager.Instance.SetGamblingReady(result.nums, result.resultType, result.callback);
+        EventManager.Instance.SetGamblingReady(result.nums, result.resultType, result.detailDesc, result.callback);
     }
 }

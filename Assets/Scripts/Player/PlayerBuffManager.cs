@@ -115,6 +115,10 @@ public class PlayerBuffManager
     public event Action<string[], string[]> OnLevelUpBuffsReady;
     public event Action OnLevelUpBuffsFinished;
 
+    // ====== Gambling great luck lifecycle events ======
+    public event Action<float> OnGamblingGreatLuckStarted;
+    public event Action OnGamblingGreatLuckEnded;
+
     public PlayerBuffAsset[] CurrentLevelUpBuffs => _currentLevelUpBuffs;
 
     /// <summary>
@@ -894,11 +898,29 @@ public class PlayerBuffManager
 
     #region Gambling
 
-    public (int[] nums, string resultType, System.Action callback) GetGamblingResult()
+    public (int[] nums, string resultType, string detailDesc, System.Action callback) GetGamblingResult()
     {
         (int[] nums, string resultType) = CalculateGambling();
+        string detailDesc = GetGamblingDetailDesc(resultType);
         System.Action callback = BuildGamblingCallback(resultType);
-        return (nums, resultType, callback);
+        return (nums, resultType, detailDesc, callback);
+    }
+
+    private string GetGamblingDetailDesc(string resultType)
+    {
+        switch (resultType)
+        {
+            case "大吉":
+                int nextStack = _gamblingGreatLuckStackCount + 1;
+                float multiplier = Mathf.Pow(2f, nextStack);
+                return $"大吉：20秒内{multiplier}倍经验并且无敌";
+            case "吉":
+                return "吉：10秒内攻击伤害+20%";
+            case "小吉":
+                return "小吉：恢复30%HP";
+            default:
+                return "不中";
+        }
     }
 
     private System.Action BuildGamblingCallback(string resultType)
@@ -942,6 +964,8 @@ public class PlayerBuffManager
         int timerId = _onScheduleTimer?.Invoke(20f, ClearGamblingGreatLuck) ?? -1;
         if (timerId >= 0)
             _gamblingGreatLuckTimerIds.Add(timerId);
+
+        OnGamblingGreatLuckStarted?.Invoke(20f);
     }
 
     private void ClearGamblingGreatLuck()
@@ -952,6 +976,10 @@ public class PlayerBuffManager
         _gamblingGreatLuckStackCount = Mathf.Max(0, _gamblingGreatLuckStackCount - 1);
         ExperienceMultiplier = Mathf.Pow(2f, _gamblingGreatLuckStackCount);
         IsInvincible = _gamblingGreatLuckStackCount > 0;
+
+        if (_gamblingGreatLuckStackCount <= 0)
+            OnGamblingGreatLuckEnded?.Invoke();
+
         Debug.LogWarning("赌博大吉效果结束");
     }
 
@@ -974,10 +1002,15 @@ public class PlayerBuffManager
 
         ExperienceMultiplier = 1f;
         IsInvincible = false;
+
+        bool hadGreatLuck = _gamblingGreatLuckStackCount > 0;
         _gamblingGreatLuckStackCount = 0;
         foreach (int timerId in _gamblingGreatLuckTimerIds)
             _onCancelTimer?.Invoke(timerId);
         _gamblingGreatLuckTimerIds.Clear();
+
+        if (hadGreatLuck)
+            OnGamblingGreatLuckEnded?.Invoke();
 
         // 清除临时 Buff 效果
         if (ClearTemporaryBuffs(out bool refreshWeaponSetup) && refreshWeaponSetup)

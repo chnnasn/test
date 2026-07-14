@@ -40,6 +40,7 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.SettleEvent += SetSettle;
         EventManager.Instance.GamblingReady += OnGamblingReady;
         EventManager.Instance.GamblingFinished += OnGamblingFinished;
+        EventManager.Instance.GamblingGreatLuckEnded += OnGamblingGreatLuckEnded;
         
         InitWaveCountdownPosition();
 
@@ -63,6 +64,7 @@ public class UIManager : MonoBehaviour
             EventManager.Instance.SettleEvent -= SetSettle;
             eventManager.GamblingReady -= OnGamblingReady;
             eventManager.GamblingFinished -= OnGamblingFinished;
+            eventManager.GamblingGreatLuckEnded -= OnGamblingGreatLuckEnded;
         }
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
@@ -309,7 +311,7 @@ public class UIManager : MonoBehaviour
 
     #region Gambling 绑定
 
-    private void OnGamblingReady(int[] nums, string desc, System.Action callback)
+    private void OnGamblingReady(int[] nums, string desc, string detailDesc, System.Action callback)
     {
         if (BuffChoose != null)
             BuffChoose.gameObject.SetActive(false);
@@ -319,7 +321,7 @@ public class UIManager : MonoBehaviour
         if (Gambling != null)
         {
             Gambling.gameObject.SetActive(true);
-            Gambling.PlayAnimation(nums, desc, callback);
+            Gambling.PlayAnimation(nums, desc, detailDesc, callback);
         }
     }
 
@@ -329,6 +331,12 @@ public class UIManager : MonoBehaviour
             Gambling.gameObject.SetActive(false);
 
         EventManager.Instance.SetGameResume();
+    }
+
+    private void OnGamblingGreatLuckEnded()
+    {
+        if (Gambling != null)
+            Gambling.OnGreatLuckEnded();
     }
 
     #endregion

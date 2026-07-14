@@ -9,27 +9,34 @@ public class Gambling : MonoBehaviour
     public Text Desc;
 
     private System.Action _onCompleteCallback;
+    private string _detailDesc;
+    private string _resultType;
+    private bool _isWaitingGreatLuckEnd;
 
     private const float MinUpdateInterval = 0.03f;
     private const float MaxUpdateInterval = 0.25f;
     private const float BaseSettleDuration = 1.2f;
     private const float SettleDurationIncrement = 0.7f;
     private const float PostAnimationWaitSeconds = 2f;
+    private const float DetailDisplayDuration = 2.5f;
 
-    public void PlayAnimation(int[] targetNums, string resultDesc, System.Action onComplete)
+    public void PlayAnimation(int[] targetNums, string resultDesc, string detailDesc, System.Action onComplete)
     {
+        _detailDesc = detailDesc;
+        _resultType = resultDesc;
+        _onCompleteCallback = onComplete;
+        _isWaitingGreatLuckEnd = false;
+
         if (Desc != null)
             Desc.text = resultDesc;
 
-        _onCompleteCallback = onComplete;
-
+        // Restore Nums visibility
         for (int i = 0; i < Nums.Length; i++)
         {
             if (Nums[i] != null)
             {
-                // 重置颜色
+                Nums[i].gameObject.SetActive(true);
                 Nums[i].color = Color.white;
-                // 随机初始值
                 Nums[i].text = Random.Range(0, 10).ToString();
             }
         }
@@ -41,7 +48,6 @@ public class Gambling : MonoBehaviour
     {
         int count = Nums.Length;
 
-        // 每个数字的结算时间点
         float[] settleTimes = new float[count];
         for (int i = 0; i < count; i++)
             settleTimes[i] = BaseSettleDuration + i * SettleDurationIncrement;
@@ -57,7 +63,6 @@ public class Gambling : MonoBehaviour
             elapsed += Time.unscaledDeltaTime;
             float progress = Mathf.Clamp01(elapsed / totalDuration);
 
-            // 更新间隔：由快到慢
             float currentInterval = Mathf.Lerp(MinUpdateInterval, MaxUpdateInterval, progress);
 
             for (int i = 0; i < count; i++)
@@ -66,13 +71,11 @@ public class Gambling : MonoBehaviour
 
                 if (elapsed >= settleTimes[i] && !settled[i])
                 {
-                    // 结算这个数字，使用 DoTween 做一个小弹跳效果
                     SettleNumber(i, targetNums[i]);
                     settled[i] = true;
                 }
                 else if (!settled[i] && elapsed >= nextUpdate[i])
                 {
-                    // 还在滚动
                     Nums[i].text = Random.Range(0, 10).ToString();
                     nextUpdate[i] = elapsed + currentInterval;
                 }
@@ -81,22 +84,65 @@ public class Gambling : MonoBehaviour
             yield return null;
         }
 
-        // 确保所有数字都是最终值
         for (int i = 0; i < count; i++)
         {
             if (Nums[i] != null)
                 Nums[i].text = targetNums[i].ToString();
         }
 
-        // 等待几秒
         yield return new WaitForSecondsRealtime(PostAnimationWaitSeconds);
 
-        // 执行 Buff 回调
         _onCompleteCallback?.Invoke();
 
-        // 隐藏自己，通知 UIManager 恢复游戏
+        // Update Desc to detailed buff description
+        if (Desc != null)
+            Desc.text = _detailDesc ?? string.Empty;
+
+        if (_resultType == "大吉")
+        {
+            // Great Luck: resume game but keep panel visible for the duration
+            _isWaitingGreatLuckEnd = true;
+
+            // Hide number texts, keep Desc showing
+            for (int i = 0; i < count; i++)
+            {
+                if (Nums[i] != null)
+                    Nums[i].gameObject.SetActive(false);
+            }
+
+            EventManager.Instance.SetGamblingFinished();
+        }
+        else
+        {
+            // Normal result: show detail briefly then hide
+            yield return new WaitForSecondsRealtime(DetailDisplayDuration);
+
+            if (Desc != null)
+                Desc.text = string.Empty;
+
+            gameObject.SetActive(false);
+            EventManager.Instance.SetGamblingFinished();
+        }
+    }
+
+    public void OnGreatLuckEnded()
+    {
+        if (!_isWaitingGreatLuckEnd) return;
+        _isWaitingGreatLuckEnd = false;
+
+        StopAllCoroutines();
+
+        if (Desc != null)
+            Desc.text = string.Empty;
+
+        int count = Nums.Length;
+        for (int i = 0; i < count; i++)
+        {
+            if (Nums[i] != null)
+                Nums[i].gameObject.SetActive(true);
+        }
+
         gameObject.SetActive(false);
-        EventManager.Instance.SetGamblingFinished();
     }
 
     private void SettleNumber(int index, int targetValue)
