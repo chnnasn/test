@@ -522,7 +522,7 @@ namespace InfimaGames.LowPolyShooterPack
                 if (player != null)
                     finalProjectileDamage = player.BuffManager.GetAttackDamage(projectileDamage);
 
-                ApplyRayDamage(shotDirection, finalProjectileDamage);
+                ApplyRayDamage(shotDirection, finalProjectileDamage, player);
 
                 GameObject projectile = global::ProjectilePool.Spawn(prefabProjectile, playerCamera.position, projectileRotation);
                 if (projectile == null) continue;
@@ -562,7 +562,7 @@ namespace InfimaGames.LowPolyShooterPack
             return player != null ? player.BuffManager.GetMagazineCapacity(baseCapacity) : baseCapacity;
         }
 
-        private void ApplyRayDamage(Vector3 direction, float damage)
+        private void ApplyRayDamage(Vector3 direction, float damage, global::Player player)
         {
             if (!TryGetFirstShotHit(direction, damageRayDistance, out RaycastHit hit))
                 return;
@@ -572,6 +572,7 @@ namespace InfimaGames.LowPolyShooterPack
                 return;
 
             damageTarget.TakeDamage(damage, hit.point);
+            player?.BuffManager.ApplyLifeSteal(damage);
         }
 
         private bool TryGetFirstShotHit(Vector3 direction, float distance, out RaycastHit closestHit)

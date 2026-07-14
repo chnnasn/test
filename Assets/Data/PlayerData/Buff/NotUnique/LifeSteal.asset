@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
-  m_Name: Adrenaline
+  m_Name: LifeSteal
   m_EditorClassIdentifier: 
-  _buffName: "\u80BE\u4E0A\u817A\u7D20"
-  _description: "\u751F\u547D\u503C\u4F4E\u4E8E30%\u65F6\u89E6\u53D1\uFF0C8\u79D2\u5185\u653B\u51FB\u529B\u548C\u4F24\u5BB3\u51CF\u514D\u63D0\u534710%"
-  _kind: 11
-  _unique: 1
-  _value: 10
+  _buffName: "\u5438\u8840"
+  _description: "\u9020\u6210\u7684\u4F24\u5BB3\u7684 3% \u8F6C\u5316\u4E3A HP \u56DE\u590D"
+  _kind: 12
+  _unique: 0
+  _value: 3
   _valueMode: 1
   _operation: 0
   _skillKind: 0
-  _duration: 8
+  _duration: 0

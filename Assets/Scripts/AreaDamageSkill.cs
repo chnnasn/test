@@ -29,6 +29,7 @@ public class AreaDamageSkill : MonoBehaviour
     private LayerMask _enemyLayerMask;
     private float _slowMultiplier;
     private float _slowDuration;
+    private Player _ownerPlayer;
     private float _elapsed;
     private float _releaseTimer;
     private bool _flying;
@@ -77,6 +78,7 @@ public class AreaDamageSkill : MonoBehaviour
         _enemyLayerMask = enemyLayerMask;
         _slowMultiplier = slowMultiplier;
         _slowDuration = slowDuration;
+        _ownerPlayer = owner.GetComponentInParent<Player>();
         _elapsed = 0f;
         _flying = true;
     }
@@ -152,6 +154,7 @@ public class AreaDamageSkill : MonoBehaviour
             if (!HitEnemies.Add(enemy)) continue;
 
             enemy.TakeDamage(damage, enemy.transform.position);
+            _ownerPlayer?.BuffManager.ApplyLifeSteal(damage);
             if (_kind == AreaDamageSkillKind.IceBomb)
                 enemy.ApplyTemporarySlow(slowMultiplier, slowDuration);
         }

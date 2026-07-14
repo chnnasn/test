@@ -115,7 +115,8 @@ public class Player : MonoBehaviour, IDamage
     /// </summary>
     private void OnTriggerBuff(int index)
     {
-        _playerBuffManager.TryApplySelectedBuff(index);
+        if (_playerBuffManager.TryApplySelectedBuff(index))
+            ClampCurrentHpToMax();
     }
 
     public void AddDebugExperience()
@@ -582,7 +583,13 @@ public class Player : MonoBehaviour, IDamage
 
     private void HealFlat(float amount)
     {
-        CurrentHP.Value = Mathf.Min(CurrentHP.Value + amount, MaxHP);
+        float maxHP = MaxHP;
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value + amount, maxHP);
+    }
+
+    public void ClampCurrentHpToMax()
+    {
+        CurrentHP.Value = Mathf.Min(CurrentHP.Value, MaxHP);
     }
 
     public void TakeDamage(float damage)

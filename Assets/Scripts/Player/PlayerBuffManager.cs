@@ -79,6 +79,8 @@ public class PlayerBuffManager
     public bool IsAdrenalineActive { get; private set; }
     public bool HasAdrenalineTriggered { get; private set; }
     public bool CanDrawAdrenaline => !HasAdrenalineBuff;
+    public float LifeStealPercent { get; private set; }
+    public float MaxHPMultiplier { get; private set; } = 1f;
 
     // ====== Buff flow state (moved from Player) ======
     private int _pendingBuffChooseCount;
@@ -191,6 +193,11 @@ public class PlayerBuffManager
             case PlayerBuffKind.DamageReduction:
                 IncomingDamageMultiplier = ApplyBuffToMultiplier(IncomingDamageMultiplier, buff);
                 return true;
+            case PlayerBuffKind.LifeSteal:
+                LifeStealPercent += GetNormalizedBuffValue(buff);
+                return true;
+            case PlayerBuffKind.LastStand:
+                return ApplyLastStandBuff(buff);
             case PlayerBuffKind.SkillUnlock:
                 return UnlockSkill(buff.SkillKind);
             case PlayerBuffKind.DroneSkillPower:
@@ -214,9 +221,22 @@ public class PlayerBuffManager
         return Mathf.Max(0f, rawDamage * GetLevelIncomingDamageMultiplier() * IncomingDamageMultiplier * GetTemporaryMultiplier(PlayerBuffKind.DamageReduction));
     }
 
+    public float GetLifeStealHeal(float dealtDamage)
+    {
+        return Mathf.Max(0f, dealtDamage * LifeStealPercent);
+    }
+
+    public void ApplyLifeSteal(float dealtDamage)
+    {
+        float healAmount = GetLifeStealHeal(dealtDamage);
+        if (healAmount <= 0f) return;
+
+        _onHeal?.Invoke(healAmount);
+    }
+
     public float GetMaxHP(float baseMaxHP)
     {
-        return Mathf.Max(0f, baseMaxHP * GetLevelMaxHPMultiplier() + AddedHp);
+        return Mathf.Max(0f, baseMaxHP * GetLevelMaxHPMultiplier() * MaxHPMultiplier + AddedHp);
     }
 
     public float GetFireRate(float baseRateOfFire)
@@ -598,6 +618,17 @@ public class PlayerBuffManager
         if (!IsSkillUnlocked(PlayerSkillKind.IceBomb)) return false;
 
         IceBombSkillPowerMultiplier = ApplyBuffToMultiplier(IceBombSkillPowerMultiplier, buff);
+        return true;
+    }
+
+    private bool ApplyLastStandBuff(PlayerBuffAsset buff)
+    {
+        float percent = GetNormalizedBuffValue(buff);
+        if (percent <= 0f) return false;
+
+        MaxHPMultiplier = Mathf.Max(0f, MaxHPMultiplier * (1f - percent));
+        IncomingDamageMultiplier = Mathf.Max(0f, IncomingDamageMultiplier * (1f + percent));
+        AttackMultiplier = Mathf.Max(0f, AttackMultiplier * (1f + percent));
         return true;
     }
 

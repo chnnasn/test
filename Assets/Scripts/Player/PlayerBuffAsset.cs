@@ -13,7 +13,9 @@ public enum PlayerBuffKind
     DroneSkillPower,
     IceBombSkillPower,
     Gambling,
-    Adrenaline
+    Adrenaline,
+    LifeSteal,
+    LastStand
 }
 
 public enum PlayerSkillKind

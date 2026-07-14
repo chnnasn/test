@@ -97,6 +97,7 @@ public class PlayerProjectileDamage : MonoBehaviour
         if (damageTarget != null)
         {
             damageTarget.TakeDamage(_damage, hitPoint);
+            ApplyOwnerLifeSteal();
             if (destroyOnImpact)
                 ReleaseToPool();
             return;
@@ -111,6 +112,12 @@ public class PlayerProjectileDamage : MonoBehaviour
 
         if (destroyOnImpact)
             ReleaseToPool();
+    }
+
+    private void ApplyOwnerLifeSteal()
+    {
+        Player ownerPlayer = _owner != null ? _owner.GetComponentInParent<Player>() : null;
+        ownerPlayer?.BuffManager.ApplyLifeSteal(_damage);
     }
 
     private void ReleaseToPool()
