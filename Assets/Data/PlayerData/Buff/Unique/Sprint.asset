@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Sprint
   m_EditorClassIdentifier: 
-  _buffName: "\u540E\u64A4"
-  _description: "\u83B7\u5F97\u540E\u64A4\u6280\u80FD\uFF0C\u63D0\u9AD8\u673A\u52A8\u6027"
+  _buffName: "\u6218\u672F\u4F4D\u79FB"
+  _description: "\u89E3\u9501\u51B2\u523A\u6280\u80FD\uFF0C\u63D0\u5347\u673A\u52A8\u6027"
   _kind: 7
   _unique: 1
   _value: 1

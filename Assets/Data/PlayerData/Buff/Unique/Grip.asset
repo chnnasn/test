@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Grip
   m_EditorClassIdentifier: 
-  _buffName: "\u63E1\u628A"
-  _description: "\u88C5\u5907\u63E1\u628A\uFF0C\u964D\u4F4E15%\u540E\u5750\u529B"
+  _buffName: "\u94C1\u8155"
+  _description: "\u88C5\u5907\u6218\u672F\u63E1\u628A\uFF0C\u540E\u5750\u529B\u964D\u4F4E
+    15%"
   _kind: 2
   _unique: 1
   _value: 15

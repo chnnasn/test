@@ -8,7 +8,10 @@ public class PlayerBuffPoolAsset : ScriptableObject
 
     public PlayerBuffAsset[] Buffs => _buffs;
 
-    public PlayerBuffAsset[] GetRandomDifferentBuffs(int count, IReadOnlyCollection<PlayerBuffAsset> excludedBuffs = null, PlayerBuff playerBuff = null)
+    public PlayerBuffAsset[] GetRandomDifferentBuffs(
+        int count, 
+        ICollection<PlayerBuffAsset> excludedBuffs = null, 
+        PlayerBuff playerBuff = null)
     {
         if (_buffs == null || _buffs.Length == 0 || count <= 0)
             return new PlayerBuffAsset[0];

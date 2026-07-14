@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Laser
   m_EditorClassIdentifier: 
-  _buffName: "\u5C04\u7EBF"
-  _description: "\u88C5\u5907\u5C04\u7EBF\uFF0C\u63D0\u9AD815%\u5C04\u51FB\u901F\u5EA6"
+  _buffName: "\u6273\u673A\u72C2\u70ED"
+  _description: "\u88C5\u5907\u5C04\u7EBF\uFF0C\u5C04\u901F\u63D0\u5347 15%"
   _kind: 1
   _unique: 1
   _value: 15

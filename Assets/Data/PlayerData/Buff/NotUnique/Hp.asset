@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Hp
   m_EditorClassIdentifier: 
-  _buffName: "\u8840\u5305"
-  _description: "\u56DE\u590D15%\u7684\u8840\u91CF"
+  _buffName: "\u6218\u573A\u6025\u6551"
+  _description: "\u7ACB\u5373\u56DE\u590D 15% \u6700\u5927\u751F\u547D\u503C"
   _kind: 4
   _unique: 0
   _value: 15

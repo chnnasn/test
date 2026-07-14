@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Magazine
   m_EditorClassIdentifier: 
-  _buffName: "\u5F39\u5939"
-  _description: "\u589E\u52A025%\u5F39\u5323\u5BB9\u91CF"
+  _buffName: "\u53CC\u6392\u4F9B\u5F39"
+  _description: "\u5F39\u5323\u5BB9\u91CF\u589E\u52A0 25%"
   _kind: 3
   _unique: 1
   _value: 25

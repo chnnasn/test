@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Scope
   m_EditorClassIdentifier: 
-  _buffName: "\u500D\u955C"
-  _description: "\u88C5\u5907\u500D\u955C\uFF0C\u964D\u4F4E20%\u7784\u51C6\u6643\u52A8"
+  _buffName: "\u9E70\u773C"
+  _description: "\u88C5\u5907\u5149\u5B66\u7784\u51C6\u955C\uFF0C\u7784\u51C6\u6643\u52A8\u51CF\u5C11
+    20%"
   _kind: 0
   _unique: 1
   _value: 20

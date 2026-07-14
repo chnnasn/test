@@ -11,12 +11,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: DronePower
-  m_EditorClassIdentifier:
-  _buffName: "无人机强化"
-  _description: "需要先解锁无人机，提高无人机范围伤害数值"
+  m_EditorClassIdentifier: 
+  _buffName: "\u8702\u7FA4\u534F\u8BAE"
+  _description: "\u65E0\u4EBA\u673A\u7206\u70B8\u4F24\u5BB3\u63D0\u5347 8%"
   _kind: 8
   _unique: 0
-  _value: 20
+  _value: 8
   _valueMode: 1
   _operation: 0
   _skillKind: 0

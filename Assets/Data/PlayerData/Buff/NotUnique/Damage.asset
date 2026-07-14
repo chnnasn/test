@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4e2f9b6d1c4b8ab0e3f5d92716c084, type: 3}
   m_Name: Damage
   m_EditorClassIdentifier: 
-  _buffName: "\u4F24\u5BB3\u51CF\u514D"
-  _description: "\u63D0\u9AD85%\u7684\u4F24\u5BB3\u51CF\u514D"
+  _buffName: "\u9676\u74F7\u5185\u886C"
+  _description: "\u53D7\u5230\u4F24\u5BB3\u51CF\u5C11 5%"
   _kind: 6
   _unique: 0
   _value: 5
