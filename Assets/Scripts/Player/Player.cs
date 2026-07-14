@@ -511,8 +511,52 @@ public class Player : MonoBehaviour, IDamage
         }
 
         _currentLevelUpBuffs = _buffPoolAsset.GetRandomDifferentBuffs(_levelUpBuffChooseCount, _usedUniqueBuffs, _playerBuff);
+
+        // 二次校验：剔除 null 与重复项，确保 UI 不会展示相同 Buff
+        _currentLevelUpBuffs = SanitizeDrawnBuffs(_currentLevelUpBuffs, _levelUpBuffChooseCount);
+
+        if (_currentLevelUpBuffs == null || _currentLevelUpBuffs.Length == 0)
+        {
+            Debug.LogWarning("[BuffChoose] 抽不出有效 Buff，跳过本轮选择");
+            _pendingBuffChooseCount = 0;
+            EventManager.Instance.SetLevelUpBuffsFinished();
+            return;
+        }
+
         (string[] names, string[] descs) = GetBuffNamesAndDescs(_currentLevelUpBuffs);
         EventManager.Instance.SetLevelUpBuffs(names, descs);
+    }
+
+    /// <summary>
+    /// 去重、去 null，若候选不足则缩小返回数量，避免 UI 展示相同的 Buff。
+    /// </summary>
+    private PlayerBuffAsset[] SanitizeDrawnBuffs(PlayerBuffAsset[] buffs, int expectedCount)
+    {
+        if (buffs == null || buffs.Length == 0) return new PlayerBuffAsset[0];
+
+        var seen = new HashSet<PlayerBuffAsset>();
+        int writeIndex = 0;
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            if (buffs[i] != null && seen.Add(buffs[i]))
+            {
+                buffs[writeIndex] = buffs[i];
+                writeIndex++;
+            }
+        }
+
+        int finalCount = Mathf.Min(writeIndex, Mathf.Max(0, expectedCount));
+        if (finalCount == writeIndex)
+        {
+            if (writeIndex < buffs.Length)
+                System.Array.Resize(ref buffs, finalCount);
+            return buffs;
+        }
+
+        PlayerBuffAsset[] trimmed = new PlayerBuffAsset[finalCount];
+        for (int i = 0; i < finalCount; i++)
+            trimmed[i] = buffs[i];
+        return trimmed;
     }
 
     private (string[] names, string[] descs) GetBuffNamesAndDescs(PlayerBuffAsset[] buffs)
@@ -547,8 +591,18 @@ public class Player : MonoBehaviour, IDamage
 
     private void ApplySelectedBuff(int index)
     {
+        // 防止事件多次触发或越界调用
+        if (_pendingBuffChooseCount <= 0 || _currentLevelUpBuffs == null) return;
+
         PlayerBuffAsset buff = GetCurrentLevelUpBuff(index);
         if (buff == null) return;
+
+        // 防止重复应用同一个 Unique Buff
+        if (buff.Unique && _usedUniqueBuffs.Contains(buff))
+        {
+            Debug.LogWarning($"[BuffChoose] Buff '{buff.BuffName}' 已被应用过，跳过重复选择");
+            return;
+        }
 
         if (!ApplyBuff(buff)) return;
 

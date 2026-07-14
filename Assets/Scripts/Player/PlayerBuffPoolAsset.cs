@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "PlayerBuffPool", menuName = "ScriptableObjects/Player Buff Pool", order = 5)]
@@ -14,20 +13,23 @@ public class PlayerBuffPoolAsset : ScriptableObject
         if (_buffs == null || _buffs.Length == 0 || count <= 0)
             return new PlayerBuffAsset[0];
 
-        List<PlayerBuffAsset> candidates = new List<PlayerBuffAsset>(_buffs.Length);
+        // 使用 HashSet 去重：防止池子里拖入了重复的 ScriptableObject
+        var candidatesSet = new HashSet<PlayerBuffAsset>();
         foreach (PlayerBuffAsset buff in _buffs)
         {
             if (buff == null) continue;
             if (excludedBuffs != null && excludedBuffs.Contains(buff)) continue;
             if (!CanDrawBuff(buff, playerBuff)) continue;
-
-            candidates.Add(buff);
+            candidatesSet.Add(buff);
         }
 
-        if (candidates.Count == 0)
+        if (candidatesSet.Count == 0)
             return new PlayerBuffAsset[0];
 
+        List<PlayerBuffAsset> candidates = new List<PlayerBuffAsset>(candidatesSet);
+
         int resultCount = Mathf.Min(count, candidates.Count);
+        // Fisher-Yates 洗牌
         for (int i = 0; i < resultCount; i++)
         {
             int randomIndex = Random.Range(i, candidates.Count);

@@ -200,6 +200,7 @@ public class BuffChoose : MonoBehaviour, IPointerClickHandler
     public void ChooseBuff()
     {
         if (!_canChoose || _index == -1) return;
+        if (_buffs == null || _index >= _buffs.Length) return;
 
         ResetSelectedTarget();
         _canChoose = false;
