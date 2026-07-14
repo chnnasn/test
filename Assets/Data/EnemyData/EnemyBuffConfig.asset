@@ -11,8 +11,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fac96997f1d34874ba5159b627ad55c7, type: 3}
   m_Name: EnemyBuffConfig
-  m_EditorClassIdentifier:
-  _maxHPGrowthPerWave: 1.13
-  _experienceRewardGrowthPerWave: 1.1
-  _attackDamageGrowthPerWave: 1.18
+  m_EditorClassIdentifier: 
+  _maxHPGrowthPerWave: 1.26
+  _experienceRewardGrowthPerWave: 1.2
+  _attackDamageGrowthPerWave: 1.07
   _moveSpeedGrowthPerWave: 1.04
