@@ -37,6 +37,11 @@ public class Enemy : MonoBehaviour,IDamage
     private Action<Enemy> _poolReleaseCallback;
     private Action<Enemy, float> _poolReleaseDelayCallback;
     private Coroutine _boomParticleReleaseCoroutine;
+
+    // GPU Skinning
+    private SkinnedMeshRenderer _cachedSkinnedRenderer;
+    private int _cachedSMROriginalLayer;
+    private bool _gpuSkinningActive;
     private int _slowTimerId = -1;
 
     public EnemyStateMachine stateMachine { get; private set; }
@@ -242,6 +247,26 @@ public class Enemy : MonoBehaviour,IDamage
     private void OnEnable()
     {
         SpatialGrid.Register(this);
+
+        _gpuSkinningActive = EnemyGPUSkinningManager.TryGetInstance(out EnemyGPUSkinningManager skinMgr);
+        if (_gpuSkinningActive)
+        {
+            _cachedSkinnedRenderer ??= GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (_cachedSkinnedRenderer != null)
+            {
+                // 不 disable SMR（否则 Animator 不驱动骨骼），改为关闭阴影 + 屏蔽渲染层
+                _cachedSkinnedRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                int hiddenLayer = LayerMask.NameToLayer("GPUSkinningHidden");
+                if (hiddenLayer >= 0)
+                {
+                    _cachedSMROriginalLayer = _cachedSkinnedRenderer.gameObject.layer;
+                    _cachedSkinnedRenderer.gameObject.layer = hiddenLayer;
+                }
+            }
+            // SMR 在隐藏层上 → Unity 内置 Culling 会停掉 Animator → 强制 AlwaysAnimate
+            AnimatorController?.ForceAlwaysAnimate();
+            skinMgr.Register(this);
+        }
     }
 
     private void OnDisable()
@@ -249,6 +274,18 @@ public class Enemy : MonoBehaviour,IDamage
         SpatialGrid.Unregister(this);
         _attackDetectCallback = null;
         ClearTemporarySlow();
+
+        if (_gpuSkinningActive && EnemyGPUSkinningManager.TryGetInstance(out EnemyGPUSkinningManager skinMgr))
+        {
+            skinMgr.Unregister(this);
+            if (_cachedSkinnedRenderer != null)
+            {
+                _cachedSkinnedRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                if (_cachedSMROriginalLayer != 0)
+                    _cachedSkinnedRenderer.gameObject.layer = _cachedSMROriginalLayer;
+            }
+        }
+        _gpuSkinningActive = false;
     }
 
     private void Start()
@@ -441,6 +478,7 @@ public class Enemy : MonoBehaviour,IDamage
         _isDying = true;
         EventManager.Instance.SetAddExperience(ExperienceReward);
         Movement?.Stop();
+        AnimatorController?.ForceAlwaysAnimate();
         if (AnimatorController != null && AnimatorController.HasAnimator)
             AnimatorController.PlayDead();
         else

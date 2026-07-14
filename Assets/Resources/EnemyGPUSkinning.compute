@@ -1,0 +1,82 @@
+// EnemyGPUSkinning.compute
+// GPU 骨骼蒙皮：每线程处理一个顶点一次蒙皮，输出到结构化 buffer 供 vertex shader 直接读取。
+// 单个 Dispatch 完成所有僵尸所有顶点的蒙皮计算。
+
+#pragma kernel CSSkinning
+
+// ── 输入：静态网格数据（init 时从 SkinnedMeshRenderer.sharedMesh 写入一次，不变）──
+StructuredBuffer<float3> _RestPositions;     // 顶点数
+StructuredBuffer<float3> _RestNormals;       // 顶点数
+StructuredBuffer<float2> _UVs;               // 顶点数
+StructuredBuffer<float4> _BoneWeights;       // 顶点数，float4 = (w0, w1, w2, w3)
+StructuredBuffer<uint4>   _BoneIndices;      // 顶点数，uint4 = (i0, i1, i2, i3)
+
+// ── 输入：每帧更新的骨骼矩阵（bindPose 已预先乘入）──
+// 布局：[骨骼0_实例0, 骨骼1_实例0, ..., 骨骼B_实例0, 骨骼0_实例1, ...]
+StructuredBuffer<float4x4> _BoneMatrices;
+
+// ── 输出：蒙皮后的顶点数据 ──
+RWStructuredBuffer<float3> _SkinnedPositions;  // 顶点数 × 实例数
+RWStructuredBuffer<float3> _SkinnedNormals;    // 顶点数 × 实例数
+RWStructuredBuffer<float2> _SkinnedUVs;        // 顶点数 × 实例数（UV 不变但需要合并进一次输出方便 shader 取）
+
+// ── 常量 ──
+uint _BonesPerInstance;
+uint _VertexCount;
+uint _InstanceCount;
+
+[numthreads(64, 1, 1)]
+void CSSkinning(uint3 id : SV_DispatchThreadID)
+{
+    uint globalIdx = id.x;
+    uint totalWork = _VertexCount * _InstanceCount;
+    if (globalIdx >= totalWork) return;
+
+    uint instanceID = globalIdx / _VertexCount;
+    uint vertexID   = globalIdx % _VertexCount;
+
+    float3 restPos    = _RestPositions[vertexID];
+    float3 restNormal = _RestNormals[vertexID];
+    float4 weights    = _BoneWeights[vertexID];
+    uint4  indices    = _BoneIndices[vertexID];
+
+    float3 skinnedPos    = float3(0, 0, 0);
+    float3 skinnedNormal = float3(0, 0, 0);
+
+    uint boneBase = instanceID * _BonesPerInstance;
+
+    // Bone 0（必有）
+    {
+        float4x4 mat = _BoneMatrices[boneBase + indices.x];
+        skinnedPos    += mul(mat, float4(restPos,    1.0)).xyz * weights.x;
+        skinnedNormal += mul((float3x3)mat, restNormal)     * weights.x;
+    }
+
+    // Bone 1
+    if (weights.y > 0.0001)
+    {
+        float4x4 mat = _BoneMatrices[boneBase + indices.y];
+        skinnedPos    += mul(mat, float4(restPos,    1.0)).xyz * weights.y;
+        skinnedNormal += mul((float3x3)mat, restNormal)     * weights.y;
+    }
+
+    // Bone 2
+    if (weights.z > 0.0001)
+    {
+        float4x4 mat = _BoneMatrices[boneBase + indices.z];
+        skinnedPos    += mul(mat, float4(restPos,    1.0)).xyz * weights.z;
+        skinnedNormal += mul((float3x3)mat, restNormal)     * weights.z;
+    }
+
+    // Bone 3
+    if (weights.w > 0.0001)
+    {
+        float4x4 mat = _BoneMatrices[boneBase + indices.w];
+        skinnedPos    += mul(mat, float4(restPos,    1.0)).xyz * weights.w;
+        skinnedNormal += mul((float3x3)mat, restNormal)     * weights.w;
+    }
+
+    _SkinnedPositions[globalIdx] = skinnedPos;
+    _SkinnedNormals[globalIdx]   = normalize(skinnedNormal);
+    _SkinnedUVs[globalIdx]       = _UVs[vertexID];       // UV 不变，透传
+}

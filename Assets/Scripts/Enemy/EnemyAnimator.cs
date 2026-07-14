@@ -13,17 +13,25 @@ public class EnemyAnimator : MonoBehaviour
     private float _deadAnimationDuration;
     private bool _waitingForAttackAnimation;
     private float _attackStartNormalizedTime;
+    private bool _hasBoomParameter;
 
     public float DeadAnimationDuration => _deadAnimationDuration;
     public bool HasAnimator => _animator != null;
-    public bool IsBooming => _animator != null && _animator.GetBool(BoomHash);
+    public bool IsBooming => _hasBoomParameter && _animator.GetBool(BoomHash);
 
     private void Awake()
     {
         _enemy = GetComponent<Enemy>();
         _animator = GetComponent<Animator>();
         if (_animator != null)
+        {
             _animator.applyRootMotion = false;
+            // 检测 Animator Controller 是否包含 "Boom" 参数（非自爆型僵尸没有）
+            foreach (AnimatorControllerParameter p in _animator.parameters)
+            {
+                if (p.nameHash == BoomHash) { _hasBoomParameter = true; break; }
+            }
+        }
     }
 
     private void Update()
@@ -59,7 +67,7 @@ public class EnemyAnimator : MonoBehaviour
 
     public void SetBoom(bool value)
     {
-        if (_animator == null) return;
+        if (_animator == null || !_hasBoomParameter) return;
         _animator.SetBool(BoomHash, value);
     }
 
@@ -68,6 +76,16 @@ public class EnemyAnimator : MonoBehaviour
         _waitingForAttackAnimation = false;
         SetChaseState(0f);
         SetBoom(false);
+    }
+
+    /// <summary>
+    /// 强制 Animator 始终更新（GPU Skinning 时 SMR 在隐藏层，必须覆盖默认 Culling）。
+    /// </summary>
+    public void ForceAlwaysAnimate()
+    {
+        if (_animator == null) return;
+        _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        _animator.speed = 1f;
     }
 
     public void PlayDead()

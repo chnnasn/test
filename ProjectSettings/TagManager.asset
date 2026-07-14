@@ -14,7 +14,7 @@ TagManager:
   - UI
   - Floor
   - Show
-  - 3
+  - GPUSkinningHidden
   - Gun
   - Player
   - Obstacle
