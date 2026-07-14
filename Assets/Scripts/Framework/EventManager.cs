@@ -25,6 +25,11 @@ public class EventManager : LazySingleton<EventManager>
     public Action BeforeDemoRestart;
 
     public Action<String> SettleEvent;
+
+    public Action RequestGambling;
+    public Action<int[], string, System.Action> GamblingReady;
+    public Action GamblingFinished;
+
     public void SetBuffIndex(int index)
     {
         TriggerBuff?.Invoke(index);
@@ -97,5 +102,20 @@ public class EventManager : LazySingleton<EventManager>
     public void TriggerSettle(string settle)
     {
         SettleEvent?.Invoke(settle);
+    }
+
+    public void SetRequestGambling()
+    {
+        RequestGambling?.Invoke();
+    }
+
+    public void SetGamblingReady(int[] nums, string desc, System.Action callback)
+    {
+        GamblingReady?.Invoke(nums, desc, callback);
+    }
+
+    public void SetGamblingFinished()
+    {
+        GamblingFinished?.Invoke();
     }
 }

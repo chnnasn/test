@@ -19,6 +19,9 @@ public class Player : MonoBehaviour, IDamage
     [Header("IceBomb Skill")]
     [SerializeField] private AreaDamageSkill _iceBombPrefab;
 
+    [Header("Skill Scan (环形扫描敌人密度)")]
+    [SerializeField] private int _scanRayCount = 16;
+
     [Header("Debug")]
     [SerializeField] private float _spaceExperienceAmount = 50f;
 
@@ -60,6 +63,7 @@ public class Player : MonoBehaviour, IDamage
         EventManager.Instance.OnAttackedAction += TakeDamage;
         EventManager.Instance.AddExper += AddExperience;
         EventManager.Instance.TriggerBuff += ApplySelectedBuff;
+        EventManager.Instance.RequestGambling += OnRequestGambling;
         _playerBuff.DroneUnlocked.OnValueChanged += OnDroneUnlockedChanged;
         _playerBuff.IceBombUnlocked.OnValueChanged += OnIceBombUnlockedChanged;
         OnDroneUnlockedChanged(_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone));
@@ -78,6 +82,7 @@ public class Player : MonoBehaviour, IDamage
             eventManager.OnAttackedAction -= TakeDamage;
             eventManager.AddExper -= AddExperience;
             eventManager.TriggerBuff -= ApplySelectedBuff;
+            eventManager.RequestGambling -= OnRequestGambling;
         }
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
@@ -111,12 +116,38 @@ public class Player : MonoBehaviour, IDamage
             StopIceBombTimer();
     }
 
+    private struct SkillTargetScanResult
+    {
+        public bool HasTarget;
+        public Vector3 Direction;
+        public Vector3 TargetPosition;
+        public int EnemyCount;
+    }
+
     private void StartDroneTimer()
     {
         if (_droneTimerId >= 0) return;
 
-        TriggerDroneSkill();
-        _droneTimerId = TimeManager.Instance.AddLoopTimer(_playerBuff.GetDroneInterval(), TriggerDroneSkill);
+        ScheduleDroneTimer();
+    }
+
+    private void ScheduleDroneTimer()
+    {
+        if (!isActiveAndEnabled || !IsAlive) return;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
+
+        _droneTimerId = TimeManager.Instance.AddTimer(_playerBuff.GetDroneInterval(), OnDroneTimerElapsed);
+    }
+
+    private void OnDroneTimerElapsed()
+    {
+        _droneTimerId = -1;
+
+        if (!isActiveAndEnabled || !IsAlive) return;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
+
+        TryTriggerDroneSkill();
+        ScheduleDroneTimer();
     }
 
     private void StopDroneTimer()
@@ -133,8 +164,26 @@ public class Player : MonoBehaviour, IDamage
     {
         if (_iceBombTimerId >= 0) return;
 
-        TriggerIceBombSkill();
-        _iceBombTimerId = TimeManager.Instance.AddLoopTimer(_playerBuff.GetIceBombInterval(), TriggerIceBombSkill);
+        ScheduleIceBombTimer();
+    }
+
+    private void ScheduleIceBombTimer()
+    {
+        if (!isActiveAndEnabled || !IsAlive) return;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
+
+        _iceBombTimerId = TimeManager.Instance.AddTimer(_playerBuff.GetIceBombInterval(), OnIceBombTimerElapsed);
+    }
+
+    private void OnIceBombTimerElapsed()
+    {
+        _iceBombTimerId = -1;
+
+        if (!isActiveAndEnabled || !IsAlive) return;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
+
+        TryTriggerIceBombSkill();
+        ScheduleIceBombTimer();
     }
 
     private void StopIceBombTimer()
@@ -147,30 +196,179 @@ public class Player : MonoBehaviour, IDamage
         _iceBombTimerId = -1;
     }
 
-    private void TriggerDroneSkill()
+    /// <summary>
+    /// 环形射线扫描：在玩家周围 360 度统计敌人密度，并返回爆炸范围能覆盖最多敌人的落点。
+    /// </summary>
+    private SkillTargetScanResult ScanBestSkillTarget(Transform owner, float range, float acquireRadius, float aoeRadius)
     {
-        if (!isActiveAndEnabled || !IsAlive) return;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return;
+        SkillTargetScanResult result = new SkillTargetScanResult
+        {
+            HasTarget = false,
+            Direction = owner.forward,
+            TargetPosition = owner.position,
+            EnemyCount = 0
+        };
+
+        if (_scanRayCount <= 0) return result;
+
+        Vector3 origin = owner.position;
+        range = Mathf.Max(0f, range);
+        acquireRadius = Mathf.Max(0.01f, acquireRadius);
+        aoeRadius = Mathf.Max(0f, aoeRadius);
+
+        float angleStep = 360f / _scanRayCount;
+        int bestEnemyCount = 0;
+        Vector3 bestDirection = owner.forward;
+        var enemySet = new HashSet<Enemy>();
+        var bestEnemies = new List<Enemy>();
+        var hitBuffer = new RaycastHit[32];
+
+        for (int i = 0; i < _scanRayCount; i++)
+        {
+            float currentAngle = i * angleStep;
+            Vector3 rayDirection = Quaternion.Euler(0f, currentAngle, 0f) * Vector3.forward;
+
+            int hitCount = Physics.SphereCastNonAlloc(
+                origin, acquireRadius, rayDirection, hitBuffer, range,
+                _enemyLayerMask, QueryTriggerInteraction.Ignore);
+
+            enemySet.Clear();
+            for (int j = 0; j < hitCount; j++)
+            {
+                Enemy enemy = hitBuffer[j].collider?.GetComponentInParent<Enemy>();
+                if (enemy != null && enemy.IsAlive && !enemy.IsDying)
+                    enemySet.Add(enemy);
+            }
+
+            if (enemySet.Count <= bestEnemyCount) continue;
+
+            bestEnemyCount = enemySet.Count;
+            bestDirection = rayDirection;
+            bestEnemies.Clear();
+            bestEnemies.AddRange(enemySet);
+        }
+
+        if (bestEnemyCount <= 0) return result;
+
+        Vector3 targetPosition = ChooseBestAoeCenter(origin, bestEnemies, range, aoeRadius, out int coveredCount);
+        Vector3 direction = targetPosition - origin;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.0001f)
+            direction = bestDirection;
+
+        result.HasTarget = coveredCount > 0;
+        result.Direction = direction.normalized;
+        result.TargetPosition = targetPosition;
+        result.EnemyCount = coveredCount;
+        return result;
+    }
+
+    private Vector3 ChooseBestAoeCenter(Vector3 origin, List<Enemy> enemies, float range, float aoeRadius, out int coveredCount)
+    {
+        coveredCount = 0;
+        if (enemies == null || enemies.Count <= 0) return origin;
+
+        Vector3 sum = Vector3.zero;
+        for (int i = 0; i < enemies.Count; i++)
+            sum += enemies[i].transform.position;
+
+        Vector3 average = sum / enemies.Count;
+        Vector3 bestCenter = ClampSkillTargetToRange(origin, average, range);
+        coveredCount = CountEnemiesCovered(bestCenter, enemies, aoeRadius);
+
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            Vector3 candidate = ClampSkillTargetToRange(origin, enemies[i].transform.position, range);
+            int count = CountEnemiesCovered(candidate, enemies, aoeRadius);
+            if (count <= coveredCount) continue;
+
+            coveredCount = count;
+            bestCenter = candidate;
+        }
+
+        return bestCenter;
+    }
+
+    private Vector3 ClampSkillTargetToRange(Vector3 origin, Vector3 target, float range)
+    {
+        Vector3 offset = target - origin;
+        offset.y = 0f;
+
+        float distance = offset.magnitude;
+        if (distance > Mathf.Max(0f, range))
+            offset = offset.normalized * Mathf.Max(0f, range);
+
+        return new Vector3(origin.x + offset.x, origin.y, origin.z + offset.z);
+    }
+
+    private int CountEnemiesCovered(Vector3 center, List<Enemy> enemies, float aoeRadius)
+    {
+        int count = 0;
+        float sqrRadius = aoeRadius * aoeRadius;
+
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            Vector3 offset = enemies[i].transform.position - center;
+            offset.y = 0f;
+            if (offset.sqrMagnitude <= sqrRadius)
+                count++;
+        }
+
+        return count;
+    }
+
+    private bool TryTriggerDroneSkill()
+    {
+        if (!isActiveAndEnabled || !IsAlive) return false;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.Drone)) return false;
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
+        float range = _playerBuff.GetDroneRange();
+        float acquireRadius = _playerBuff.GetDroneAcquireRadius();
+        float aoeRadius = _playerBuff.GetDroneAoeRadius();
+
+        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
+        if (!scan.HasTarget) return false;
+
         AreaDamageSkill drone = _dronePrefab != null
             ? Instantiate(_dronePrefab, spawnPoint.position, spawnPoint.rotation)
             : new GameObject("Drone Skill").AddComponent<AreaDamageSkill>();
-        drone.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
-        drone.Initialize(AreaDamageSkillKind.Drone, spawnPoint, _playerBuff.GetDroneRange(), _playerBuff.GetDroneAcquireRadius(), _playerBuff.GetDroneAoeRadius(), _playerBuff.GetDroneDamage(), _enemyLayerMask);
+        drone.transform.SetPositionAndRotation(spawnPoint.position, Quaternion.LookRotation(scan.Direction));
+        drone.Initialize(
+            AreaDamageSkillKind.Drone, spawnPoint,
+            scan.TargetPosition,
+            aoeRadius, _playerBuff.GetDroneDamage(),
+            _enemyLayerMask);
+
+        return true;
     }
 
-    private void TriggerIceBombSkill()
+    private bool TryTriggerIceBombSkill()
     {
-        if (!isActiveAndEnabled || !IsAlive) return;
-        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return;
+        if (!isActiveAndEnabled || !IsAlive) return false;
+        if (!_playerBuff.IsSkillUnlocked(PlayerSkillKind.IceBomb)) return false;
 
         Transform spawnPoint = _skillSpawnPoint != null ? _skillSpawnPoint : transform;
+        float range = _playerBuff.GetIceBombRange();
+        float acquireRadius = _playerBuff.GetIceBombAcquireRadius();
+        float aoeRadius = _playerBuff.GetIceBombAoeRadius();
+
+        SkillTargetScanResult scan = ScanBestSkillTarget(spawnPoint, range, acquireRadius, aoeRadius);
+        if (!scan.HasTarget) return false;
+
         AreaDamageSkill iceBomb = _iceBombPrefab != null
             ? Instantiate(_iceBombPrefab, spawnPoint.position, spawnPoint.rotation)
             : new GameObject("IceBomb Skill").AddComponent<AreaDamageSkill>();
-        iceBomb.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
-        iceBomb.Initialize(AreaDamageSkillKind.IceBomb, spawnPoint, _playerBuff.GetIceBombRange(), _playerBuff.GetIceBombAcquireRadius(), _playerBuff.GetIceBombAoeRadius(), _playerBuff.GetIceBombDamage(), _enemyLayerMask, _playerBuff.GetIceBombSlowMultiplier(), _playerBuff.GetIceBombSlowDuration());
+        iceBomb.transform.SetPositionAndRotation(spawnPoint.position, Quaternion.LookRotation(scan.Direction));
+        iceBomb.Initialize(
+            AreaDamageSkillKind.IceBomb, spawnPoint,
+            scan.TargetPosition,
+            aoeRadius, _playerBuff.GetIceBombDamage(),
+            _enemyLayerMask,
+            slowMultiplier: _playerBuff.GetIceBombSlowMultiplier(),
+            slowDuration: _playerBuff.GetIceBombSlowDuration());
+
+        return true;
     }
 
     private void AddExperience(float experience)
@@ -349,5 +547,52 @@ public class Player : MonoBehaviour, IDamage
     private void Die()
     {
         EventManager.Instance.TriggerSettle("失败");
+    }
+
+    private void OnRequestGambling()
+    {
+        if (!IsAlive) return;
+
+        (int[] nums, string resultType) = _playerBuff.CalculateGambling();
+        System.Action callback = BuildGamblingCallback(resultType);
+        EventManager.Instance.SetGamblingReady(nums, resultType, callback);
+    }
+
+    private System.Action BuildGamblingCallback(string resultType)
+    {
+        switch (resultType)
+        {
+            case "大吉":
+                return () =>
+                {
+                    _playerBuff.MultiplyAttackMultiplier(1.5f);
+                    float healPercent = MaxHP * 0.5f;
+                    HealFlat(healPercent);
+                    float hpBonus = _maxHP * 0.2f;
+                    _playerBuff.AddMaxHp(hpBonus);
+                    HealFlat(hpBonus);
+                    Debug.LogWarning("赌博大吉！攻击力x1.5，恢复50%HP，最大HP+20%");
+                };
+            case "吉":
+                return () =>
+                {
+                    _playerBuff.MultiplyAttackMultiplier(1.2f);
+                    float healPercent = MaxHP * 0.2f;
+                    HealFlat(healPercent);
+                    Debug.LogWarning("赌博吉！攻击力x1.2，恢复20%HP");
+                };
+            case "小吉":
+                return () =>
+                {
+                    float healPercent = MaxHP * 0.1f;
+                    HealFlat(healPercent);
+                    Debug.LogWarning("赌博小吉！恢复10%HP");
+                };
+            default:
+                return () =>
+                {
+                    Debug.LogWarning("赌博不中...");
+                };
+        }
     }
 }

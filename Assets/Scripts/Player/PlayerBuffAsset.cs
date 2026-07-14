@@ -11,7 +11,8 @@ public enum PlayerBuffKind
     DamageReduction,
     SkillUnlock,
     DroneSkillPower,
-    IceBombSkillPower
+    IceBombSkillPower,
+    Gambling
 }
 
 public enum PlayerSkillKind

@@ -7,6 +7,9 @@ public class UIManager : MonoBehaviour
     [Header("BUFF")]
     public BuffChoose BuffChoose;
 
+    [Header("赌博")]
+    public Gambling Gambling;
+
     [Header("波次")]
     public Text WaveCountDown;
     public Text WaveText;
@@ -35,6 +38,8 @@ public class UIManager : MonoBehaviour
         EventManager.Instance.LevelUpBuffsFinished += OnLevelUpBuffsFinished;
 
         EventManager.Instance.SettleEvent += SetSettle;
+        EventManager.Instance.GamblingReady += OnGamblingReady;
+        EventManager.Instance.GamblingFinished += OnGamblingFinished;
         
         InitWaveCountdownPosition();
 
@@ -44,6 +49,9 @@ public class UIManager : MonoBehaviour
 
         if (BuffChoose != null)
             BuffChoose.gameObject.SetActive(false);
+
+        if (Gambling != null)
+            Gambling.gameObject.SetActive(false);
     }
 
     private void OnDisable()
@@ -53,6 +61,8 @@ public class UIManager : MonoBehaviour
             eventManager.LevelUpBuffs -= OnLevelUpBuffs;
             eventManager.LevelUpBuffsFinished -= OnLevelUpBuffsFinished;
             EventManager.Instance.SettleEvent -= SetSettle;
+            eventManager.GamblingReady -= OnGamblingReady;
+            eventManager.GamblingFinished -= OnGamblingFinished;
         }
 
         if (RunTimeContext.TryGetExistingInstance(out RunTimeContext context))
@@ -293,6 +303,32 @@ public class UIManager : MonoBehaviour
         SettleUI.SetTittle(settle);
 
         EventManager.Instance.SetGamePause();
+    }
+
+    #endregion
+
+    #region Gambling 绑定
+
+    private void OnGamblingReady(int[] nums, string desc, System.Action callback)
+    {
+        if (BuffChoose != null)
+            BuffChoose.gameObject.SetActive(false);
+
+        EventManager.Instance.SetGamePause();
+
+        if (Gambling != null)
+        {
+            Gambling.gameObject.SetActive(true);
+            Gambling.PlayAnimation(nums, desc, callback);
+        }
+    }
+
+    private void OnGamblingFinished()
+    {
+        if (Gambling != null)
+            Gambling.gameObject.SetActive(false);
+
+        EventManager.Instance.SetGameResume();
     }
 
     #endregion

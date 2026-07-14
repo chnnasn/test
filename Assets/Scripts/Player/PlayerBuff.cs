@@ -65,6 +65,16 @@ public class PlayerBuff
         _config = config;
     }
 
+    public void MultiplyAttackMultiplier(float multiplier)
+    {
+        AttackMultiplier = Mathf.Max(0f, AttackMultiplier * multiplier);
+    }
+
+    public void AddMaxHp(float amount)
+    {
+        AddedHp += Mathf.Max(0f, amount);
+    }
+
     public bool TriggerBuff(PlayerBuffAsset buff, WeaponAttachmentManagerBehaviour attachmentManager, Action<float> addHpCallback, out bool refreshWeaponSetup)
     {
         refreshWeaponSetup = false;
@@ -188,6 +198,72 @@ public class PlayerBuff
     public bool IsSkillUnlocked(PlayerSkillKind skill)
     {
         return skill != PlayerSkillKind.None && _unlockedSkills.Contains(skill);
+    }
+
+    public (int[] nums, string resultType) CalculateGambling()
+    {
+        int roll = UnityEngine.Random.Range(0, 100);
+
+        if (roll > 50)
+            return GenerateBuZhong();
+        if (roll >= 20)
+            return GenerateXiaoJi();
+        if (roll >= 5)
+            return GenerateJi();
+
+        return (new int[] { 7, 7, 7 }, "大吉");
+    }
+
+    private (int[] nums, string resultType) GenerateBuZhong()
+    {
+        int[] nums = new int[3];
+        nums[0] = 7;
+
+        nums[1] = UnityEngine.Random.Range(0, 10);
+        while (nums[1] == nums[0])
+            nums[1] = UnityEngine.Random.Range(0, 10);
+
+        nums[2] = UnityEngine.Random.Range(0, 10);
+        while (nums[2] == nums[0] || nums[2] == nums[1])
+            nums[2] = UnityEngine.Random.Range(0, 10);
+
+        return (nums, "不中");
+    }
+
+    private (int[] nums, string resultType) GenerateXiaoJi()
+    {
+        int sameValue = UnityEngine.Random.Range(0, 10);
+        int diffValue = UnityEngine.Random.Range(0, 10);
+        while (diffValue == sameValue)
+            diffValue = UnityEngine.Random.Range(0, 10);
+
+        if (sameValue == 7 && diffValue == 7)
+            diffValue = (diffValue + 1) % 10;
+
+        int[] nums = new int[3];
+        int samePosition = UnityEngine.Random.Range(0, 3);
+
+        for (int i = 0; i < 3; i++)
+            nums[i] = (i == samePosition) ? diffValue : sameValue;
+
+        if (nums[0] == 7 && nums[1] == 7 && nums[2] == 7)
+        {
+            int replaceIndex = UnityEngine.Random.Range(0, 3);
+            nums[replaceIndex] = (nums[replaceIndex] + 1) % 10;
+        }
+
+        return (nums, "小吉");
+    }
+
+    private (int[] nums, string resultType) GenerateJi()
+    {
+        int sameValue;
+        do
+        {
+            sameValue = UnityEngine.Random.Range(0, 10);
+        } while (sameValue == 7);
+
+        return (new int[] { sameValue, sameValue, sameValue }, "吉");
     }
 
     private bool NeedsAttachmentManager(PlayerBuffKind kind)
