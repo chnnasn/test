@@ -140,8 +140,13 @@ public class EnemyChaseState : EnemyState
             return;
         }
 
+        // 缓存当前位置：避免在 ComputeSteering / flip detection / flow fallback 中
+        // 多次调用 transform.position（每次都是 native P/Invoke，部分版本会触发小对象分配）。
+        Vector3 pos = enemy.transform.position;
+        Vector3 targetPos = target.position;
+
         // 计算目标转向方向 = FlowField + 分离 + 避障。
-        Vector3 steer = ComputeSteering(target.position);
+        Vector3 steer = ComputeSteering(targetPos, pos);
 
         // ── 振荡检测：如果 steer 在短时间内反复翻转 > MAX_FLIPS 次，
         //     说明敌人被夹住了，此时强行偏向 FlowField 方向打破死循环 ──
@@ -247,10 +252,16 @@ public class EnemyChaseState : EnemyState
             // 取实时流场方向
             if (FlowField.TryGetFlowDirection(pos, out Vector3 liveFlow) && liveFlow.sqrMagnitude > 0.0001f)
             {
-                float distToTarget = Vector3.Distance(pos, targetPos);
-                // 近距离：保留缓存方向精确性（分离/避障），仅 15% 流场纠正
-                // 远距离：缓存方向可能已过期，50% 流场纠正拉回轨道
-                float flowBlend = Mathf.Lerp(0.15f, 0.50f, Mathf.InverseLerp(5f, 25f, distToTarget));
+                // 用平方距离计算 blend（避免 sqrt）：5m/25m 是 LOD 距离阈值
+                float distSqr = (pos.x - targetPos.x) * (pos.x - targetPos.x)
+                              + (pos.z - targetPos.z) * (pos.z - targetPos.z);
+                const float nearSqr = 5f * 5f;     // 5m
+                const float farSqr = 25f * 25f;    // 25m
+                // Mathf.InverseLerp 在两端饱和时用平方值是一致的单调映射
+                float t = distSqr <= nearSqr ? 0f
+                        : distSqr >= farSqr ? 1f
+                        : (distSqr - nearSqr) / (farSqr - nearSqr);
+                float flowBlend = 0.15f + (0.50f - 0.15f) * t;
                 return Vector3.Lerp(_cachedMoveDirection, liveFlow, flowBlend).normalized;
             }
 
@@ -277,8 +288,11 @@ public class EnemyChaseState : EnemyState
         Vector3 pos = enemy.transform.position;
         Vector3 totalForce = Vector3.zero;
 
-        // 计算到目标的距离（用于到达减速）
-        float distToTarget = Vector3.Distance(pos, targetPos);
+        // 计算到目标的距离（用于到达减速）。先用平方值做距离比较，
+        // 仅在最后真正需要线性距离做减速比例时再求一次 sqrt。
+        float dx = pos.x - targetPos.x;
+        float dz = pos.z - targetPos.z;
+        float distSqrToTarget = dx * dx + dz * dz;
 
         // ── 1. FlowField 全局方向（替代 Seek）──
         bool hasFlowDirection = FlowField.TryGetFlowDirection(pos, out Vector3 flowDir);
@@ -300,7 +314,8 @@ public class EnemyChaseState : EnemyState
         Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
 
         // ── 4. 切向绕行：近玩家拥挤或振荡时，沿玩家周围切线侧滑，打破前后对冲 ──
-        Vector3 lateral = ComputeLateralSlide(pos, targetPos, flowDir, separation, distToTarget);
+        // 距离比较改用平方值（ComputeLateralSlide 接受 distSqr）
+        Vector3 lateral = ComputeLateralSlide(pos, targetPos, flowDir, separation, distSqrToTarget);
 
         // ── 组合：FlowField 负责导航，分离/避障/切向绕行作为安全力优先保留 ──
         float flowWeight = 1.0f;
@@ -309,12 +324,15 @@ public class EnemyChaseState : EnemyState
         float lateralWeight = 0f;
 
         float crowdDistance = enemy.AttackRange + movement.SeparationRadius;
+        float crowdDistanceSqr = crowdDistance * crowdDistance;
         bool hasSeparation = separation.sqrMagnitude > 0.01f;
         bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
         bool lateralAssistActive = _lateralAssistTimer > 0f;
 
-        if (distToTarget < crowdDistance)
+        if (distSqrToTarget < crowdDistanceSqr)
         {
+            // 反推线性距离用于 InverseLerp（只有这一处真正需要线性距离）
+            float distToTarget = Mathf.Sqrt(distSqrToTarget);
             float t = Mathf.InverseLerp(enemy.AttackRange, crowdDistance, distToTarget);
             flowWeight = Mathf.Lerp(0.25f, flowWeight, t);
             separationWeight = Mathf.Lerp(2.0f, separationWeight, t);
@@ -330,16 +348,22 @@ public class EnemyChaseState : EnemyState
 
         if (lateralWeight > 0f)
         {
-            bool makingProgress = distToTarget < _lastDistanceToTarget - 0.02f;
+            // 平方距离本身不直接做"进展"判断（需要真实变化量），但 small delta 的判断
+            // 在绝大多数情况下对线性/平方一致；这里用平方差判断进度（避免 sqrt）。
+            // 进度阈值 0.02m：平方化后约 0.0004（再保守一点用 0.001 抵消非线性误差）。
+            float distToTarget = Mathf.Sqrt(distSqrToTarget);
+            bool makingProgress = distToTarget * distToTarget < _lastDistanceToTarget * _lastDistanceToTarget - 0.001f;
             _orbitNoProgressTimer = makingProgress ? 0f : _orbitNoProgressTimer + Time.deltaTime;
             if (_orbitNoProgressTimer > ORBIT_NO_PROGRESS_LIMIT)
                 lateralWeight *= 0.35f;
+            _lastDistanceToTarget = distToTarget;
         }
         else
         {
+            // 仍需记录平方距离用于下一帧对比
+            _lastDistanceToTarget = Mathf.Sqrt(distSqrToTarget);
             _orbitNoProgressTimer = 0f;
         }
-        _lastDistanceToTarget = distToTarget;
 
         totalForce = flowDir * flowWeight
                    + separation * separationWeight
@@ -366,8 +390,10 @@ public class EnemyChaseState : EnemyState
 
         // ── 到达减速：接近目标时降低速度，避免冲过头导致来回振荡 ──
         float slowDownDist = enemy.AttackRange * 2f; // 2倍攻击范围开始减速
-        if (distToTarget < slowDownDist)
+        float slowDownDistSqr = slowDownDist * slowDownDist;
+        if (distSqrToTarget < slowDownDistSqr)
         {
+            float distToTarget = Mathf.Sqrt(distSqrToTarget);
             float t = Mathf.Max(distToTarget / slowDownDist, 0.15f); // 最低保留15%速度
             result *= t;
         }
@@ -413,10 +439,13 @@ public class EnemyChaseState : EnemyState
     /// <summary>
     /// 切向侧滑：在玩家附近拥挤或检测到振荡时，沿玩家周围切线方向绕开阻挡。
     /// </summary>
-    private Vector3 ComputeLateralSlide(Vector3 pos, Vector3 targetPos, Vector3 flowDir, Vector3 separation, float distToTarget)
+    /// <param name="distSqrToTarget">到玩家距离的平方，用于 nearTarget 判定（避免调用 sqrt）</param>
+    private Vector3 ComputeLateralSlide(Vector3 pos, Vector3 targetPos, Vector3 flowDir, Vector3 separation, float distSqrToTarget)
     {
         bool hasSeparation = separation.sqrMagnitude > 0.01f;
-        bool nearTarget = distToTarget < enemy.AttackRange + movement.SeparationRadius;
+        float crowdDistanceSqr = (enemy.AttackRange + movement.SeparationRadius)
+                                 * (enemy.AttackRange + movement.SeparationRadius);
+        bool nearTarget = distSqrToTarget < crowdDistanceSqr;
         bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
         bool lateralAssistActive = _lateralAssistTimer > 0f;
 

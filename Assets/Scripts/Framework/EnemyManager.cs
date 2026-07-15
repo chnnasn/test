@@ -264,12 +264,17 @@ public class EnemyManager : MonoBehaviour
 
     private void TickActiveEnemies()
     {
-        // 复用 playerPos 给 LOD 距离判断
-        Vector3 playerPos = RunTimeContext.Instance.PlayerObject != null
-            ? RunTimeContext.Instance.PlayerObject.transform.position
-            : Vector3.zero;
-        bool playerExists = RunTimeContext.Instance.PlayerObject != null;
+        // 缓存单例与 player transform：每帧每敌人避免两次 native 属性调用
+        GameObject playerObject = RunTimeContext.Instance.PlayerObject;
+        Transform playerTransform = playerObject != null ? playerObject.transform : null;
+        Vector3 playerPos = playerTransform != null ? playerTransform.position : Vector3.zero;
+        bool playerExists = playerTransform != null;
         int frame = _navigationFrameCount;
+
+        // 缓存 LOD 阈值平方
+        float lodNearSqr = _lodNearDistance * _lodNearDistance;
+        float lodMidSqr = _lodMidDistance * _lodMidDistance;
+        float lodFarSqr = _lodFarDistance * _lodFarDistance;
 
         for (int i = _activeEnemies.Count - 1; i >= 0; i--)
         {
@@ -289,17 +294,17 @@ public class EnemyManager : MonoBehaviour
                 Vector3 ePos = enemy.transform.position;
                 float distSqr = (ePos.x - playerPos.x) * (ePos.x - playerPos.x)
                               + (ePos.z - playerPos.z) * (ePos.z - playerPos.z);
-                if (distSqr > _lodFarDistance * _lodFarDistance)
+                if (distSqr > lodFarSqr)
                 {
                     // >50m：每 8 帧一次
                     if ((frame & 7) != 0) continue;
                 }
-                else if (distSqr > _lodMidDistance * _lodMidDistance)
+                else if (distSqr > lodMidSqr)
                 {
                     // 30-50m：每 4 帧一次
                     if ((frame & 3) != 0) continue;
                 }
-                else if (distSqr > _lodNearDistance * _lodNearDistance)
+                else if (distSqr > lodNearSqr)
                 {
                     // 15-30m：每 2 帧一次
                     if ((frame & 1) != 0) continue;
@@ -325,9 +330,14 @@ public class EnemyManager : MonoBehaviour
         int epoch = _navigationFrameCount / batchCount;
 
         // 玩家位置用于距离计算
-        Vector3 playerPos = RunTimeContext.Instance.PlayerObject != null
-            ? RunTimeContext.Instance.PlayerObject.transform.position
-            : Vector3.zero;
+        Transform playerTransform = RunTimeContext.Instance.PlayerObject != null
+            ? RunTimeContext.Instance.PlayerObject.transform
+            : null;
+
+        // 缓存 LOD 阈值平方：避免每帧每敌人重复乘法；并避免在循环里调 sqrt
+        float lodNearSqr = _lodNearDistance * _lodNearDistance;
+        float lodMidSqr = _lodMidDistance * _lodMidDistance;
+        float lodFarSqr = _lodFarDistance * _lodFarDistance;
 
         for (int i = batch; i < count && i < _navigationEnemies.Count; i += batchCount)
         {
@@ -335,25 +345,33 @@ public class EnemyManager : MonoBehaviour
             if (enemy == null || !enemy.isActiveAndEnabled || !enemy.IsAlive || enemy.IsDying)
                 continue;
 
-            // ── AI LOD：根据到玩家距离降低远敌寻路更新频率 ──
-            float distToPlayer = Vector3.Distance(enemy.transform.position, playerPos);
-            int skipFrames = GetLodSkipFrames(distToPlayer);
+            // ── AI LOD：用平方距离判定（省 sqrt） ──
+            // 顺序：先算平方距离 → 立刻判定 skip → 不被跳过的才调 TickNavigation。
+            // 这样被 LOD 跳过的敌人完全省掉了 GetMovementDirection/ComputeSteering 中
+            // 多个 sqrt + transform.position 调用的开销。
+            int skipFrames;
+            if (playerTransform == null)
+            {
+                skipFrames = 1;
+            }
+            else
+            {
+                Vector3 ePos = enemy.transform.position;
+                float dx = ePos.x - playerTransform.position.x;
+                float dz = ePos.z - playerTransform.position.z;
+                float distSqr = dx * dx + dz * dz;
+
+                if (distSqr <= lodNearSqr)      skipFrames = 1;
+                else if (distSqr <= lodMidSqr)  skipFrames = Mathf.Max(2, _lodMidSkipFrames);
+                else if (distSqr <= lodFarSqr)  skipFrames = Mathf.Max(3, _lodFarSkipFrames);
+                else                            skipFrames = Mathf.Max(5, _lodVeryFarSkipFrames);
+            }
+
             if (skipFrames > 1 && epoch % skipFrames != 0)
                 continue;
 
             enemy.TickNavigation();
         }
-    }
-
-    /// <summary>
-    /// 根据到玩家距离返回应跳过的帧数（1 = 不跳过，每批都更新）。
-    /// </summary>
-    private int GetLodSkipFrames(float distance)
-    {
-        if (distance <= _lodNearDistance) return 1;
-        if (distance <= _lodMidDistance) return Mathf.Max(2, _lodMidSkipFrames);
-        if (distance <= _lodFarDistance) return Mathf.Max(3, _lodFarSkipFrames);
-        return Mathf.Max(5, _lodVeryFarSkipFrames);
     }
 
     private void AddActiveEnemy(Enemy enemy)
