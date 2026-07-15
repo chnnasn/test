@@ -2241,6 +2241,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _demoSceneName: Demo
   _firstWave: {fileID: 11400000, guid: 7c7a0e7afd0db4740bb4bf90d9ddcac9, type: 2}
+  _gpuSkinningPrewarmPrefabs:
+  - {fileID: 1159361799200795126, guid: 29dc576bc7ac33649b8f2b113893e89d, type: 3}
+  - {fileID: 797154032667540675, guid: cf08192296fd9bd44ba0c21ad7e035d7, type: 3}
+  - {fileID: 7195785957534944849, guid: 50b0b68bc40f50542a8602aff8787aa9, type: 3}
   _progressSlider: {fileID: 1871353839}
   _loadingShow: {fileID: 132981752}
   _minLoadingTime: 5

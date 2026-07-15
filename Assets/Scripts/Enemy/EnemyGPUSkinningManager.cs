@@ -200,6 +200,25 @@ public class EnemyGPUSkinningManager : MonoBehaviour
     }
 
     // ──────────────────────────────
+    //  预热（Loading 阶段调用）
+    // ──────────────────────────────
+
+    public void PrewarmEnemyType(GameObject enemyPrefab)
+    {
+        if (!_isReady || enemyPrefab == null) return;
+
+        SkinnedMeshRenderer smr = enemyPrefab.GetComponentInChildren<SkinnedMeshRenderer>(true);
+        if (smr?.sharedMesh == null) return;
+
+        Mesh mesh = smr.sharedMesh;
+        if (_meshData.ContainsKey(mesh)) return;
+
+        MeshSkinningData data = CreateMeshData(mesh, smr);
+        if (data != null)
+            _meshData[mesh] = data;
+    }
+
+    // ──────────────────────────────
     //  每帧主循环
     // ──────────────────────────────
 

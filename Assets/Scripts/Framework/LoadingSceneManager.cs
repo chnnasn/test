@@ -7,6 +7,7 @@ public class LoadingSceneManager : MonoBehaviour
 {
     [SerializeField] private string _demoSceneName = "Demo";
     [SerializeField] private PortalWave _firstWave;
+    [SerializeField] private GameObject[] _gpuSkinningPrewarmPrefabs;
     [SerializeField] private Slider _progressSlider;
     [SerializeField] private LoadingShow _loadingShow;
     [SerializeField] private float _minLoadingTime;
@@ -162,6 +163,9 @@ public class LoadingSceneManager : MonoBehaviour
         if (!skipWarmup)
             WaveManager.PrewarmFirstWave(_firstWave);
 
+        if (!skipWarmup)
+            PrewarmGPUSkinning();
+
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(_demoSceneName);
         if (loadOperation == null)
         {
@@ -207,5 +211,16 @@ public class LoadingSceneManager : MonoBehaviour
 
             yield return null;
         }
+    }
+
+    private void PrewarmGPUSkinning()
+    {
+        if (_gpuSkinningPrewarmPrefabs == null) return;
+
+        if (!EnemyGPUSkinningManager.TryGetInstance(out EnemyGPUSkinningManager skinningMgr))
+            return;
+
+        for (int i = 0; i < _gpuSkinningPrewarmPrefabs.Length; i++)
+            skinningMgr.PrewarmEnemyType(_gpuSkinningPrewarmPrefabs[i]);
     }
 }
