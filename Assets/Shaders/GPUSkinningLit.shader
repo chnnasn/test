@@ -135,43 +135,7 @@ Shader "Enemy/GPUSkinningLit"
             ENDHLSL
         }
 
-        // ── 阴影投射 Pass（同样从 GPU buffer 读取）──
-        Pass
-        {
-            Name "ShadowCaster"
-            Tags { "LightMode" = "ShadowCaster" }
-
-            ZWrite On
-            ZTest LEqual
-            ColorMask 0
-
-            HLSLPROGRAM
-            #pragma vertex vertShadow
-            #pragma fragment fragShadow
-            #pragma target 4.5
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-
-            StructuredBuffer<float3> _SkinnedPositions;
-            uint _VertexCount;
-
-            struct ShadowAttributes
-            {
-                float4 positionOS : POSITION;   // 未使用，占位
-                uint   vertexID   : SV_VertexID;
-                uint   instanceID : SV_InstanceID;
-            };
-
-            float4 vertShadow(ShadowAttributes input) : SV_POSITION
-            {
-                uint bufferIdx = input.instanceID * _VertexCount + input.vertexID;
-                float3 positionOS = _SkinnedPositions[bufferIdx];
-                float3 positionWS = TransformObjectToWorld(positionOS);
-                return TransformWorldToHClip(positionWS);
-            }
-
-            half4 fragShadow() : SV_Target { return 0; }
-            ENDHLSL
-        }
+        // ShadowCaster Pass 已移除 — 133 个 GPU Skinning 敌人投阴影成本极高
+        // 阴影由场景/玩家投射，敌人本身不再产生阴影
     }
 }

@@ -17,6 +17,7 @@ public class GameManager : LazySingleton<GameManager>
     private Text _frameText;
     private float _fpsTimer;
     private int _fpsFrameCount;
+    private int _spatialGridSkipCounter;
 
     public Action<float> AttackAction;
 
@@ -52,7 +53,12 @@ public class GameManager : LazySingleton<GameManager>
 
     private void Update()
     {
-        SpatialGrid.RebuildAll();
+        // 空间网格隔帧重建：133 个敌人每帧遍历 + Dictionary 操作约 2ms
+        // Boids 分离在 NavigationUpdate 中 LOD 分批计算，对 1-2 帧延迟不敏感
+        _spatialGridSkipCounter++;
+        if ((_spatialGridSkipCounter & 1) == 0)
+            SpatialGrid.RebuildAll();
+
         UpdateFrameRate();
 
         if (_character == null)

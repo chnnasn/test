@@ -169,6 +169,11 @@ public class Enemy : MonoBehaviour,IDamage
     {
         SetVisualRootActive(false);
 
+        // GPU Skinning 仍在渲染此敌人，立即注销以停止绘制
+        if (_gpuSkinningActive && EnemyGPUSkinningManager.TryGetInstance(out EnemyGPUSkinningManager skinMgr))
+            skinMgr.Unregister(this);
+        _gpuSkinningActive = false;
+
         ParticleSystem boomParticle = GetBoomParticle();
         if (boomParticle == null)
         {

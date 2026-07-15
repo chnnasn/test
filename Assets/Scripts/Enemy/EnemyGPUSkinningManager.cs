@@ -266,11 +266,11 @@ public class EnemyGPUSkinningManager : MonoBehaviour
             data.DrawArgsData[4] = 0;
             data.DrawArgs.SetData(data.DrawArgsData);
 
-            // 7. 绘制
+            // 7. 绘制（关闭阴影 — 133 个敌人投阴影 GPU 成本极高，留给玩家/场景主光源）
             Graphics.DrawMeshInstancedIndirect(
                 data.SharedMesh, 0, mat, data.WorldBounds,
                 data.DrawArgs, 0, null,
-                UnityEngine.Rendering.ShadowCastingMode.On, true
+                UnityEngine.Rendering.ShadowCastingMode.Off, false
             );
         }
     }
