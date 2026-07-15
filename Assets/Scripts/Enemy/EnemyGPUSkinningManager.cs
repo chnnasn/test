@@ -57,6 +57,8 @@ public class EnemyGPUSkinningManager : MonoBehaviour
     private sealed class MeshSkinningData
     {
         public Mesh SharedMesh;
+        public Matrix4x4[] BindPoses;
+        public int Kernel;
         public int VertexCount, IndexCount, BonesPerInstance;
 
         public ComputeBuffer RestPositions;
@@ -77,10 +79,13 @@ public class EnemyGPUSkinningManager : MonoBehaviour
         public int MaxInstances;
         public int ActiveCount;
         public Enemy[] Instances;
+        public Transform[][] InstanceBones;
         public Bounds WorldBounds;
     }
 
     private readonly Dictionary<Mesh, MeshSkinningData> _meshData = new Dictionary<Mesh, MeshSkinningData>();
+    private readonly Dictionary<Enemy, MeshSkinningData> _instanceData = new Dictionary<Enemy, MeshSkinningData>();
+    private readonly Dictionary<Enemy, int> _instanceSlots = new Dictionary<Enemy, int>();
     private Matrix4x4[] _boneMatrixUpload;
 
     // ──────────────────────────────
@@ -117,9 +122,14 @@ public class EnemyGPUSkinningManager : MonoBehaviour
         foreach (var data in _meshData.Values)
         {
             for (int i = 0; i < data.Instances.Length; i++)
+            {
                 data.Instances[i] = null;
+                data.InstanceBones[i] = null;
+            }
             data.ActiveCount = 0;
         }
+        _instanceData.Clear();
+        _instanceSlots.Clear();
     }
 
     private void OnDestroy()
@@ -130,6 +140,8 @@ public class EnemyGPUSkinningManager : MonoBehaviour
         _instance = null;
         foreach (var data in _meshData.Values)
             ReleaseMeshData(data);
+        _instanceData.Clear();
+        _instanceSlots.Clear();
         _meshData.Clear();
     }
 
@@ -140,8 +152,9 @@ public class EnemyGPUSkinningManager : MonoBehaviour
     public void Register(Enemy enemy)
     {
         if (!_isReady || enemy?.AnimatorController == null) return;
+        if (_instanceData.ContainsKey(enemy)) return;
 
-        SkinnedMeshRenderer smr = enemy.GetComponentInChildren<SkinnedMeshRenderer>(true);
+        SkinnedMeshRenderer smr = enemy.CachedSkinnedRenderer;
         if (smr?.sharedMesh == null) return;
 
         Mesh mesh = smr.sharedMesh;
@@ -152,33 +165,38 @@ public class EnemyGPUSkinningManager : MonoBehaviour
             _meshData[mesh] = data;
         }
 
-        for (int i = 0; i < data.Instances.Length; i++)
+        if (data.ActiveCount >= data.MaxInstances)
         {
-            if (data.Instances[i] == null)
-            {
-                data.Instances[i] = enemy;
-                data.ActiveCount++;
-                return;
-            }
+            Debug.LogWarning($"[GPUSkinning] Mesh '{mesh.name}' 实例槽已满 (max={data.MaxInstances})");
+            return;
         }
-        Debug.LogWarning($"[GPUSkinning] Mesh '{mesh.name}' 实例槽已满 (max={data.MaxInstances})");
+
+        int slot = data.ActiveCount++;
+        data.Instances[slot] = enemy;
+        data.InstanceBones[slot] = smr.bones;
+        _instanceData.Add(enemy, data);
+        _instanceSlots.Add(enemy, slot);
     }
 
     public void Unregister(Enemy enemy)
     {
-        if (!_isReady) return;
-        foreach (var data in _meshData.Values)
+        if (!_isReady || enemy == null || !_instanceData.TryGetValue(enemy, out var data)) return;
+
+        int slot = _instanceSlots[enemy];
+        int lastSlot = data.ActiveCount - 1;
+        if (slot != lastSlot)
         {
-            for (int i = 0; i < data.Instances.Length; i++)
-            {
-                if (data.Instances[i] == enemy)
-                {
-                    data.Instances[i] = null;
-                    data.ActiveCount = Mathf.Max(0, data.ActiveCount - 1);
-                    return;
-                }
-            }
+            Enemy movedEnemy = data.Instances[lastSlot];
+            data.Instances[slot] = movedEnemy;
+            data.InstanceBones[slot] = data.InstanceBones[lastSlot];
+            _instanceSlots[movedEnemy] = slot;
         }
+
+        data.Instances[lastSlot] = null;
+        data.InstanceBones[lastSlot] = null;
+        data.ActiveCount = lastSlot;
+        _instanceData.Remove(enemy);
+        _instanceSlots.Remove(enemy);
     }
 
     // ──────────────────────────────
@@ -194,21 +212,10 @@ public class EnemyGPUSkinningManager : MonoBehaviour
             MeshSkinningData data = kvp.Value;
             if (data.ActiveCount == 0) continue;
 
-            // 1. 收紧实例列表
-            int aliveWrite = 0;
-            for (int i = 0; i < data.Instances.Length; i++)
-            {
-                if (data.Instances[i] != null)
-                {
-                    if (i != aliveWrite)
-                    { data.Instances[aliveWrite] = data.Instances[i]; data.Instances[i] = null; }
-                    aliveWrite++;
-                }
-            }
-            int instanceCount = aliveWrite;
+            int instanceCount = data.ActiveCount;
             if (instanceCount == 0) continue;
 
-            // 2. 收集骨骼矩阵
+            // 1. 收集骨骼矩阵
             int bonesPerInst = data.BonesPerInstance;
             int totalBones = instanceCount * bonesPerInst;
             if (_boneMatrixUpload == null || _boneMatrixUpload.Length < totalBones)
@@ -216,25 +223,20 @@ public class EnemyGPUSkinningManager : MonoBehaviour
 
             for (int i = 0; i < instanceCount; i++)
             {
-                Enemy enemy = data.Instances[i];
-                if (enemy == null) continue;
-                SkinnedMeshRenderer smr = enemy.GetComponentInChildren<SkinnedMeshRenderer>(true);
-                if (smr == null) continue;
-                Transform[] bones = smr.bones;
-                Matrix4x4[] bp = smr.sharedMesh.bindposes;
+                Transform[] bones = data.InstanceBones[i];
                 int count = Mathf.Min(bones.Length, bonesPerInst);
                 int off = i * bonesPerInst;
                 for (int b = 0; b < count; b++)
-                    _boneMatrixUpload[off + b] = (bones[b] != null) ? bones[b].localToWorldMatrix * bp[b] : Matrix4x4.identity;
+                    _boneMatrixUpload[off + b] = (bones[b] != null) ? bones[b].localToWorldMatrix * data.BindPoses[b] : Matrix4x4.identity;
                 for (int b = count; b < bonesPerInst; b++)
                     _boneMatrixUpload[off + b] = Matrix4x4.identity;
             }
 
-            // 3. 上传骨骼矩阵
+            // 2. 上传骨骼矩阵
             data.BoneMatrices.SetData(_boneMatrixUpload, 0, 0, totalBones);
 
-            // 4. ComputeShader dispatch
-            int kernel = _skinningCompute.FindKernel("CSSkinning");
+            // 3. ComputeShader dispatch
+            int kernel = data.Kernel;
             _skinningCompute.SetBuffer(kernel, "_RestPositions", data.RestPositions);
             _skinningCompute.SetBuffer(kernel, "_RestNormals", data.RestNormals);
             _skinningCompute.SetBuffer(kernel, "_UVs", data.UVs);
@@ -282,7 +284,8 @@ public class EnemyGPUSkinningManager : MonoBehaviour
     private MeshSkinningData CreateMeshData(Mesh mesh, SkinnedMeshRenderer smr)
     {
         int vc = mesh.vertexCount;
-        int bones = mesh.bindposes.Length;
+        Matrix4x4[] bindPoses = mesh.bindposes;
+        int bones = bindPoses.Length;
         if (vc == 0 || bones == 0) return null;
 
         Vector3[] pos = mesh.vertices;
@@ -304,11 +307,14 @@ public class EnemyGPUSkinningManager : MonoBehaviour
         var data = new MeshSkinningData
         {
             SharedMesh = mesh,
+            BindPoses = bindPoses,
+            Kernel = _skinningCompute.FindKernel("CSSkinning"),
             VertexCount = vc,
             IndexCount = (int)mesh.GetIndexCount(0),
             BonesPerInstance = bones,
             MaxInstances = maxI,
             Instances = new Enemy[maxI],
+            InstanceBones = new Transform[maxI][],
             WorldBounds = new Bounds(Vector3.zero, new Vector3(200f, 20f, 200f)),
 
             RestPositions = new ComputeBuffer(vc, 12),

@@ -48,6 +48,8 @@ public class Enemy : MonoBehaviour,IDamage
     public EnemyMovement Movement { get; private set; }
     public EnemyAnimator AnimatorController { get; private set; }
 
+    internal SkinnedMeshRenderer CachedSkinnedRenderer => _cachedSkinnedRenderer;
+
     public ParticleSystem BloodParticle;
     [SerializeField] private ParticleSystem _boomParticle;
     [SerializeField] private Transform _visualRoot;
