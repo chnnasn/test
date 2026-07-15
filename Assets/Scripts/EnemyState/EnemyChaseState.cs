@@ -146,7 +146,7 @@ public class EnemyChaseState : EnemyState
         Vector3 targetPos = target.position;
 
         // 计算目标转向方向 = FlowField + 分离 + 避障。
-        Vector3 steer = ComputeSteering(targetPos, pos);
+        Vector3 steer = ComputeSteering(targetPos);
 
         // ── 振荡检测：如果 steer 在短时间内反复翻转 > MAX_FLIPS 次，
         //     说明敌人被夹住了，此时强行偏向 FlowField 方向打破死循环 ──
