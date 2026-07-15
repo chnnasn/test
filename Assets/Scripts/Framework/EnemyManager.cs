@@ -87,6 +87,8 @@ public class EnemyManager : MonoBehaviour
     public Enemy SpawnEnemy(GameObject prefab, Vector3 position, Quaternion rotation)
     {
         Enemy enemy = GetEnemyFromPool(prefab);
+        if (enemy == null) return null;  // CreateEnemyInstance 失败（prefab 无 Enemy 组件）
+
         CancelPendingRelease(enemy);
 
         Transform enemyTransform = enemy.transform;
@@ -250,6 +252,12 @@ public class EnemyManager : MonoBehaviour
         enemyObject.SetActive(false);
         enemyObject.transform.SetParent(ProjectilePool.Root, false);
         Enemy newEnemy = enemyObject.GetComponent<Enemy>();
+        if (newEnemy == null)
+        {
+            Debug.LogError($"[EnemyManager] Prefab '{prefab.name}' 缺少 Enemy 组件！", prefab);
+            Destroy(enemyObject);
+            return null;
+        }
         _enemyPrefabMap[newEnemy] = prefab;
         return newEnemy;
     }
