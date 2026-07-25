@@ -262,7 +262,6 @@ public class Enemy : MonoBehaviour,IDamage
             _cachedSkinnedRenderer ??= GetComponentInChildren<SkinnedMeshRenderer>(true);
             if (_cachedSkinnedRenderer != null)
             {
-                // 不 disable SMR（否则 Animator 不驱动骨骼），改为关闭阴影 + 屏蔽渲染层
                 _cachedSkinnedRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 int hiddenLayer = LayerMask.NameToLayer("GPUSkinningHidden");
                 if (hiddenLayer >= 0)
@@ -270,6 +269,8 @@ public class Enemy : MonoBehaviour,IDamage
                     _cachedSMROriginalLayer = _cachedSkinnedRenderer.gameObject.layer;
                     _cachedSkinnedRenderer.gameObject.layer = hiddenLayer;
                 }
+                // 禁用 SMR 以停止 Unity 内置 GPU Skinning（Animator 已通过 ForceAlwaysAnimate 独立驱动骨骼）
+                _cachedSkinnedRenderer.enabled = false;
             }
             // SMR 在隐藏层上 → Unity 内置 Culling 会停掉 Animator → 强制 AlwaysAnimate
             AnimatorController?.ForceAlwaysAnimate();
@@ -288,6 +289,7 @@ public class Enemy : MonoBehaviour,IDamage
             skinMgr.Unregister(this);
             if (_cachedSkinnedRenderer != null)
             {
+                _cachedSkinnedRenderer.enabled = true;
                 _cachedSkinnedRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 if (_cachedSMROriginalLayer != 0)
                     _cachedSkinnedRenderer.gameObject.layer = _cachedSMROriginalLayer;
