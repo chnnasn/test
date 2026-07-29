@@ -3,10 +3,32 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
+public sealed class EnemyBatchTargetBinding
+{
+    [Min(0)] public int batchId;
+    public Transform target;
+}
+
 public class EnemyManager : MonoBehaviour
 {
+    private sealed class EnemyBatchRuntime
+    {
+        public Transform Target;
+        public readonly List<Enemy> Enemies = new List<Enemy>(64);
+        public readonly List<Enemy> SurroundCandidates = new List<Enemy>(64);
+        public readonly Dictionary<Enemy, int> SurroundAssignments =
+            new Dictionary<Enemy, int>(64);
+        public int SurroundAssignmentFrame = -1;
+        public int SurroundPopulationHash;
+    }
+
     [SerializeField] private int _enemyPoolMaxSize = 100;
     [SerializeField, Min(1)] private int _navigationBatchCount = 5;
+
+    [Header("逻辑追击批次")]
+    [SerializeField] private List<EnemyBatchTargetBinding> _batchTargets =
+        new List<EnemyBatchTargetBinding>();
 
     [Header("包围点分配")]
     [SerializeField, Min(0.25f)] private float _surroundPointRadius = 2f;
@@ -31,13 +53,11 @@ public class EnemyManager : MonoBehaviour
     private readonly HashSet<Enemy> _currentWaveEnemies = new HashSet<Enemy>();
     private readonly Dictionary<Enemy, Coroutine> _pendingReleaseCoroutines = new Dictionary<Enemy, Coroutine>();
     private readonly List<Enemy> _releaseAllBuffer = new List<Enemy>(256);
-    private readonly List<Enemy> _surroundCandidates = new List<Enemy>(256);
-    private readonly Dictionary<Enemy, int> _surroundAssignments = new Dictionary<Enemy, int>(256);
+    private readonly Dictionary<int, EnemyBatchRuntime> _enemyBatches =
+        new Dictionary<int, EnemyBatchRuntime>();
 
     private int _navigationBatchCursor;
     private int _navigationFrameCount;
-    private int _surroundAssignmentFrame = -1;
-    private int _surroundPopulationHash;
     private Action _currentWaveClearedCallback;
     private bool _currentWaveClearedNotified;
     private int _currentWaveNumber = 1;
@@ -48,6 +68,7 @@ public class EnemyManager : MonoBehaviour
     private void OnEnable()
     {
         _instance = this;
+        InitializeBatchTargets();
         EventManager.Instance.BeforeDemoRestart += OnBeforeDemoRestart;
     }
 
@@ -98,6 +119,25 @@ public class EnemyManager : MonoBehaviour
 
     public Enemy SpawnEnemy(GameObject prefab, Vector3 position, Quaternion rotation)
     {
+        return SpawnEnemy(prefab, position, rotation, 0, null);
+    }
+
+    public Enemy SpawnEnemy(
+        GameObject prefab,
+        Vector3 position,
+        Quaternion rotation,
+        int batchId)
+    {
+        return SpawnEnemy(prefab, position, rotation, batchId, null);
+    }
+
+    public Enemy SpawnEnemy(
+        GameObject prefab,
+        Vector3 position,
+        Quaternion rotation,
+        int batchId,
+        Transform chaseTarget)
+    {
         Enemy enemy = GetEnemyFromPool(prefab);
         if (enemy == null) return null;  // CreateEnemyInstance 失败（prefab 无 Enemy 组件）
 
@@ -111,6 +151,10 @@ public class EnemyManager : MonoBehaviour
         enemy.gameObject.SetActive(true);
         enemy.ResetEnemy();
         enemy.ApplyWaveGrowth(_currentWaveNumber);
+        if (chaseTarget != null)
+            SetBatchTarget(batchId, chaseTarget);
+        AssignEnemyToBatch(enemy, batchId);
+        enemy.SetTarget(GetBatchTarget(enemy));
 
         AddActiveEnemy(enemy);
         AddNavigationEnemy(enemy);
@@ -123,6 +167,7 @@ public class EnemyManager : MonoBehaviour
         if (enemy == null) return;
 
         CancelPendingRelease(enemy);
+        RemoveEnemyFromBatch(enemy);
         RemoveActiveEnemy(enemy);
         RemoveNavigationEnemy(enemy);
         enemy.SetPoolReleaseCallback(null);
@@ -176,10 +221,116 @@ public class EnemyManager : MonoBehaviour
         _navigationBatchCursor = 0;
         _navigationFrameCount = 0;
         _currentWaveNumber = 1;
-        _surroundAssignments.Clear();
-        _surroundCandidates.Clear();
-        _surroundAssignmentFrame = -1;
-        _surroundPopulationHash = 0;
+        ClearBatchMembers();
+    }
+
+    /// <summary>
+    /// 为逻辑批次指定追击目标。批次内现有敌人会立即切换目标。
+    /// </summary>
+    public void SetBatchTarget(int batchId, Transform target)
+    {
+        EnemyBatchRuntime batch = GetOrCreateBatch(Mathf.Max(0, batchId));
+        batch.Target = target;
+        for (int i = 0; i < batch.Enemies.Count; i++)
+        {
+            Enemy member = batch.Enemies[i];
+            if (member != null)
+                member.SetTarget(ResolveBatchTarget(batch));
+        }
+    }
+
+    /// <summary>
+    /// 将已生成敌人移动到另一逻辑批次。
+    /// </summary>
+    public void AssignEnemyToBatch(Enemy enemy, int batchId)
+    {
+        if (enemy == null) return;
+
+        RemoveEnemyFromBatch(enemy);
+        int safeBatchId = Mathf.Max(0, batchId);
+        EnemyBatchRuntime batch = GetOrCreateBatch(safeBatchId);
+        if (!batch.Enemies.Contains(enemy))
+            batch.Enemies.Add(enemy);
+
+        enemy.SetCrowdBatch(safeBatchId);
+        enemy.SetTarget(ResolveBatchTarget(batch));
+        InvalidateSurroundAssignments(batch);
+    }
+
+    /// <summary>
+    /// 获取敌人所属批次的目标；未配置时兼容回退到当前主玩家。
+    /// </summary>
+    public static Transform GetBatchTarget(Enemy enemy)
+    {
+        if (enemy == null) return null;
+
+        if (_instance != null &&
+            _instance._enemyBatches.TryGetValue(enemy.CrowdBatchId, out EnemyBatchRuntime batch))
+            return _instance.ResolveBatchTarget(batch);
+
+        GameObject playerObject = RunTimeContext.Instance.PlayerObject;
+        return playerObject != null ? playerObject.transform : null;
+    }
+
+    private void InitializeBatchTargets()
+    {
+        for (int i = 0; i < _batchTargets.Count; i++)
+        {
+            EnemyBatchTargetBinding binding = _batchTargets[i];
+            if (binding == null) continue;
+            GetOrCreateBatch(Mathf.Max(0, binding.batchId)).Target = binding.target;
+        }
+
+        GetOrCreateBatch(0);
+    }
+
+    private EnemyBatchRuntime GetOrCreateBatch(int batchId)
+    {
+        if (_enemyBatches.TryGetValue(batchId, out EnemyBatchRuntime batch))
+            return batch;
+
+        batch = new EnemyBatchRuntime();
+        _enemyBatches.Add(batchId, batch);
+        return batch;
+    }
+
+    private Transform ResolveBatchTarget(EnemyBatchRuntime batch)
+    {
+        if (batch != null && batch.Target != null)
+            return batch.Target;
+
+        GameObject playerObject = RunTimeContext.Instance.PlayerObject;
+        return playerObject != null ? playerObject.transform : null;
+    }
+
+    private void RemoveEnemyFromBatch(Enemy enemy)
+    {
+        if (enemy == null ||
+            !_enemyBatches.TryGetValue(enemy.CrowdBatchId, out EnemyBatchRuntime batch))
+            return;
+
+        batch.Enemies.Remove(enemy);
+        batch.SurroundAssignments.Remove(enemy);
+        InvalidateSurroundAssignments(batch);
+    }
+
+    private static void InvalidateSurroundAssignments(EnemyBatchRuntime batch)
+    {
+        if (batch == null) return;
+        batch.SurroundAssignmentFrame = -1;
+        batch.SurroundPopulationHash = 0;
+    }
+
+    private void ClearBatchMembers()
+    {
+        foreach (KeyValuePair<int, EnemyBatchRuntime> pair in _enemyBatches)
+        {
+            EnemyBatchRuntime batch = pair.Value;
+            batch.Enemies.Clear();
+            batch.SurroundCandidates.Clear();
+            batch.SurroundAssignments.Clear();
+            InvalidateSurroundAssignments(batch);
+        }
     }
 
     /// <summary>
@@ -195,47 +346,54 @@ public class EnemyManager : MonoBehaviour
     private bool TryGetAssignedSurroundPoint(Enemy enemy, Vector3 playerPosition, out Vector3 point)
     {
         point = playerPosition;
-        if (enemy == null) return false;
-
-        EnsureSurroundAssignments(playerPosition);
-        if (!_surroundAssignments.TryGetValue(enemy, out int slotIndex))
+        if (enemy == null ||
+            !_enemyBatches.TryGetValue(enemy.CrowdBatchId, out EnemyBatchRuntime batch))
             return false;
 
-        point = GetSurroundPoint(enemy, playerPosition, slotIndex, _surroundCandidates.Count);
+        EnsureSurroundAssignments(batch, playerPosition);
+        if (!batch.SurroundAssignments.TryGetValue(enemy, out int slotIndex))
+            return false;
+
+        point = GetSurroundPoint(
+            enemy,
+            playerPosition,
+            slotIndex,
+            batch.SurroundCandidates.Count);
         return true;
     }
 
-    private void EnsureSurroundAssignments(Vector3 playerPosition)
+    private void EnsureSurroundAssignments(EnemyBatchRuntime batch, Vector3 playerPosition)
     {
-        if (_surroundAssignmentFrame == Time.frameCount)
+        if (batch.SurroundAssignmentFrame == Time.frameCount)
             return;
-        _surroundAssignmentFrame = Time.frameCount;
+        batch.SurroundAssignmentFrame = Time.frameCount;
 
-        _surroundCandidates.Clear();
+        batch.SurroundCandidates.Clear();
         int populationHash = 17;
-        for (int i = 0; i < _activeEnemies.Count; i++)
+        for (int i = 0; i < batch.Enemies.Count; i++)
         {
-            Enemy candidate = _activeEnemies[i];
+            Enemy candidate = batch.Enemies[i];
             if (candidate == null || !candidate.isActiveAndEnabled ||
                 !candidate.IsAlive || candidate.IsDying)
                 continue;
 
-            _surroundCandidates.Add(candidate);
+            batch.SurroundCandidates.Add(candidate);
             populationHash = populationHash * 31 + candidate.GetInstanceID();
         }
 
-        int count = _surroundCandidates.Count;
-        if (count == _surroundAssignments.Count && populationHash == _surroundPopulationHash)
+        int count = batch.SurroundCandidates.Count;
+        if (count == batch.SurroundAssignments.Count &&
+            populationHash == batch.SurroundPopulationHash)
             return;
 
-        _surroundPopulationHash = populationHash;
-        _surroundAssignments.Clear();
+        batch.SurroundPopulationHash = populationHash;
+        batch.SurroundAssignments.Clear();
         if (count == 0) return;
 
         bool[] occupied = new bool[count];
         for (int i = 0; i < count; i++)
         {
-            Enemy candidate = _surroundCandidates[i];
+            Enemy candidate = batch.SurroundCandidates[i];
             int bestSlot = -1;
             float bestDistanceSqr = float.MaxValue;
 
@@ -255,7 +413,7 @@ public class EnemyManager : MonoBehaviour
 
             if (bestSlot < 0) continue;
             occupied[bestSlot] = true;
-            _surroundAssignments[candidate] = bestSlot;
+            batch.SurroundAssignments[candidate] = bestSlot;
         }
     }
 
@@ -402,11 +560,6 @@ public class EnemyManager : MonoBehaviour
         // 当前是第几轮遍历：每 batchCount 帧所有敌人各被访问一次，算一轮
         int epoch = _navigationFrameCount / batchCount;
 
-        // 玩家位置用于距离计算
-        Transform playerTransform = RunTimeContext.Instance.PlayerObject != null
-            ? RunTimeContext.Instance.PlayerObject.transform
-            : null;
-
         // 缓存 LOD 阈值平方：避免每帧每敌人重复乘法；并避免在循环里调 sqrt
         float lodNearSqr = _lodNearDistance * _lodNearDistance;
         float lodMidSqr = _lodMidDistance * _lodMidDistance;
@@ -423,15 +576,17 @@ public class EnemyManager : MonoBehaviour
             // 这样被 LOD 跳过的敌人完全省掉了 GetMovementDirection/ComputeSteering 中
             // 多个 sqrt + transform.position 调用的开销。
             int skipFrames;
-            if (playerTransform == null)
+            Transform chaseTarget = GetBatchTarget(enemy);
+            if (chaseTarget == null)
             {
                 skipFrames = 1;
             }
             else
             {
                 Vector3 ePos = enemy.transform.position;
-                float dx = ePos.x - playerTransform.position.x;
-                float dz = ePos.z - playerTransform.position.z;
+                Vector3 targetPosition = chaseTarget.position;
+                float dx = ePos.x - targetPosition.x;
+                float dz = ePos.z - targetPosition.z;
                 float distSqr = dx * dx + dz * dz;
 
                 if (distSqr <= lodNearSqr)      skipFrames = 1;

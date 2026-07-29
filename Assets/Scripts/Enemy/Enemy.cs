@@ -70,6 +70,7 @@ public class Enemy : MonoBehaviour,IDamage
     public float ExperienceReward => _enemyBuff.GetExperienceReward(_experienceReward);
     public float DeadDestroyDelay => Mathf.Max(AnimatorController != null ? AnimatorController.DeadAnimationDuration : 0f, 0f) + _deadDestroyExtraDelay;
     public bool BoomAfterAttack => _boomAfterAttack;
+    public int CrowdBatchId { get; private set; }
 
     public void SetAttackDetectCallback(Action<bool> callback)
     {
@@ -115,8 +116,8 @@ public class Enemy : MonoBehaviour,IDamage
     /// </summary>
     private bool DetectAttackHitPlayer()
     {
-        GameObject player = RunTimeContext.Instance.PlayerObject;
-        if (player == null) return false;
+        Transform attackTarget = _target;
+        if (attackTarget == null) return false;
 
         Vector3 origin = transform.position + AttackCastOffset;
         Vector3 direction = transform.forward;
@@ -126,7 +127,9 @@ public class Enemy : MonoBehaviour,IDamage
         for (int i = 0; i < hitCount; i++)
         {
             Collider hitCollider = _attackHits[i].collider;
-            if (hitCollider != null && hitCollider.transform.IsChildOf(player.transform))
+            if (hitCollider != null &&
+                (hitCollider.transform == attackTarget ||
+                 hitCollider.transform.IsChildOf(attackTarget)))
                 return true;
         }
 
@@ -151,8 +154,8 @@ public class Enemy : MonoBehaviour,IDamage
     /// </summary>
     private bool DetectBoomHitPlayer()
     {
-        GameObject player = RunTimeContext.Instance.PlayerObject;
-        if (player == null) return false;
+        Transform attackTarget = _target;
+        if (attackTarget == null) return false;
 
         Vector3 origin = transform.position + AttackCastOffset;
         int hitCount = Physics.OverlapSphereNonAlloc(origin, AttackRange, _boomHits, PlayerLayerMask, QueryTriggerInteraction.Ignore);
@@ -160,7 +163,9 @@ public class Enemy : MonoBehaviour,IDamage
         for (int i = 0; i < hitCount; i++)
         {
             Collider hitCollider = _boomHits[i];
-            if (hitCollider != null && hitCollider.transform.IsChildOf(player.transform))
+            if (hitCollider != null &&
+                (hitCollider.transform == attackTarget ||
+                 hitCollider.transform.IsChildOf(attackTarget)))
                 return true;
         }
 
@@ -327,6 +332,7 @@ public class Enemy : MonoBehaviour,IDamage
         _isDying = false;
         _isBooming = false;
         _target = null;
+        CrowdBatchId = 0;
         if (_boomParticleReleaseCoroutine != null)
         {
             StopCoroutine(_boomParticleReleaseCoroutine);
@@ -392,6 +398,11 @@ public class Enemy : MonoBehaviour,IDamage
     public void SetTarget(Transform target)
     {
         _target = target;
+    }
+
+    public void SetCrowdBatch(int batchId)
+    {
+        CrowdBatchId = batchId;
     }
 
     public void ApplyTemporarySlow(float multiplier, float duration)

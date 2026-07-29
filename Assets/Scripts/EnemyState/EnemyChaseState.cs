@@ -7,7 +7,9 @@ using UnityEngine;
 /// </summary>
 public abstract class EnemyNavigationState : EnemyState
 {
-    private static readonly List<Enemy> NeighborBuffer = new List<Enemy>(32);
+    // Boids 只读取同批次邻居；RVO 读取所有批次邻居，二者不能共用结果集。
+    private static readonly List<Enemy> BoidsNeighborBuffer = new List<Enemy>(32);
+    private static readonly List<Enemy> RvoNeighborBuffer = new List<Enemy>(32);
 
     private Vector3 _cachedAvoidanceOffset;
     private bool _hasCachedAvoidance;
@@ -21,7 +23,7 @@ public abstract class EnemyNavigationState : EnemyState
         ClearNavigationCache();
         movement.ResetNavigationVelocity();
         enemyAnimator.SetChaseState(0f);
-        enemy.SetTarget(RunTimeContext.Instance.PlayerObject?.transform);
+        enemy.SetTarget(EnemyManager.GetBatchTarget(enemy));
     }
 
     public override void Update()
@@ -32,24 +34,26 @@ public abstract class EnemyNavigationState : EnemyState
             return;
         }
 
-        Transform player = RunTimeContext.Instance.PlayerObject?.transform;
-        if (player == null)
+        Transform target = EnemyManager.GetBatchTarget(enemy);
+        if (target == null)
         {
             movement.Stop();
             return;
         }
 
-        enemy.SetTarget(player);
-        if (TryChangeState(player))
+        enemy.SetTarget(target);
+        if (TryChangeState(target))
             return;
 
-        if (!TryGetNavigationTarget(player, out Vector3 targetPosition))
+        if (!TryGetNavigationTarget(target, out Vector3 targetPosition))
         {
             movement.Stop();
             return;
         }
 
-        Vector3 flowVelocity = ComputeFlowVelocity(targetPosition);
+        Vector3 flowVelocity = ComputeFlowVelocity(
+            targetPosition,
+            IsSharedFlowTarget(target));
         if (flowVelocity.sqrMagnitude < 0.01f)
         {
             movement.Stop();
@@ -72,14 +76,16 @@ public abstract class EnemyNavigationState : EnemyState
             return;
         }
 
-        Transform player = RunTimeContext.Instance.PlayerObject?.transform;
-        if (player == null || !TryGetNavigationTarget(player, out Vector3 targetPosition))
+        Transform target = EnemyManager.GetBatchTarget(enemy);
+        if (target == null || !TryGetNavigationTarget(target, out Vector3 targetPosition))
         {
             ClearNavigationCache();
             return;
         }
 
-        Vector3 flowVelocity = ComputeFlowVelocity(targetPosition);
+        Vector3 flowVelocity = ComputeFlowVelocity(
+            targetPosition,
+            IsSharedFlowTarget(target));
         if (flowVelocity.sqrMagnitude < 0.01f)
         {
             ClearNavigationCache();
@@ -89,20 +95,30 @@ public abstract class EnemyNavigationState : EnemyState
         float queryRadius = Mathf.Max(
             movement.SeparationRadius,
             movement.ColliderRadius * 2f + movement.MoveSpeed * Mathf.Min(movement.RvoTimeHorizon, 0.75f));
-        int neighborCount = SpatialGrid.QueryNeighbors(
+        // 同批次邻居只影响 Boids 分离/队形。
+        SpatialGrid.QueryNeighbors(
+            enemy.transform.position,
+            movement.SeparationRadius,
+            enemy,
+            BoidsNeighborBuffer,
+            enemy.CrowdBatchId);
+
+        // 所有批次邻居都进入 RVO，避免不同玩家的敌群互相穿插。
+        int rvoNeighborCount = SpatialGrid.QueryNeighbors(
             enemy.transform.position,
             queryRadius,
             enemy,
-            NeighborBuffer);
+            RvoNeighborBuffer);
 
-        Vector3 separation = ComputeSeparation(NeighborBuffer);
+        Vector3 separation = ComputeSeparation(BoidsNeighborBuffer);
         Vector3 preferredVelocity = Vector3.ClampMagnitude(
             flowVelocity + separation * movement.MoveSpeed * movement.SeparationWeight,
             movement.MoveSpeed);
-        Vector3 rvoVelocity = ComputeRvoVelocity(preferredVelocity, NeighborBuffer);
+        Vector3 rvoVelocity = ComputeRvoVelocity(preferredVelocity, RvoNeighborBuffer);
 
         // Agent.md 指定公式：周围无敌人时完全服从流场，拥挤时 RVO 最多占 50%。
-        float crowdingRatio = neighborCount / (float)Mathf.Max(1, movement.MaxComfortableNeighborCount);
+        float crowdingRatio = rvoNeighborCount /
+                              (float)Mathf.Max(1, movement.MaxComfortableNeighborCount);
         float blendWeight = Mathf.Clamp(crowdingRatio, 0f, movement.MaxRvoBlendWeight);
         Vector3 finalVelocity = Vector3.Lerp(flowVelocity, rvoVelocity, blendWeight);
         finalVelocity = Vector3.ClampMagnitude(finalVelocity, movement.MoveSpeed);
@@ -132,12 +148,13 @@ public abstract class EnemyNavigationState : EnemyState
         return 1f;
     }
 
-    private Vector3 ComputeFlowVelocity(Vector3 targetPosition)
+    private Vector3 ComputeFlowVelocity(Vector3 targetPosition, bool targetUsesSharedFlow)
     {
         Vector3 position = enemy.transform.position;
         Vector3 direction;
 
         if (UseGlobalPlayerFlow &&
+            targetUsesSharedFlow &&
             FlowField.TryGetFlowDirection(position, out Vector3 globalFlow) &&
             globalFlow.sqrMagnitude > 0.0001f)
         {
@@ -162,6 +179,7 @@ public abstract class EnemyNavigationState : EnemyState
         // 包围点使用局部目标方向；若直达方向被静态障碍完全截断，
         // 回退到共享流场绕过障碍，下一帧再继续收敛到分配点。
         if (direction.sqrMagnitude < 0.0001f &&
+            targetUsesSharedFlow &&
             FlowField.TryGetFlowDirection(position, out Vector3 fallbackFlow))
         {
             direction = FlowField.ProjectDirectionByObstacle(
@@ -174,6 +192,14 @@ public abstract class EnemyNavigationState : EnemyState
         return direction.sqrMagnitude > 0.0001f
             ? direction.normalized * movement.MoveSpeed
             : Vector3.zero;
+    }
+
+    private static bool IsSharedFlowTarget(Transform target)
+    {
+        GameObject playerObject = RunTimeContext.Instance.PlayerObject;
+        return target != null &&
+               playerObject != null &&
+               target == playerObject.transform;
     }
 
     private Vector3 ComputeSeparation(List<Enemy> neighbors)

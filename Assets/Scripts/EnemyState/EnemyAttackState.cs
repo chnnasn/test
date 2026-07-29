@@ -29,7 +29,10 @@ public class EnemyAttackState : EnemyState
         movement.Stop();
         if (!enemy.IsAlive) return;
 
-        if (RunTimeContext.Instance.PlayerObject == null) return;
+        Transform batchTarget = EnemyManager.GetBatchTarget(enemy);
+        if (batchTarget == null) return;
+        if (enemy.Target != batchTarget)
+            enemy.SetTarget(batchTarget);
 
         if (enemyAnimator.IsBooming)
         {
