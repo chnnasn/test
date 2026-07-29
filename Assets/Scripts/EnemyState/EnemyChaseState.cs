@@ -1,559 +1,384 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class EnemyChaseState : EnemyState
+/// <summary>
+/// 追击与包围共享的移动管线：
+/// FlowField 决定主方向，Boids 只生成分离偏好，RVO 只在邻居可能碰撞时修正。
+/// </summary>
+public abstract class EnemyNavigationState : EnemyState
 {
-    // 邻居查询复用 buffer
-    private static readonly List<Enemy> _neighborBuffer = new List<Enemy>(32);
+    private static readonly List<Enemy> NeighborBuffer = new List<Enemy>(32);
 
-    // 目标更新间隔
-    private float _updateTimer;
+    private Vector3 _cachedAvoidanceOffset;
+    private bool _hasCachedAvoidance;
 
-    // WaveManager分批寻路时缓存的移动方向，移动仍每帧执行以避免卡顿。
-    private Vector3 _cachedMoveDirection;
-    private bool _hasCachedMoveDirection;
-
-    // 平滑方向插值：避免分离力突变导致的坐标/旋转抖动
-    private Vector3 _smoothedDirection;
-    private Vector3 _velocityRef; // SmoothDamp 内部速度缓存
-    private Vector3 _lastStableDirection;
-    private float _lastDistanceToTarget;
-    private float _orbitNoProgressTimer;
-    private const float STEER_SMOOTH_TIME = 0.15f; // 方向平滑时间（越小越灵敏）
-    private const float MOVE_DEAD_ZONE = 0.04f;
-    private const float ORBIT_NO_PROGRESS_LIMIT = 0.8f;
-
-    // 振荡检测：防止被夹住时反复前进/后退
-    private Vector3 _prevSteer;
-    private int _flipCount;
-    private float _flipWindowTimer;
-    private const float FLIP_WINDOW = 0.6f;   // 检测窗口
-    private const int MAX_FLIPS = 3;           // 窗口内允许的最大方向翻转次数
-    private const float STUCK_BIAS = 0.35f;    // 检测到振荡时偏向流场的比例
-
-    // 切向绕行：打破近玩家时 flow 与分离力径向对冲造成的前后振荡
-    private int _orbitSide;
-    private float _orbitLockTimer;
-    private float _lateralAssistTimer;
-    private const float ORBIT_LOCK_DURATION = 0.8f;
-    private const float LATERAL_ASSIST_DURATION = 0.7f;
-    private const float LATERAL_WEIGHT_NEAR = 0.75f;
-    private const float LATERAL_WEIGHT_STUCK = 1.1f;
-    private const float RADIAL_CONFLICT_DOT = -0.55f;
-
-    public EnemyChaseState(EnemyStateMachine machine) : base(machine) { }
+    protected EnemyNavigationState(EnemyStateMachine machine) : base(machine)
+    {
+    }
 
     public override void Enter()
     {
-        _updateTimer = 0f;
+        ClearNavigationCache();
+        movement.ResetNavigationVelocity();
         enemyAnimator.SetChaseState(0f);
-        _orbitSide = 0;
-        _orbitLockTimer = 0f;
-        _lateralAssistTimer = 0f;
-        // 初始化平滑方向为当前朝向，避免进入时突变
-        _smoothedDirection = enemy.transform.forward;
-        _lastStableDirection = enemy.transform.forward;
-        _cachedMoveDirection = Vector3.zero;
-        _hasCachedMoveDirection = false;
-        _lastDistanceToTarget = float.MaxValue;
-        _orbitNoProgressTimer = 0f;
         enemy.SetTarget(RunTimeContext.Instance.PlayerObject?.transform);
-    }
-
-    public void ResetState()
-    {
-        _updateTimer = 0f;
-        _cachedMoveDirection = Vector3.zero;
-        _hasCachedMoveDirection = false;
-        _smoothedDirection = Vector3.zero;
-        _velocityRef = Vector3.zero;
-        _lastStableDirection = Vector3.zero;
-        _lastDistanceToTarget = float.MaxValue;
-        _orbitNoProgressTimer = 0f;
-        _prevSteer = Vector3.zero;
-        _flipCount = 0;
-        _flipWindowTimer = 0f;
-        _orbitSide = 0;
-        _orbitLockTimer = 0f;
-        _lateralAssistTimer = 0f;
     }
 
     public override void Update()
     {
-        if (!enemy.IsAlive) return;
-
-        Transform target = RunTimeContext.Instance.PlayerObject?.transform;
-        if (target == null) return;
-
-        // 进入攻击范围 → 攻击。这里仍然每帧检测，避免分批寻路导致攻击反应变慢。
-        if (enemy.IsTargetInAttackRange())
+        if (!enemy.IsAlive || enemy.IsDying)
         {
-            ClearCachedMoveDirection();
             movement.Stop();
-            stateMachine.ChangeState(stateMachine.attackState);
             return;
         }
 
-        // 定期更新目标引用。
-        _updateTimer += Time.deltaTime;
-        if (_updateTimer >= 0.3f)
+        Transform player = RunTimeContext.Instance.PlayerObject?.transform;
+        if (player == null)
         {
-            _updateTimer = 0f;
-            enemy.SetTarget(target);
-        }
-
-        if (_orbitLockTimer > 0f)
-            _orbitLockTimer -= Time.deltaTime;
-        if (_lateralAssistTimer > 0f)
-            _lateralAssistTimer -= Time.deltaTime;
-
-        // 翻转窗口计时：超过窗口时间未再翻转，重置计数。
-        _flipWindowTimer += Time.deltaTime;
-        if (_flipWindowTimer > FLIP_WINDOW)
-        {
-            _flipCount = 0;
-            _flipWindowTimer = 0f;
-        }
-
-        // 移动仍然每帧执行。即使 NavigationUpdate 已设缓存方向，
-        // 也需要用实时流场做纠正：缓存方向可能在 LOD 跳帧期间过期，指向错误位置甚至墙壁。
-        // 近距离依赖缓存（含精确分离/避障），远距离靠实时流场拉回。
-        Vector3 moveDir = GetMovementDirection(target.position);
-        if (moveDir.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-            movement.Move(moveDir);
-        else
             movement.Stop();
+            return;
+        }
+
+        enemy.SetTarget(player);
+        if (TryChangeState(player))
+            return;
+
+        if (!TryGetNavigationTarget(player, out Vector3 targetPosition))
+        {
+            movement.Stop();
+            return;
+        }
+
+        Vector3 flowVelocity = ComputeFlowVelocity(targetPosition);
+        if (flowVelocity.sqrMagnitude < 0.01f)
+        {
+            movement.Stop();
+            return;
+        }
+
+        Vector3 finalVelocity = flowVelocity;
+        if (_hasCachedAvoidance)
+            finalVelocity = Vector3.ClampMagnitude(flowVelocity + _cachedAvoidanceOffset, movement.MoveSpeed);
+
+        float arrivalScale = GetArrivalSpeedScale(targetPosition);
+        movement.MoveVelocity(finalVelocity * arrivalScale);
     }
 
     public override void NavigationUpdate()
     {
         if (!enemy.IsAlive || enemy.IsDying)
         {
-            ClearCachedMoveDirection();
+            ClearNavigationCache();
             return;
         }
 
-        Transform target = RunTimeContext.Instance.PlayerObject?.transform;
-        if (target == null || enemy.IsTargetInAttackRange())
+        Transform player = RunTimeContext.Instance.PlayerObject?.transform;
+        if (player == null || !TryGetNavigationTarget(player, out Vector3 targetPosition))
         {
-            ClearCachedMoveDirection();
+            ClearNavigationCache();
             return;
         }
 
-        // 缓存当前位置：避免在 ComputeSteering / flip detection / flow fallback 中
-        // 多次调用 transform.position（每次都是 native P/Invoke，部分版本会触发小对象分配）。
-        Vector3 pos = enemy.transform.position;
-        Vector3 targetPos = target.position;
-
-        // 计算目标转向方向 = FlowField + 分离 + 避障。
-        Vector3 steer = ComputeSteering(targetPos);
-
-        // ── 振荡检测：如果 steer 在短时间内反复翻转 > MAX_FLIPS 次，
-        //     说明敌人被夹住了，此时强行偏向 FlowField 方向打破死循环 ──
-        if (steer != Vector3.zero && _prevSteer != Vector3.zero)
+        Vector3 flowVelocity = ComputeFlowVelocity(targetPosition);
+        if (flowVelocity.sqrMagnitude < 0.01f)
         {
-            float dot = Vector3.Dot(_prevSteer.normalized, steer.normalized);
-            if (dot < -0.6f) // 方向翻转 > 126°
-            {
-                _flipCount++;
-                _flipWindowTimer = 0f;
-
-                if (_flipCount >= MAX_FLIPS)
-                {
-                    // 检测到被夹住振荡，短时间强化切向侧滑，同时保留少量流场前进倾向。
-                    _lateralAssistTimer = LATERAL_ASSIST_DURATION;
-                    Vector3 flowDir = FlowField.GetFlowDirection(enemy.transform.position);
-                    if (flowDir == Vector3.zero)
-                    {
-                        Vector3 toTarget = target.position - enemy.transform.position;
-                        toTarget.y = 0;
-                        if (toTarget.sqrMagnitude > 0.0001f)
-                            flowDir = toTarget.normalized;
-                    }
-                    if (flowDir != Vector3.zero)
-                    {
-                        steer = Vector3.Lerp(steer, flowDir, STUCK_BIAS).normalized;
-                    }
-                    _flipCount = 0; // 重置计数，继续监控。
-                }
-            }
-        }
-        _prevSteer = steer;
-
-        // 平滑插值：将瞬时方向渐变到目标方向，消除分离力突变引起的抖动。
-        if (steer.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-        {
-            _smoothedDirection = Vector3.SmoothDamp(
-                _smoothedDirection,
-                steer,
-                ref _velocityRef,
-                STEER_SMOOTH_TIME);
-            _smoothedDirection.y = 0;
-        }
-        else
-        {
-            _smoothedDirection = Vector3.MoveTowards(_smoothedDirection, Vector3.zero, Time.deltaTime * 2f);
+            ClearNavigationCache();
+            return;
         }
 
-        if (_smoothedDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-        {
-            _lastStableDirection = _smoothedDirection.normalized;
-            Vector3 moveDirection = ConstrainByObstacle(_smoothedDirection);
-            if (moveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-            {
-                _cachedMoveDirection = moveDirection;
-                _hasCachedMoveDirection = true;
-                return;
-            }
-        }
+        float queryRadius = Mathf.Max(
+            movement.SeparationRadius,
+            movement.ColliderRadius * 2f + movement.MoveSpeed * Mathf.Min(movement.RvoTimeHorizon, 0.75f));
+        int neighborCount = SpatialGrid.QueryNeighbors(
+            enemy.transform.position,
+            queryRadius,
+            enemy,
+            NeighborBuffer);
 
-        ClearCachedMoveDirection();
+        Vector3 separation = ComputeSeparation(NeighborBuffer);
+        Vector3 preferredVelocity = Vector3.ClampMagnitude(
+            flowVelocity + separation * movement.MoveSpeed * movement.SeparationWeight,
+            movement.MoveSpeed);
+        Vector3 rvoVelocity = ComputeRvoVelocity(preferredVelocity, NeighborBuffer);
+
+        // Agent.md 指定公式：周围无敌人时完全服从流场，拥挤时 RVO 最多占 50%。
+        float crowdingRatio = neighborCount / (float)Mathf.Max(1, movement.MaxComfortableNeighborCount);
+        float blendWeight = Mathf.Clamp(crowdingRatio, 0f, movement.MaxRvoBlendWeight);
+        Vector3 finalVelocity = Vector3.Lerp(flowVelocity, rvoVelocity, blendWeight);
+        finalVelocity = Vector3.ClampMagnitude(finalVelocity, movement.MoveSpeed);
+
+        _cachedAvoidanceOffset = finalVelocity - flowVelocity;
+        _hasCachedAvoidance = _cachedAvoidanceOffset.sqrMagnitude > 0.0001f;
     }
 
     public override void Exit()
     {
-        ClearCachedMoveDirection();
-        movement.Stop();
+        ClearNavigationCache();
+        movement.ResetNavigationVelocity();
     }
 
-    /// <summary>
-    /// 轻量追击方向：仅查流场（O(1) 数组读取），不计算分离/避障等昂贵逻辑。
-    /// 用于 NavigationUpdate 跳帧期间保持敌人朝玩家持续靠近。
-    /// </summary>
-    private Vector3 GetLiveChaseDirection(Vector3 targetPos)
+    public void ResetState()
     {
-        Vector3 pos = enemy.transform.position;
-
-        // 1. 优先流场方向（只需一次数组访问）
-        if (FlowField.TryGetFlowDirection(pos, out Vector3 flowDir) && flowDir.sqrMagnitude > 0.0001f)
-        {
-            // 做基本贴墙投影（同样是流场查表，无 Physics 开销）
-            return ConstrainByObstacle(flowDir);
-        }
-
-        // 2. 流场不可用（未初始化或格子在界外）→ 直接追玩家
-        Vector3 toTarget = targetPos - pos;
-        toTarget.y = 0;
-        return toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : Vector3.zero;
+        ClearNavigationCache();
     }
 
-    /// <summary>
-    /// 每帧真实移动方向：有缓存方向时用实时流场纠正过期偏差；
-    /// 无缓存方向时退化到纯流场追击。
-    /// 这保证了 NavigationUpdate 的频率只影响分离/避障精度，不影响"朝玩家靠近"这个基本行为。
-    /// </summary>
-    private Vector3 GetMovementDirection(Vector3 targetPos)
+    protected abstract bool TryChangeState(Transform player);
+    protected abstract bool TryGetNavigationTarget(Transform player, out Vector3 targetPosition);
+
+    protected virtual bool UseGlobalPlayerFlow => false;
+
+    protected virtual float GetArrivalSpeedScale(Vector3 targetPosition)
     {
-        // 有缓存方向（NavigationUpdate 曾运行过）：混合实时流场纠正
-        if (_hasCachedMoveDirection && _cachedMoveDirection.sqrMagnitude > MOVE_DEAD_ZONE * MOVE_DEAD_ZONE)
-        {
-            Vector3 pos = enemy.transform.position;
-
-            // 取实时流场方向
-            if (FlowField.TryGetFlowDirection(pos, out Vector3 liveFlow) && liveFlow.sqrMagnitude > 0.0001f)
-            {
-                // 用平方距离计算 blend（避免 sqrt）：5m/25m 是 LOD 距离阈值
-                float distSqr = (pos.x - targetPos.x) * (pos.x - targetPos.x)
-                              + (pos.z - targetPos.z) * (pos.z - targetPos.z);
-                const float nearSqr = 5f * 5f;     // 5m
-                const float farSqr = 25f * 25f;    // 25m
-                // Mathf.InverseLerp 在两端饱和时用平方值是一致的单调映射
-                float t = distSqr <= nearSqr ? 0f
-                        : distSqr >= farSqr ? 1f
-                        : (distSqr - nearSqr) / (farSqr - nearSqr);
-                float flowBlend = 0.15f + (0.50f - 0.15f) * t;
-                return Vector3.Lerp(_cachedMoveDirection, liveFlow, flowBlend).normalized;
-            }
-
-            // 流场不可用 → 保留缓存方向（已是当前最好选择）
-            return _cachedMoveDirection;
-        }
-
-        // 无缓存方向 → 纯流场追击
-        return GetLiveChaseDirection(targetPos);
+        return 1f;
     }
 
-    private void ClearCachedMoveDirection()
+    private Vector3 ComputeFlowVelocity(Vector3 targetPosition)
     {
-        _cachedMoveDirection = Vector3.zero;
-        _hasCachedMoveDirection = false;
-    }
+        Vector3 position = enemy.transform.position;
+        Vector3 direction;
 
-    /// <summary>
-    /// 计算合成转向力：
-    /// FlowField(全局最优方向) + Separation(Boids分离) + ObstacleAvoidance(局部避障)
-    /// </summary>
-    private Vector3 ComputeSteering(Vector3 targetPos)
-    {
-        Vector3 pos = enemy.transform.position;
-        Vector3 totalForce = Vector3.zero;
-
-        // 计算到目标的距离（用于到达减速）。先用平方值做距离比较，
-        // 仅在最后真正需要线性距离做减速比例时再求一次 sqrt。
-        float dx = pos.x - targetPos.x;
-        float dz = pos.z - targetPos.z;
-        float distSqrToTarget = dx * dx + dz * dz;
-
-        // ── 1. FlowField 全局方向（替代 Seek）──
-        bool hasFlowDirection = FlowField.TryGetFlowDirection(pos, out Vector3 flowDir);
-        // 流场不可达时（界外 / 未初始化）：回退直追玩家，由后续 ConstrainByObstacle 处理贴墙
-        if (!hasFlowDirection)
+        if (UseGlobalPlayerFlow &&
+            FlowField.TryGetFlowDirection(position, out Vector3 globalFlow) &&
+            globalFlow.sqrMagnitude > 0.0001f)
         {
-            Vector3 toTarget = targetPos - pos;
-            toTarget.y = 0;
-            if (toTarget.sqrMagnitude > 0.0001f)
-                flowDir = toTarget.normalized;
-            else
-                return Vector3.zero;
-        }
-
-        // ── 2. Boids 分离力（空间分桶查询邻居）──
-        Vector3 separation = LimitBackwardSeparation(ComputeSeparation(pos), flowDir);
-
-        // ── 3. 流场格子查表避障 ──
-        Vector3 avoidance = ComputeObstacleAvoidance(pos, flowDir);
-
-        // ── 4. 切向绕行：近玩家拥挤或振荡时，沿玩家周围切线侧滑，打破前后对冲 ──
-        // 距离比较改用平方值（ComputeLateralSlide 接受 distSqr）
-        Vector3 lateral = ComputeLateralSlide(pos, targetPos, flowDir, separation, distSqrToTarget);
-
-        // ── 组合：FlowField 负责导航，分离/避障/切向绕行作为安全力优先保留 ──
-        float flowWeight = 1.0f;
-        float separationWeight = 1.2f;
-        float avoidanceWeight = 1.6f;
-        float lateralWeight = 0f;
-
-        float crowdDistance = enemy.AttackRange + movement.SeparationRadius;
-        float crowdDistanceSqr = crowdDistance * crowdDistance;
-        bool hasSeparation = separation.sqrMagnitude > 0.01f;
-        bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
-        bool lateralAssistActive = _lateralAssistTimer > 0f;
-
-        if (distSqrToTarget < crowdDistanceSqr)
-        {
-            // 反推线性距离用于 InverseLerp（只有这一处真正需要线性距离）
-            float distToTarget = Mathf.Sqrt(distSqrToTarget);
-            float t = Mathf.InverseLerp(enemy.AttackRange, crowdDistance, distToTarget);
-            flowWeight = Mathf.Lerp(0.25f, flowWeight, t);
-            separationWeight = Mathf.Lerp(2.0f, separationWeight, t);
-
-            if (hasSeparation)
-                lateralWeight = Mathf.Lerp(LATERAL_WEIGHT_NEAR, 0f, t);
-        }
-
-        if (radialConflict)
-            lateralWeight = Mathf.Max(lateralWeight, LATERAL_WEIGHT_NEAR);
-        if (lateralAssistActive)
-            lateralWeight = Mathf.Max(lateralWeight, LATERAL_WEIGHT_STUCK);
-
-        if (lateralWeight > 0f)
-        {
-            // 平方距离本身不直接做"进展"判断（需要真实变化量），但 small delta 的判断
-            // 在绝大多数情况下对线性/平方一致；这里用平方差判断进度（避免 sqrt）。
-            // 进度阈值 0.02m：平方化后约 0.0004（再保守一点用 0.001 抵消非线性误差）。
-            float distToTarget = Mathf.Sqrt(distSqrToTarget);
-            bool makingProgress = distToTarget * distToTarget < _lastDistanceToTarget * _lastDistanceToTarget - 0.001f;
-            _orbitNoProgressTimer = makingProgress ? 0f : _orbitNoProgressTimer + Time.deltaTime;
-            if (_orbitNoProgressTimer > ORBIT_NO_PROGRESS_LIMIT)
-                lateralWeight *= 0.35f;
-            _lastDistanceToTarget = distToTarget;
+            direction = globalFlow;
         }
         else
         {
-            // 仍需记录平方距离用于下一帧对比
-            _lastDistanceToTarget = Mathf.Sqrt(distSqrToTarget);
-            _orbitNoProgressTimer = 0f;
+            direction = targetPosition - position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.0001f)
+                return Vector3.zero;
+            direction.Normalize();
         }
 
-        totalForce = flowDir * flowWeight
-                   + separation * separationWeight
-                   + avoidance * avoidanceWeight
-                   + lateral * lateralWeight;
-        totalForce.y = 0;
+        // 静态障碍来自 Bake 后的 FlowField 网格，相当于 RVO 的静态障碍约束。
+        float checkDistance = Mathf.Max(
+            movement.ObstacleCheckDistance,
+            movement.ColliderRadius + movement.MoveSpeed * Time.deltaTime);
+        direction = FlowField.ProjectDirectionByObstacle(position, direction, checkDistance);
+        direction.y = 0f;
 
-        if (totalForce.sqrMagnitude < 0.0001f) return Vector3.zero;
-
-        Vector3 result = totalForce.normalized;
-
-        // 只有没有明显安全力时才把方向拉回流场，避免分离/避障被 flow 抵消
-        bool hasSafetyForce = separation.sqrMagnitude > 0.01f
-                           || avoidance.sqrMagnitude > 0.01f
-                           || lateral.sqrMagnitude > 0.01f;
-        if (!hasSafetyForce)
+        // 包围点使用局部目标方向；若直达方向被静态障碍完全截断，
+        // 回退到共享流场绕过障碍，下一帧再继续收敛到分配点。
+        if (direction.sqrMagnitude < 0.0001f &&
+            FlowField.TryGetFlowDirection(position, out Vector3 fallbackFlow))
         {
-            float finalAlignment = Vector3.Dot(result, flowDir);
-            if (finalAlignment < 0.2f)
-            {
-                result = Vector3.Lerp(result, flowDir, 0.5f).normalized;
-            }
+            direction = FlowField.ProjectDirectionByObstacle(
+                position,
+                fallbackFlow,
+                checkDistance);
+            direction.y = 0f;
         }
 
-        // ── 到达减速：接近目标时降低速度，避免冲过头导致来回振荡 ──
-        float slowDownDist = enemy.AttackRange * 2f; // 2倍攻击范围开始减速
-        float slowDownDistSqr = slowDownDist * slowDownDist;
-        if (distSqrToTarget < slowDownDistSqr)
-        {
-            float distToTarget = Mathf.Sqrt(distSqrToTarget);
-            float t = Mathf.Max(distToTarget / slowDownDist, 0.15f); // 最低保留15%速度
-            result *= t;
-        }
-
-        return result;
+        return direction.sqrMagnitude > 0.0001f
+            ? direction.normalized * movement.MoveSpeed
+            : Vector3.zero;
     }
 
-    private Vector3 LimitBackwardSeparation(Vector3 separation, Vector3 flowDir)
+    private Vector3 ComputeSeparation(List<Enemy> neighbors)
     {
-        if (separation.sqrMagnitude < 0.0001f || flowDir.sqrMagnitude < 0.0001f)
-            return separation;
+        Vector3 position = enemy.transform.position;
+        Vector3 separation = Vector3.zero;
+        float radius = movement.SeparationRadius;
+        float radiusSqr = radius * radius;
 
-        Vector3 flow = flowDir.normalized;
-        float forwardAmount = Vector3.Dot(separation, flow);
-        if (forwardAmount >= 0f) return separation;
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            Enemy other = neighbors[i];
+            if (other == null) continue;
 
-        Vector3 lateral = separation - flow * forwardAmount;
-        Vector3 backward = flow * Mathf.Max(forwardAmount, -0.35f);
-        return lateral + backward;
+            Vector3 away = position - other.transform.position;
+            away.y = 0f;
+            float distanceSqr = away.sqrMagnitude;
+            if (distanceSqr >= radiusSqr)
+                continue;
+
+            if (distanceSqr < 0.0001f)
+            {
+                float side = enemy.GetInstanceID() < other.GetInstanceID() ? -1f : 1f;
+                separation += Vector3.right * side;
+                continue;
+            }
+
+            float distance = Mathf.Sqrt(distanceSqr);
+            float strength = 1f - distance / radius;
+            separation += away / distance * strength;
+        }
+
+        return Vector3.ClampMagnitude(separation, 1f);
     }
-
 
     /// <summary>
-    /// 贴墙滑动投影：用流场障碍格代替 Physics.SphereCast。
-    /// 检测距离至少覆盖一个格子（cellSize），确保能发现紧邻格子的墙壁。
+    /// 轻量 reciprocal velocity obstacle 求解。
+    /// 双方各承担一半修正量；只修正时间视界内会进入合并半径的邻居。
     /// </summary>
-    private Vector3 ConstrainByObstacle(Vector3 moveDirection)
+    private Vector3 ComputeRvoVelocity(Vector3 preferredVelocity, List<Enemy> neighbors)
     {
-        float magnitude = moveDirection.magnitude;
-        if (magnitude < 0.0001f) return moveDirection;
+        Vector3 position = enemy.transform.position;
+        Vector3 result = preferredVelocity;
+        float horizon = Mathf.Max(0.1f, movement.RvoTimeHorizon);
 
-        // 确保检测距离至少覆盖一个格子 + collider，否则敌人会走进紧邻的墙格才触发投影
-        float checkDistance = movement.MoveSpeed * Time.deltaTime + movement.ColliderRadius;
-        if (FlowField.IsInitialized)
-            checkDistance = Mathf.Max(checkDistance, FlowField.CellSize + movement.ColliderRadius);
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            Enemy other = neighbors[i];
+            if (other == null || other.Movement == null) continue;
 
+            Vector3 relativePosition = other.transform.position - position;
+            relativePosition.y = 0f;
+            float distance = relativePosition.magnitude;
+            if (distance < 0.0001f)
+            {
+                float side = enemy.GetInstanceID() < other.GetInstanceID() ? -1f : 1f;
+                result += Vector3.right * side * movement.MoveSpeed * 0.5f;
+                continue;
+            }
+
+            Vector3 relativeVelocity = preferredVelocity - other.Movement.Velocity;
+            relativeVelocity.y = 0f;
+            float relativeSpeedSqr = relativeVelocity.sqrMagnitude;
+
+            float closestTime = 0f;
+            if (relativeSpeedSqr > 0.0001f)
+                closestTime = Mathf.Clamp(
+                    Vector3.Dot(relativePosition, relativeVelocity) / relativeSpeedSqr,
+                    0f,
+                    horizon);
+
+            Vector3 closestOffset = relativePosition - relativeVelocity * closestTime;
+            float closestDistance = closestOffset.magnitude;
+            float combinedRadius = movement.ColliderRadius
+                                 + other.Movement.ColliderRadius
+                                 + movement.RvoAgentPadding;
+
+            if (closestDistance >= combinedRadius)
+                continue;
+
+            Vector3 correctionDirection = closestDistance > 0.001f
+                ? -closestOffset / closestDistance
+                : -relativePosition / distance;
+            float penetration = 1f - Mathf.Clamp01(closestDistance / combinedRadius);
+
+            // Reciprocal：当前 agent 只承担一半速度修正。
+            result += correctionDirection * (movement.MoveSpeed * penetration * 0.5f);
+        }
+
+        result = Vector3.ClampMagnitude(result, movement.MoveSpeed);
         Vector3 projected = FlowField.ProjectDirectionByObstacle(
-            enemy.transform.position, moveDirection, checkDistance);
-
-        return projected;
+            position,
+            result,
+            Mathf.Max(movement.ObstacleCheckDistance, movement.ColliderRadius));
+        return projected.sqrMagnitude > 0.0001f
+            ? projected.normalized * result.magnitude
+            : Vector3.zero;
     }
 
-    /// <summary>
-    /// 切向侧滑：在玩家附近拥挤或检测到振荡时，沿玩家周围切线方向绕开阻挡。
-    /// </summary>
-    /// <param name="distSqrToTarget">到玩家距离的平方，用于 nearTarget 判定（避免调用 sqrt）</param>
-    private Vector3 ComputeLateralSlide(Vector3 pos, Vector3 targetPos, Vector3 flowDir, Vector3 separation, float distSqrToTarget)
+    private void ClearNavigationCache()
     {
-        bool hasSeparation = separation.sqrMagnitude > 0.01f;
-        float crowdDistanceSqr = (enemy.AttackRange + movement.SeparationRadius)
-                                 * (enemy.AttackRange + movement.SeparationRadius);
-        bool nearTarget = distSqrToTarget < crowdDistanceSqr;
-        bool radialConflict = hasSeparation && Vector3.Dot(flowDir.normalized, separation.normalized) < RADIAL_CONFLICT_DOT;
-        bool lateralAssistActive = _lateralAssistTimer > 0f;
+        _cachedAvoidanceOffset = Vector3.zero;
+        _hasCachedAvoidance = false;
+    }
+}
 
-        if ((!nearTarget || !hasSeparation) && !radialConflict && !lateralAssistActive)
-            return Vector3.zero;
-
-        Vector3 toTarget = targetPos - pos;
-        toTarget.y = 0f;
-        if (toTarget.sqrMagnitude < 0.0001f) return Vector3.zero;
-
-        Vector3 radialDir = toTarget.normalized;
-        Vector3 rightTangent = Vector3.Cross(Vector3.up, radialDir).normalized;
-        if (rightTangent.sqrMagnitude < 0.001f) return Vector3.zero;
-
-        if (_orbitSide == 0 || _orbitLockTimer <= 0f)
-        {
-            _orbitSide = ChooseOrbitSide(pos, rightTangent, separation);
-            _orbitLockTimer = ORBIT_LOCK_DURATION;
-        }
-
-        return rightTangent * _orbitSide;
+public class EnemyChaseState : EnemyNavigationState
+{
+    public EnemyChaseState(EnemyStateMachine machine) : base(machine)
+    {
     }
 
-    /// <summary>
-    /// 选择稳定绕行方向：用流场格子查表检测侧向是否被阻挡，替代原来的 SphereCast。
-    /// </summary>
-    private int ChooseOrbitSide(Vector3 pos, Vector3 rightTangent, Vector3 separation)
+    protected override bool UseGlobalPlayerFlow => true;
+
+    protected override bool TryChangeState(Transform player)
     {
-        float checkDist = Mathf.Max(movement.ObstacleCheckDistance, movement.SeparationRadius * 0.6f);
-
-        if (checkDist > 0f)
+        float distanceSqr = HorizontalDistanceSqr(enemy.transform.position, player.position);
+        float attackRange = enemy.AttackRange;
+        if (distanceSqr <= attackRange * attackRange)
         {
-            bool rightBlocked = FlowField.IsDirectionBlocked(pos, rightTangent, checkDist);
-            bool leftBlocked = FlowField.IsDirectionBlocked(pos, -rightTangent, checkDist);
-
-            if (rightBlocked && !leftBlocked) return -1;
-            if (leftBlocked && !rightBlocked) return 1;
+            movement.Stop();
+            stateMachine.ChangeState(stateMachine.attackState);
+            return true;
         }
 
-        if (separation.sqrMagnitude > 0.01f)
+        float surroundRadius = movement.SurroundRadius;
+        if (distanceSqr <= surroundRadius * surroundRadius)
         {
-            float sepTangent = Vector3.Dot(separation.normalized, rightTangent);
-            if (Mathf.Abs(sepTangent) > 0.2f)
-                return sepTangent >= 0f ? 1 : -1;
+            movement.Stop();
+            stateMachine.ChangeState(stateMachine.surroundState);
+            return true;
         }
 
-        return (enemy.GetInstanceID() & 1) == 0 ? 1 : -1;
+        return false;
     }
 
-    /// <summary>
-    /// Boids 分离：通过 SpatialGrid O(1) 查询周围敌人，施加排斥力
-    /// </summary>
-    private Vector3 ComputeSeparation(Vector3 pos)
+    protected override bool TryGetNavigationTarget(Transform player, out Vector3 targetPosition)
     {
-        Vector3 force = Vector3.zero;
-        int count = SpatialGrid.QueryNeighbors(pos, movement.SeparationRadius, enemy, _neighborBuffer);
-        if (count == 0) return force;
+        targetPosition = player.position;
+        return true;
+    }
 
-        for (int i = 0; i < count; i++)
+    internal static float HorizontalDistanceSqr(Vector3 a, Vector3 b)
+    {
+        float dx = a.x - b.x;
+        float dz = a.z - b.z;
+        return dx * dx + dz * dz;
+    }
+}
+
+public class EnemySurroundState : EnemyNavigationState
+{
+    public EnemySurroundState(EnemyStateMachine machine) : base(machine)
+    {
+    }
+
+    protected override bool TryChangeState(Transform player)
+    {
+        float distanceSqr = EnemyChaseState.HorizontalDistanceSqr(
+            enemy.transform.position,
+            player.position);
+        float attackRange = enemy.AttackRange;
+        if (distanceSqr <= attackRange * attackRange)
         {
-            Enemy other = _neighborBuffer[i];
-            Vector3 away = pos - other.transform.position;
-            float dist = away.magnitude;
-            if (dist < 0.001f) continue;
+            movement.Stop();
+            stateMachine.ChangeState(stateMachine.attackState);
+            return true;
+        }
 
-            Vector3 awayDir = away / dist;
+        float surroundRadius = movement.SurroundRadius;
+        if (distanceSqr > surroundRadius * surroundRadius)
+        {
+            movement.Stop();
+            stateMachine.ChangeState(stateMachine.chaseState);
+            return true;
+        }
 
-            // 硬推开：近距离直接排斥（使用平滑衰减替代线性，减少弹力振荡）
-            if (dist < movement.HardPushDistance)
+        if (EnemyManager.TryGetSurroundPoint(enemy, player.position, out Vector3 point))
+        {
+            float pointDistanceSqr = EnemyChaseState.HorizontalDistanceSqr(
+                enemy.transform.position,
+                point);
+            float reachedDistance = movement.SurroundPointReachedDistance;
+            if (pointDistanceSqr <= reachedDistance * reachedDistance)
             {
-                float t = 1f - (dist / movement.HardPushDistance);
-                t = t * t; // 平方衰减，使力在远处更快减小，减少弹簧效应
-                force += awayDir * movement.HardPushForce * t;
-            }
-            else
-            {
-                // 速度分离：反比于距离
-                force += awayDir * (movement.SeparationForce / dist);
+                movement.Stop();
+                stateMachine.ChangeState(stateMachine.attackState);
+                return true;
             }
         }
 
-        // 限制分离力最大幅值，防止被大量邻居包围时分离力淹没法场方向
-        const float maxSepForce = 3f;
-        if (force.sqrMagnitude > maxSepForce * maxSepForce)
-        {
-            force = force.normalized * maxSepForce;
-        }
-
-        return force;
+        return false;
     }
 
-    /// <summary>
-    /// 流场格子查表避障：通过 FlowField 检查前方/左前/右前是否有阻挡格，遇障碍往远离方向偏转。
-    /// 替代原来的 Physics.SphereCast 三向射线检测。
-    /// </summary>
-    private Vector3 ComputeObstacleAvoidance(Vector3 pos, Vector3 moveDirection)
+    protected override bool TryGetNavigationTarget(Transform player, out Vector3 targetPosition)
     {
-        float checkDist = movement.ObstacleCheckDistance;
-        if (checkDist <= 0) return Vector3.zero;
+        return EnemyManager.TryGetSurroundPoint(enemy, player.position, out targetPosition);
+    }
 
-        Vector3 forward = moveDirection.normalized;
-        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-        if (right.sqrMagnitude < 0.001f) return Vector3.zero;
-
-        float bias = FlowField.GetObstacleAvoidanceBias(pos, forward, checkDist);
-        if (Mathf.Abs(bias) < 0.001f) return Vector3.zero;
-
-        // bias > 0 → 右侧有障碍，偏右；bias < 0 → 左侧有障碍，偏左
-        return (right * bias).normalized * movement.ObstacleAvoidForce;
+    protected override float GetArrivalSpeedScale(Vector3 targetPosition)
+    {
+        float distance = Mathf.Sqrt(EnemyChaseState.HorizontalDistanceSqr(
+            enemy.transform.position,
+            targetPosition));
+        float slowRadius = Mathf.Max(movement.SurroundPointReachedDistance * 3f, 0.5f);
+        return Mathf.Clamp(distance / slowRadius, 0.2f, 1f);
     }
 }

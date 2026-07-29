@@ -145,7 +145,6 @@ GameObject:
   - component: {fileID: 2463948159009774806}
   - component: {fileID: 3498124652387619041}
   - component: {fileID: 3498124652387619042}
-  - component: {fileID: 8163849254627183921}
   m_Layer: 3
   m_Name: Enemy_Zombie_Stand
   m_TagString: Untagged
@@ -255,32 +254,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9487a240b86a8ee438a57dc59711e708, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!143 &8163849254627183921
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1159361799200795126}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 1.5
-  m_Radius: 0.3
-  m_SlopeLimit: 45
-  m_StepOffset: 0.2
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.8, z: 0}
 --- !u!1 &1464659764991309516
 GameObject:
   m_ObjectHideFlags: 0

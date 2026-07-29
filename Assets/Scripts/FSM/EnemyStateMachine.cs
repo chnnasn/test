@@ -5,6 +5,7 @@ public class EnemyStateMachine : StateMachine
     public Enemy enemy { get; }
     public EnemyBirthState BirthState { get; }
     public EnemyChaseState chaseState { get; }
+    public EnemySurroundState surroundState { get; }
     public EnemyAttackState attackState { get; }
     public EnemyDeadState deadState { get; }
 
@@ -13,6 +14,7 @@ public class EnemyStateMachine : StateMachine
         enemy = enemyController;
         BirthState = new EnemyBirthState(this);
         chaseState = new EnemyChaseState(this);
+        surroundState = new EnemySurroundState(this);
         attackState = new EnemyAttackState(this);
         deadState = new EnemyDeadState(this);
     }
@@ -20,6 +22,7 @@ public class EnemyStateMachine : StateMachine
     public void ResetStates()
     {
         chaseState.ResetState();
+        surroundState.ResetState();
         deadState.ResetState();
     }
 

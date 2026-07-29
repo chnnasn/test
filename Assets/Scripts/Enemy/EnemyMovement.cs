@@ -1,44 +1,62 @@
 using UnityEngine;
 
-[RequireComponent(typeof(CharacterController))]
 public class EnemyMovement : MonoBehaviour
 {
     [Header("移动属性")]
     [SerializeField] private float _moveSpeed = 3.5f;
-    [SerializeField] private float _rotationSpeed = 10f;
+    [SerializeField, Min(1f)] private float _maxTurnSpeed = 180f;
+    [SerializeField, Min(0f)] private float _moveDirectionDeadZone = 0.1f;
+
+    [Header("群体状态")]
+    [SerializeField, Min(0.1f)] private float _surroundRadius = 5f;
+    [SerializeField, Min(0.05f)] private float _surroundPointReachedDistance = 0.5f;
 
     [Header("分离力（Boids）")]
-    [SerializeField] private float _separationRadius = 2.5f;
-    [SerializeField] private float _separationForce = 4f;
-    [SerializeField] private float _hardPushDistance = 1.0f;
-    [SerializeField] private float _hardPushForce = 6f;
+    [SerializeField, Min(0.1f)] private float _separationRadius = 1.5f;
+    [SerializeField, Range(0f, 1f)] private float _separationWeight = 0.3f;
 
-    [Header("简单避障")]
+    [Header("RVO 局部避障")]
+    [SerializeField, Range(0f, 0.5f)] private float _maxRvoBlendWeight = 0.5f;
+    [SerializeField, Min(1)] private int _maxComfortableNeighborCount = 5;
+    [SerializeField, Min(0.1f)] private float _rvoTimeHorizon = 1.5f;
+    [SerializeField, Min(0f)] private float _rvoAgentPadding = 0.05f;
     [SerializeField] private float _obstacleCheckDistance = 2f;
-    [SerializeField] private float _obstacleAvoidForce = 5f;
     [SerializeField] private LayerMask _obstacleLayerMask;
 
-    private CharacterController _characterController;
+    [Header("逻辑代理尺寸")]
+    [SerializeField, Min(0.05f)] private float _agentRadius = 0.3f;
+    [SerializeField, Min(0.1f)] private float _agentHeight = 1.7f;
+    [SerializeField] private Vector3 _agentCenter = new Vector3(0f, 0.85f, 0f);
+
     private Enemy _enemy;
-    private bool _missingCharacterControllerLogged;
+    private Vector3 _lastMoveDirection;
 
     public Vector3 Velocity { get; private set; }
     public float MoveSpeed => _enemy != null ? _enemy.Buff.GetMoveSpeed(_moveSpeed) : _moveSpeed;
+    public float SurroundRadius => Mathf.Max(_surroundRadius, _enemy != null ? _enemy.AttackRange : 0f);
+    public float SurroundPointReachedDistance => _surroundPointReachedDistance;
     public float SeparationRadius => _separationRadius;
-    public float SeparationForce => _separationForce;
-    public float HardPushDistance => _hardPushDistance;
-    public float HardPushForce => _hardPushForce;
+    public float SeparationWeight => _separationWeight;
+    public float MaxRvoBlendWeight => _maxRvoBlendWeight;
+    public int MaxComfortableNeighborCount => _maxComfortableNeighborCount;
+    public float RvoTimeHorizon => _rvoTimeHorizon;
+    public float RvoAgentPadding => _rvoAgentPadding;
     public float ObstacleCheckDistance => _obstacleCheckDistance;
-    public float ObstacleAvoidForce => _obstacleAvoidForce;
-    public float ColliderRadius => _characterController != null ? _characterController.radius : 0.3f;
-    public Vector3 ColliderCenter => _characterController != null ? _characterController.center : Vector3.up * 0.4f;
-    public float ColliderHeight => _characterController != null ? _characterController.height : 1.7f;
+    public float ColliderRadius => _agentRadius;
+    public Vector3 ColliderCenter => _agentCenter;
+    public float ColliderHeight => _agentHeight;
     public LayerMask ObstacleLayerMask => _obstacleLayerMask;
 
     private void Awake()
     {
-        _characterController = GetComponent<CharacterController>();
         _enemy = GetComponent<Enemy>();
+        _lastMoveDirection = transform.forward;
+
+        // 兼容尚未清理的旧预制体：移动完全由 Transform 驱动，
+        // CharacterController 永久禁用，避免进入物理场景更新。
+        CharacterController legacyController = GetComponent<CharacterController>();
+        if (legacyController != null)
+            legacyController.enabled = false;
     }
 
     public void Move(Vector3 direction, float speedMultiplier = 1f)
@@ -53,27 +71,41 @@ public class EnemyMovement : MonoBehaviour
 
         float magnitude = Mathf.Clamp01(inputMagnitude) * Mathf.Max(0f, speedMultiplier);
         Vector3 velocity = direction / inputMagnitude * MoveSpeed * magnitude;
+        MoveVelocity(velocity);
+    }
 
-        if (_characterController != null && _characterController.enabled)
+    public void MoveVelocity(Vector3 velocity)
+    {
+        velocity.y = 0f;
+        float speed = Mathf.Min(velocity.magnitude, MoveSpeed);
+        if (speed < _moveDirectionDeadZone)
         {
-            Vector3 motion = velocity;
-            motion.y = _characterController.isGrounded ? -1f : -4f;
-            _characterController.Move(motion * Time.deltaTime);
-            ClampYToZero();
-        }
-        else
-        {
-            if (!_missingCharacterControllerLogged)
-            {
-                Debug.LogError($"[EnemyMovement] {name} 缺少 CharacterController，已停止 Transform 直移以避免穿墙", this);
-                _missingCharacterControllerLogged = true;
-            }
-
             Stop();
             return;
         }
 
+        Vector3 desiredDirection = velocity / velocity.magnitude;
+        Vector3 currentDirection = _lastMoveDirection;
+        currentDirection.y = 0f;
+        if (currentDirection.sqrMagnitude < 0.0001f)
+            currentDirection = transform.forward;
+
+        float maxRadiansDelta = _maxTurnSpeed * Mathf.Deg2Rad * Time.deltaTime;
+        Vector3 limitedDirection = Vector3.RotateTowards(
+            currentDirection.normalized,
+            desiredDirection,
+            maxRadiansDelta,
+            0f);
+        limitedDirection.y = 0f;
+        limitedDirection.Normalize();
+        velocity = limitedDirection * speed;
+
+        Vector3 position = transform.position + velocity * Time.deltaTime;
+        position.y = 0f;
+        transform.position = position;
+
         Velocity = velocity;
+        _lastMoveDirection = limitedDirection;
         FaceDirection(velocity);
     }
 
@@ -83,7 +115,7 @@ public class EnemyMovement : MonoBehaviour
         if (direction.sqrMagnitude < 0.0001f) return;
 
         Quaternion targetRot = Quaternion.LookRotation(direction.normalized);
-        float maxDegreesDelta = _rotationSpeed * 60f * Time.deltaTime;
+        float maxDegreesDelta = _maxTurnSpeed * Time.deltaTime;
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, maxDegreesDelta);
     }
 
@@ -95,9 +127,27 @@ public class EnemyMovement : MonoBehaviour
         FaceDirection(dir);
     }
 
+    public void FaceTargetImmediate(Transform target)
+    {
+        if (target == null) return;
+
+        Vector3 direction = target.position - transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f) return;
+
+        transform.rotation = Quaternion.LookRotation(direction.normalized);
+        _lastMoveDirection = transform.forward;
+    }
+
     public void Stop()
     {
         Velocity = Vector3.zero;
+    }
+
+    public void ResetNavigationVelocity()
+    {
+        Velocity = Vector3.zero;
+        _lastMoveDirection = transform.forward;
     }
 
     public void SnapToGround()
@@ -123,7 +173,7 @@ public class EnemyMovement : MonoBehaviour
 
     public void DisableCollision()
     {
-        Collider[] colliders = GetComponents<Collider>();
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
         for (int i = 0; i < colliders.Length; i++)
         {
             colliders[i].enabled = false;
@@ -132,9 +182,11 @@ public class EnemyMovement : MonoBehaviour
 
     public void EnableCollision()
     {
-        Collider[] colliders = GetComponents<Collider>();
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
         for (int i = 0; i < colliders.Length; i++)
         {
+            // 旧资源上的 CharacterController 只用于兼容迁移，绝不重新启用。
+            if (colliders[i] is CharacterController) continue;
             colliders[i].enabled = true;
         }
     }

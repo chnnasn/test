@@ -8,6 +8,9 @@ public class EnemyManager : MonoBehaviour
     [SerializeField] private int _enemyPoolMaxSize = 100;
     [SerializeField, Min(1)] private int _navigationBatchCount = 5;
 
+    [Header("包围点分配")]
+    [SerializeField, Min(0.25f)] private float _surroundPointRadius = 2f;
+
     [Header("AI LOD 距离分级")]
     [SerializeField] private float _lodNearDistance = 15f;
     [SerializeField] private float _lodMidDistance = 30f;
@@ -28,17 +31,23 @@ public class EnemyManager : MonoBehaviour
     private readonly HashSet<Enemy> _currentWaveEnemies = new HashSet<Enemy>();
     private readonly Dictionary<Enemy, Coroutine> _pendingReleaseCoroutines = new Dictionary<Enemy, Coroutine>();
     private readonly List<Enemy> _releaseAllBuffer = new List<Enemy>(256);
+    private readonly List<Enemy> _surroundCandidates = new List<Enemy>(256);
+    private readonly Dictionary<Enemy, int> _surroundAssignments = new Dictionary<Enemy, int>(256);
 
     private int _navigationBatchCursor;
     private int _navigationFrameCount;
+    private int _surroundAssignmentFrame = -1;
+    private int _surroundPopulationHash;
     private Action _currentWaveClearedCallback;
     private bool _currentWaveClearedNotified;
     private int _currentWaveNumber = 1;
 
     public bool HasCurrentWaveEnemies => _currentWaveEnemies.Count > 0;
+    private static EnemyManager _instance;
 
     private void OnEnable()
     {
+        _instance = this;
         EventManager.Instance.BeforeDemoRestart += OnBeforeDemoRestart;
     }
 
@@ -50,6 +59,9 @@ public class EnemyManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (_instance == this)
+            _instance = null;
+
         if (EventManager.TryGetExistingInstance(out EventManager eventManager))
             eventManager.BeforeDemoRestart -= OnBeforeDemoRestart;
 
@@ -164,6 +176,100 @@ public class EnemyManager : MonoBehaviour
         _navigationBatchCursor = 0;
         _navigationFrameCount = 0;
         _currentWaveNumber = 1;
+        _surroundAssignments.Clear();
+        _surroundCandidates.Clear();
+        _surroundAssignmentFrame = -1;
+        _surroundPopulationHash = 0;
+    }
+
+    /// <summary>
+    /// 返回当前玩家位置对应的动态包围点。敌人数量或成员变化时按最近空闲点贪心重分配。
+    /// </summary>
+    public static bool TryGetSurroundPoint(Enemy enemy, Vector3 playerPosition, out Vector3 point)
+    {
+        point = playerPosition;
+        return _instance != null &&
+               _instance.TryGetAssignedSurroundPoint(enemy, playerPosition, out point);
+    }
+
+    private bool TryGetAssignedSurroundPoint(Enemy enemy, Vector3 playerPosition, out Vector3 point)
+    {
+        point = playerPosition;
+        if (enemy == null) return false;
+
+        EnsureSurroundAssignments(playerPosition);
+        if (!_surroundAssignments.TryGetValue(enemy, out int slotIndex))
+            return false;
+
+        point = GetSurroundPoint(enemy, playerPosition, slotIndex, _surroundCandidates.Count);
+        return true;
+    }
+
+    private void EnsureSurroundAssignments(Vector3 playerPosition)
+    {
+        if (_surroundAssignmentFrame == Time.frameCount)
+            return;
+        _surroundAssignmentFrame = Time.frameCount;
+
+        _surroundCandidates.Clear();
+        int populationHash = 17;
+        for (int i = 0; i < _activeEnemies.Count; i++)
+        {
+            Enemy candidate = _activeEnemies[i];
+            if (candidate == null || !candidate.isActiveAndEnabled ||
+                !candidate.IsAlive || candidate.IsDying)
+                continue;
+
+            _surroundCandidates.Add(candidate);
+            populationHash = populationHash * 31 + candidate.GetInstanceID();
+        }
+
+        int count = _surroundCandidates.Count;
+        if (count == _surroundAssignments.Count && populationHash == _surroundPopulationHash)
+            return;
+
+        _surroundPopulationHash = populationHash;
+        _surroundAssignments.Clear();
+        if (count == 0) return;
+
+        bool[] occupied = new bool[count];
+        for (int i = 0; i < count; i++)
+        {
+            Enemy candidate = _surroundCandidates[i];
+            int bestSlot = -1;
+            float bestDistanceSqr = float.MaxValue;
+
+            for (int slot = 0; slot < count; slot++)
+            {
+                if (occupied[slot]) continue;
+
+                Vector3 slotPoint = GetSurroundPoint(candidate, playerPosition, slot, count);
+                float distanceSqr = EnemyChaseState.HorizontalDistanceSqr(
+                    candidate.transform.position,
+                    slotPoint);
+                if (distanceSqr >= bestDistanceSqr) continue;
+
+                bestDistanceSqr = distanceSqr;
+                bestSlot = slot;
+            }
+
+            if (bestSlot < 0) continue;
+            occupied[bestSlot] = true;
+            _surroundAssignments[candidate] = bestSlot;
+        }
+    }
+
+    private Vector3 GetSurroundPoint(Enemy enemy, Vector3 playerPosition, int slotIndex, int count)
+    {
+        if (count <= 0) return playerPosition;
+
+        float reachedDistance = enemy.Movement != null
+            ? enemy.Movement.SurroundPointReachedDistance
+            : 0.5f;
+        float attackSafeRadius = Mathf.Max(0.25f, enemy.AttackRange - reachedDistance * 0.5f);
+        float radius = Mathf.Min(_surroundPointRadius, attackSafeRadius);
+        float angle = Mathf.PI * 2f * slotIndex / count;
+        return playerPosition + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
     }
 
     public void ScheduleEnemyRelease(Enemy enemy, float delay)
@@ -264,18 +370,6 @@ public class EnemyManager : MonoBehaviour
 
     private void TickActiveEnemies()
     {
-        // 缓存单例与 player transform：每帧每敌人避免两次 native 属性调用
-        GameObject playerObject = RunTimeContext.Instance.PlayerObject;
-        Transform playerTransform = playerObject != null ? playerObject.transform : null;
-        Vector3 playerPos = playerTransform != null ? playerTransform.position : Vector3.zero;
-        bool playerExists = playerTransform != null;
-        int frame = _navigationFrameCount;
-
-        // 缓存 LOD 阈值平方
-        float lodNearSqr = _lodNearDistance * _lodNearDistance;
-        float lodMidSqr = _lodMidDistance * _lodMidDistance;
-        float lodFarSqr = _lodFarDistance * _lodFarDistance;
-
         for (int i = _activeEnemies.Count - 1; i >= 0; i--)
         {
             Enemy enemy = _activeEnemies[i];
@@ -288,29 +382,8 @@ public class EnemyManager : MonoBehaviour
             // 死亡中：跳过状态机（死亡动画由 Animator 自身播放）
             if (enemy.IsDying) continue;
 
-            // ── 距离 LOD：远距离敌人状态机更新降频（适配 200 敌人）──
-            if (playerExists)
-            {
-                Vector3 ePos = enemy.transform.position;
-                float distSqr = (ePos.x - playerPos.x) * (ePos.x - playerPos.x)
-                              + (ePos.z - playerPos.z) * (ePos.z - playerPos.z);
-                if (distSqr > lodFarSqr)
-                {
-                    // >50m：每 8 帧一次
-                    if ((frame & 7) != 0) continue;
-                }
-                else if (distSqr > lodMidSqr)
-                {
-                    // 30-50m：每 4 帧一次
-                    if ((frame & 3) != 0) continue;
-                }
-                else if (distSqr > lodNearSqr)
-                {
-                    // 15-30m：每 2 帧一次
-                    if ((frame & 1) != 0) continue;
-                }
-            }
-
+            // 状态切换和 Transform 位移必须逐帧执行；
+            // 昂贵的邻居/RVO 查询仍由 TickNavigationBatch 分批。
             enemy.TickState();
         }
     }
