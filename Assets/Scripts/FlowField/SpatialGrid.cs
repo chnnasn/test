@@ -74,6 +74,30 @@ public static class SpatialGrid
     /// </summary>
     public static int QueryNeighbors(Vector3 center, float radius, Enemy self, List<Enemy> outList)
     {
+        return QueryNeighbors(center, radius, self, outList, false, 0);
+    }
+
+    /// <summary>
+    /// 查询同一逻辑批次内的邻居。用于局部 Boids/RVO，避免不同玩家的敌群互相改变速度。
+    /// </summary>
+    public static int QueryNeighbors(
+        Vector3 center,
+        float radius,
+        Enemy self,
+        List<Enemy> outList,
+        int batchId)
+    {
+        return QueryNeighbors(center, radius, self, outList, true, batchId);
+    }
+
+    private static int QueryNeighbors(
+        Vector3 center,
+        float radius,
+        Enemy self,
+        List<Enemy> outList,
+        bool filterByBatch,
+        int batchId)
+    {
         outList.Clear();
 
         int cx = Mathf.FloorToInt(center.x / CELL_SIZE);
@@ -93,6 +117,7 @@ public static class SpatialGrid
                 {
                     Enemy other = cellList[i];
                     if (other == self || other == null || !other.IsAlive) continue;
+                    if (filterByBatch && other.CrowdBatchId != batchId) continue;
 
                     float dx = center.x - other.transform.position.x;
                     float dz = center.z - other.transform.position.z;

@@ -16,18 +16,23 @@ public class EnemyAttackState : EnemyState
             enemyAnimator.WaitForAttackAnimationFinished();
 
         // 停止移动，专注于攻击
-        movement.Stop();
+        movement.ResetNavigationVelocity();
         enemy.SetAttackDetectCallback(OnAttackDetectResult);
 
-        // 面向目标
-        movement.FaceTarget(enemy.Target);
+        // Agent.md 要求攻击状态强制朝向玩家，不做转向平滑。
+        movement.FaceTargetImmediate(enemy.Target);
     }
 
     public override void Update()
     {
+        // 攻击与移动严格互斥，任何提前返回之前都先清零速度。
+        movement.Stop();
         if (!enemy.IsAlive) return;
 
-        if (RunTimeContext.Instance.PlayerObject == null) return;
+        Transform batchTarget = EnemyManager.GetBatchTarget(enemy);
+        if (batchTarget == null) return;
+        if (enemy.Target != batchTarget)
+            enemy.SetTarget(batchTarget);
 
         if (enemyAnimator.IsBooming)
         {
@@ -35,8 +40,28 @@ public class EnemyAttackState : EnemyState
             return;
         }
 
-        // 始终面向目标
-        movement.FaceTarget(enemy.Target);
+        // 始终立即面向目标，避免移动状态残留的限角转向造成左右摇摆。
+        movement.FaceTargetImmediate(enemy.Target);
+
+        if (!enemy.IsTargetInAttackRange())
+        {
+            Transform target = enemy.Target;
+            if (target == null)
+            {
+                stateMachine.ChangeState(stateMachine.chaseState);
+                return;
+            }
+
+            float distanceSqr = EnemyChaseState.HorizontalDistanceSqr(
+                enemy.transform.position,
+                target.position);
+            float surroundRadius = movement.SurroundRadius;
+            stateMachine.ChangeState(
+                distanceSqr <= surroundRadius * surroundRadius
+                    ? stateMachine.surroundState
+                    : stateMachine.chaseState);
+            return;
+        }
 
         _attackTimer += Time.deltaTime;
 
@@ -45,13 +70,7 @@ public class EnemyAttackState : EnemyState
         {
             _attackTimer = 0f;
 
-            // 攻击动作结束后，判断目标距离决定下一步
-            if (!enemy.IsTargetInAttackRange())
-            {
-                // 目标离开攻击范围 → 回到追击
-                stateMachine.ChangeState(stateMachine.chaseState);
-            }
-            // 否则目标仍在范围内 → 继续留在攻击状态，下一次攻击计时器继续
+            // 目标仍在范围内，继续留在攻击状态；伤害由动画事件触发。
         }
     }
 
