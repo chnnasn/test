@@ -1,0 +1,86 @@
+Fire Portfolio License
+Version 1.0, 2026
+
+Copyright (c) 2026 chnnasn
+All rights reserved.
+
+1. Scope
+
+This license applies only to the source code, documentation, configuration,
+and other materials in this repository that were originally authored by
+chnnasn and for which chnnasn owns the copyright ("Original Materials").
+
+This license does not apply to any third-party software, frameworks, plugins,
+models, textures, artwork, animations, audio, fonts, tools, or other assets.
+Third-party materials remain subject to the licenses and terms of their
+respective copyright holders.
+
+2. Permitted Use
+
+Permission is granted to access and view the Original Materials through this
+repository solely for:
+
+- portfolio review;
+- recruitment and employment evaluation;
+- academic or technical assessment; and
+- personal, non-commercial study of the project's design and implementation.
+
+Ordinary transient technical copies created automatically while viewing the
+repository through a web browser are permitted only to the extent necessary
+for the uses listed above.
+
+3. Restrictions
+
+Except with prior written permission from the copyright holder, you may not:
+
+- copy or reproduce the Original Materials;
+- download or clone the Original Materials for reuse;
+- modify, adapt, translate, or create derivative works;
+- publish, upload, sublicense, sell, rent, or redistribute the Original
+  Materials;
+- incorporate the Original Materials into another project, product, service,
+  dataset, training corpus, or codebase;
+- use the Original Materials for commercial purposes; or
+- remove or alter copyright, attribution, or licensing notices.
+
+No patent, trademark, trade-secret, publicity, or other rights are granted by
+this license.
+
+4. Third-Party Materials
+
+The repository may contain or reference third-party materials, including but
+not limited to Unity packages, Infima Games Low Poly Shooter Pack, DOTween,
+SharpPoly Zombies, Dark UI, and other software or media assets.
+
+The inclusion of third-party materials in this repository does not mean that
+chnnasn owns them or has authority to relicense them. You are responsible for
+identifying and complying with all applicable third-party licenses before
+accessing or using those materials.
+
+Nothing in this license expands, replaces, or limits any right granted by a
+third-party copyright holder.
+
+5. No Open-Source Grant
+
+This is a portfolio and evaluation license. It is not an open-source or
+free-software license and does not grant permission to use, modify, or
+redistribute the Original Materials.
+
+6. No Warranty
+
+THE ORIGINAL MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM OR RELATED TO THE ORIGINAL MATERIALS OR THEIR
+REVIEW.
+
+7. Additional Permission
+
+To request permission for use not allowed by this license, contact the
+copyright holder through the GitHub account associated with this repository.
+
+By accessing or reviewing the Original Materials, you acknowledge the
+restrictions stated in this license.
